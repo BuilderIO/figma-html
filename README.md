@@ -19,7 +19,7 @@ Figma plugin to convert HTML from a URL to Figma
 
 ## Why?
 
-- Easily import real live site styles for a starting point for m
+- Easily import real live site styles for a starting point for designs and prototypes
 - Quicly turn real site components into design components
 - Easy import from storybook, etc
 
