@@ -23,7 +23,7 @@ export default function Loading() {
       });
     }
 
-    const timer = setInterval(progress, 1000);
+    const timer = setInterval(progress, 2000);
     return () => {
       clearInterval(timer);
     };

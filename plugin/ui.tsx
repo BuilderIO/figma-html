@@ -129,7 +129,7 @@ class App extends SafeComponent {
     this.loading = true;
     if (this.urlValue) {
       fetch(
-        "https://042ddc79.ngrok.io/api/v1/url-to-figma?url=" +
+        "https://builder.io/api/v1/url-to-figma?url=" +
           encodeURIComponent(this.urlValue) +
           "&width=" +
           (this.width || 1200)
