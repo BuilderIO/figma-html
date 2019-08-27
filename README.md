@@ -11,9 +11,9 @@ Figma plugin to convert HTML from a URL to Figma
 
 ## How does it work
 
-1) Open the plugin with cmd+/ and search "html to figma" and hit enter
+1) [Install the plugin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma)
+1) In Figma hit cmd+/ and search "html to figma" and hit enter
 2) Enter a URL you want to import
-3) Profit
 
 <img src="https://i.imgur.com/0jycGDC.gif" alt="Demo" />
 
