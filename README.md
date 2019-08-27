@@ -5,7 +5,7 @@ Figma plugin to convert HTML from a URL to Figma
 <br />
 
 <p align="center">
-  <img alt="Html to figma" src="https://i.imgur.com/sn1rmXk.jpg" height="200" />
+  <img alt="Html to figma" src="https://i.imgur.com/sn1rmXk.jpg" width="390" />
 </p>
 
 
