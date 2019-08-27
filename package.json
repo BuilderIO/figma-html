@@ -1,8 +1,8 @@
 {
-  "name": "@builder.io/url-to-figma",
+  "name": "@builder.io/html-to-figma",
   "version": "0.0.1",
-  "description": "",
-  "main": "code.js",
+  "description": "Convert HTML to figma",
+  "main": "dist/lib.js",
   "scripts": {
     "dev": "webpack --watch",
     "build": "webpack --mode production"
