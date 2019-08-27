@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "Convert HTML to figma",
   "main": "dist/lib.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "webpack --watch",
     "build": "webpack --mode production"
