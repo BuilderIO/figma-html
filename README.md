@@ -8,12 +8,11 @@ Figma plugin to convert HTML from a URL to Figma
   <img alt="Html to figma" src="https://i.imgur.com/sn1rmXk.jpg" width="390" />
 </p>
 
-
 ## How does it work
 
-1) [Install the plugin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma)
-1) In Figma hit cmd+/ and search "html to figma" and hit enter
-2) Enter a URL you want to import
+1. [Install the plugin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma)
+1. In Figma hit cmd+/ and search "html to figma" and hit enter
+1. Enter a URL you want to import
 
 <img src="https://i.imgur.com/0jycGDC.gif" alt="Demo" />
 
@@ -23,10 +22,9 @@ Figma plugin to convert HTML from a URL to Figma
 - Quicly turn real site components into design components
 - Easy import from storybook, etc
 
-
 ## Limitations
 
-Importing HTML layers to Figma is a best-effort process. Even getting 90% there can save you a ton of time, only having to clean up a few things. 
+Importing HTML layers to Figma is a best-effort process. Even getting 90% there can save you a ton of time, only having to clean up a few things.
 
 A few known limitations:
 
@@ -36,6 +34,10 @@ A few known limitations:
 - all fonts have to be uploaded to Figma or a best effort fallback will be used
 
 If you find any issues or have feedback at all please [make an issue](https://github.com/BuilderIO/html-to-figma/issues/new)
+
+## Todo
+
+- Chrome extension
 
 <br />
 <br />
