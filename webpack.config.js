@@ -11,7 +11,7 @@ module.exports = (env, argv) => ({
   entry: {
     ui: "./plugin/ui.tsx", // The entry point for your UI code
     code: "./plugin/code.ts" ,
-    lib: "lib/lib.ts"// The entry point for your plugin code
+    lib: "./lib/html-to-figma.ts"// The entry point for your plugin code
   },
 
   module: {
