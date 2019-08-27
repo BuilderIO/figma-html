@@ -1,6 +1,6 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { observable } from "mobx";
+import { observable, computed } from "mobx";
 import { observer } from "mobx-react";
 import {
   createMuiTheme,
@@ -112,6 +112,23 @@ class App extends SafeComponent {
   form: HTMLFormElement | null = null;
   urlInputRef: HTMLInputElement | null = null;
 
+  @computed get urlValid() {
+    function validURL(str: string) {
+      var pattern = new RegExp(
+        "^(https?:\\/\\/)?" + // protocol
+        "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // domain name
+        "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
+        "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
+        "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
+          "(\\#[-a-z\\d_]*)?$",
+        "i"
+      ); // fragment locator
+      return !!pattern.test(str);
+    }
+
+    return validURL(this.urlValue);
+  }
+
   componentDidMount() {
     // TODO: destroy on component unmount
     this.safeReaction(() => this.urlValue, () => (this.errorMessage = ""));
@@ -126,16 +143,21 @@ class App extends SafeComponent {
       return;
     }
     if (!this.validate()) {
-      this.errorMessage = "Please enter a valid URL";
-      return;
+      if (!this.urlValid) {
+        this.errorMessage = "Please enter a valid URL";
+        return;
+      }
     }
     this.loading = true;
     if (this.urlValue) {
+      const width = clamp(parseInt(this.width) || 1200, 200, 3000);
+      const widthString = String(width);
+      this.width = widthString;
       fetch(
         "https://builder.io/api/v1/url-to-figma?url=" +
           encodeURIComponent(this.urlValue) +
           "&width=" +
-          clamp(parseInt(this.width) || 1200, 200, 3000)
+          width
       )
         .then(res => res.json())
         .then(data => {
@@ -242,7 +264,7 @@ class App extends SafeComponent {
               inputProps={{
                 min: "200",
                 max: "3000",
-                step: "1"
+                step: "10"
               }}
               disabled={this.loading}
               onKeyDown={e => {
