@@ -28,7 +28,7 @@ Figma plugin to convert HTML from a URL to Figma
 
 Importing HTML layers to Figma is a best-effort process. Even getting 90% there can save you a ton of time, only having to clean up a few things. 
 
-A few known limitations -
+A few known limitations:
 
 - not all element types are supported (e.g. iframe, pseudoelements)
 - not all CSS properties are supported or fully supported
