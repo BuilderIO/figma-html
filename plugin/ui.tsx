@@ -8,13 +8,16 @@ import {
   CssBaseline,
   TextField,
   Button,
-  Typography,
+  Typography
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
 import { theme as themeVars } from "./constants/theme";
 import "./ui.css";
 import { SafeComponent } from "./classes/safe-component";
 import Loading from "./components/loading";
+
+const clamp = (num: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, num));
 
 type Node = TextNode | RectangleNode;
 
@@ -102,7 +105,7 @@ class App extends SafeComponent {
   @observable loading = false;
   @observable urlValue = "https://builder.io";
   @observable width = "1200";
-  @observable online = navigator.onLine
+  @observable online = navigator.onLine;
 
   @observable errorMessage = "";
 
@@ -114,8 +117,8 @@ class App extends SafeComponent {
     this.safeReaction(() => this.urlValue, () => (this.errorMessage = ""));
     this.selectAllUrlInputText();
 
-    this.safeListenToEvent(window, 'offline', () => this.online = false)
-    this.safeListenToEvent(window, 'online', () => this.online = true)
+    this.safeListenToEvent(window, "offline", () => (this.online = false));
+    this.safeListenToEvent(window, "online", () => (this.online = true));
   }
 
   onCreate = () => {
@@ -132,7 +135,7 @@ class App extends SafeComponent {
         "https://builder.io/api/v1/url-to-figma?url=" +
           encodeURIComponent(this.urlValue) +
           "&width=" +
-          (this.width || 1200)
+          clamp(parseInt(this.width) || 1200, 200, 3000)
       )
         .then(res => res.json())
         .then(data => {
@@ -235,6 +238,12 @@ class App extends SafeComponent {
             />
             <TextField
               label="Width"
+              required
+              inputProps={{
+                min: "200",
+                max: "3000",
+                step: "1"
+              }}
               disabled={this.loading}
               onKeyDown={e => {
                 // Default cmd + a functionality as weird
@@ -310,7 +319,9 @@ class App extends SafeComponent {
           ) : (
             <Button
               type="submit"
-              disabled={Boolean(this.errorMessage || this.loading || !this.online)}
+              disabled={Boolean(
+                this.errorMessage || this.loading || !this.online
+              )}
               style={{ marginTop: 20 }}
               fullWidth
               color="primary"
