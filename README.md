@@ -28,10 +28,9 @@ Figma plugin to convert HTML from a URL to Figma
 
 Importing HTML layers to Figma is a best-effort process. Even getting 90% there can save you a ton of time, only having to clean up a few things. A few known limitations
 
-- pseudoelements are not supported
-- some CSS properties (e.g. overflow) are not supported or not fully supported
-- not all types of images are supported (animated gifs, webp)
-- resizing information is not generated
+- not all element types are supported (e.g. iframe, pseudoelements)
+- not all CSS properties are supported or fully supported
+- not all types of media are supported (video, animated gifs, etc)
 - all fonts have to be uploaded to Figma or a best effort fallback will be used
 
 If you find any issues or have feedback at all please [make an issue](https://github.com/BuilderIO/html-to-figma/issues/new)
