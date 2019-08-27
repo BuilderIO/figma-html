@@ -1,59 +1,138 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { observable } from 'mobx';
-import { observer } from 'mobx-react';
+import { observable } from "mobx";
+import { observer } from "mobx-react";
+import {
+  createMuiTheme,
+  MuiThemeProvider,
+  CssBaseline,
+  TextField,
+  Button,
+  Typography,
+} from "@material-ui/core";
+import green from "@material-ui/core/colors/green";
+import { theme as themeVars } from "./constants/theme";
 import "./ui.css";
-
-declare function require(path: string): any;
+import { SafeComponent } from "./classes/safe-component";
+import Loading from "./components/loading";
 
 type Node = TextNode | RectangleNode;
 
-function getImageFill(layer: Node) {
-  const image =
-    Array.isArray(layer.fills) &&
-    layer.fills.find(item => item.type === "IMAGE");
-  return image;
-}
-
-function processImages(layer: Node) {
-  const image = getImageFill(layer);
-  if (image) {
-    const url = image.url;
-    if (url.startsWith("data:")) {
-      // const type = url.split(/[:,]/)[1];
-      // const buffer = new Buffer(url.split(',')[1], )
-      return Promise.resolve();
-    }
-    return fetch(
-      "https://builder.io/api/v1/proxy-api?url=" + encodeURIComponent(url)
-    )
-      .then(res => res.arrayBuffer())
-      .then(buffer => {
-        const intArr = new Uint8Array(buffer);
-        delete image.url;
-        image.intArr = intArr;
-      });
+const theme = createMuiTheme({
+  typography: themeVars.typography,
+  palette: {
+    primary: { main: themeVars.colors.primary },
+    secondary: green
   }
-  return Promise.resolve();
+});
+
+const BASE64_MARKER = ";base64,";
+function convertDataURIToBinary(dataURI: string) {
+  const base64Index = dataURI.indexOf(BASE64_MARKER) + BASE64_MARKER.length;
+  const base64 = dataURI.substring(base64Index);
+  const raw = window.atob(base64);
+  const rawLength = raw.length;
+  const array = new Uint8Array(new ArrayBuffer(rawLength));
+
+  for (let i = 0; i < rawLength; i++) {
+    array[i] = raw.charCodeAt(i);
+  }
+  return array;
 }
 
-class App extends React.Component {
-  textbox: HTMLInputElement;
+function getImageFills(layer: Node) {
+  const images =
+    Array.isArray(layer.fills) &&
+    layer.fills.filter(item => item.type === "IMAGE");
+  return images;
+}
 
+// const imageCache: { [key: string]: Uint8Array | undefined } = {};
+// TODO: CACHE!
+async function processImages(layer: Node) {
+  const images = getImageFills(layer);
+  return images
+    ? Promise.all(
+        images.map(image => {
+          if (image) {
+            const url = image.url;
+            if (url.startsWith("data:")) {
+              const type = url.split(/[:,;]/)[1];
+              if (type.includes("svg")) {
+                const svgValue = decodeURIComponent(url.split(",")[1]);
+                (layer as any).type = "SVG";
+                (layer as any).svg = svgValue;
+                layer.fills = [];
+                return Promise.resolve();
+              } else {
+                if (url.includes(BASE64_MARKER)) {
+                  image.intArr = convertDataURIToBinary(url);
+                  delete image.url;
+                } else {
+                  console.info(
+                    "Found data url that could not be converted",
+                    url
+                  );
+                }
+                return Promise.resolve();
+              }
+            }
+            return fetch(
+              "https://builder.io/api/v1/proxy-api?url=" +
+                encodeURIComponent(url)
+            )
+              .then(res => res.arrayBuffer())
+              .then(buffer => {
+                const intArr = new Uint8Array(buffer);
+                delete image.url;
+                image.intArr = intArr;
+              })
+              .catch(err => {
+                console.warn("Image fetch error", err, image, layer);
+              });
+          }
+          return Promise.resolve();
+        })
+      )
+    : Promise.resolve([]);
+}
+
+@observer
+class App extends SafeComponent {
   @observable loading = false;
+  @observable urlValue = "https://builder.io";
+  @observable width = "1200";
+  @observable online = navigator.onLine
 
-  countRef = (element: HTMLInputElement) => {
-    if (element) element.value = "5";
-    this.textbox = element;
-  };
+  @observable errorMessage = "";
+
+  form: HTMLFormElement | null = null;
+  urlInputRef: HTMLInputElement | null = null;
+
+  componentDidMount() {
+    // TODO: destroy on component unmount
+    this.safeReaction(() => this.urlValue, () => (this.errorMessage = ""));
+    this.selectAllUrlInputText();
+
+    this.safeListenToEvent(window, 'offline', () => this.online = false)
+    this.safeListenToEvent(window, 'online', () => this.online = true)
+  }
 
   onCreate = () => {
-    const textbox = document.getElementById("url");
-    loading.style.display = "block";
-    if (textbox.value) {
+    if (this.loading) {
+      return;
+    }
+    if (!this.validate()) {
+      this.errorMessage = "Please enter a valid URL";
+      return;
+    }
+    this.loading = true;
+    if (this.urlValue) {
       fetch(
         "https://042ddc79.ngrok.io/api/v1/url-to-figma?url=" +
-          encodeURIComponent(textbox.value)
+          encodeURIComponent(this.urlValue) +
+          "&width=" +
+          (this.width || 1200)
       )
         .then(res => res.json())
         .then(data => {
@@ -61,8 +140,8 @@ class App extends React.Component {
           const layers = data.layers;
           return Promise.all(
             [data].concat(
-              layers.map(layer => {
-                if (getImageFill(layer)) {
+              layers.map((layer: Node) => {
+                if (getImageFills(layer)) {
                   return processImages(layer).catch(err => {
                     console.warn("Could not process image", err);
                   });
@@ -72,14 +151,16 @@ class App extends React.Component {
           );
         })
         .then(data => {
-          loading.style.display = "none";
           parent.postMessage(
             { pluginMessage: { type: "import", data: data[0] } },
             "*"
           );
+          // setTimeout(() => {
+          //   this.loading = false;
+          // }, 50);
         })
         .catch(err => {
-          loading.style.display = "none";
+          this.loading = false;
           console.error(err);
           alert(err);
         });
@@ -90,23 +171,164 @@ class App extends React.Component {
     parent.postMessage({ pluginMessage: { type: "cancel" } }, "*");
   };
 
+  validate() {
+    if (!this.form) {
+      return false;
+    }
+    return this.form!.reportValidity();
+  }
+
+  selectAllUrlInputText() {
+    const input = this.urlInputRef;
+    if (input) {
+      input.setSelectionRange(0, input.value.length);
+    }
+  }
+
   render() {
     return (
-      <div>
-        <h2>Import from URL</h2>
+      <div style={{ display: "flex", flexDirection: "column", padding: 20 }}>
+        <Typography style={{ textAlign: "center", marginTop: 0 }} variant="h6">
+          Import from URL
+        </Typography>
 
-        <p>
-          URL: <input id="url" value="https://builder.io" />
-        </p>
-        <div style="display: none" id="loading">
-          Loading...
-        </div>
-        <button id="create">Import</button>
-        <button id="cancel">Cancel</button>
+        <form
+          ref={ref => (this.form = ref)}
+          // {...{ validate: 'true' }}
+          style={{ display: "flex", flexDirection: "column" }}
+          onSubmit={e => {
+            e.preventDefault();
+            this.onCreate();
+          }}
+        >
+          <div style={{ display: "flex", marginTop: 20 }}>
+            <TextField
+              label="URL"
+              autoFocus
+              fullWidth
+              inputRef={ref => (this.urlInputRef = ref)}
+              disabled={this.loading}
+              required
+              onKeyDown={e => {
+                // Default cmd + a functionality as weird
+                if ((e.metaKey || e.ctrlKey) && e.which === 65) {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (e.shiftKey) {
+                    const input = this.urlInputRef!;
+                    input.setSelectionRange(0, 0);
+                  } else {
+                    this.selectAllUrlInputText();
+                  }
+                }
+              }}
+              placeholder="e.g. https://builder.io"
+              type="url"
+              value={this.urlValue}
+              onChange={e => {
+                let value = e.target.value.trim();
+                if (!value.match(/^https?:\/\//)) {
+                  value = "http://" + value;
+                }
+                this.urlValue = value;
+              }}
+            />
+            <TextField
+              label="Width"
+              disabled={this.loading}
+              onKeyDown={e => {
+                // Default cmd + a functionality as weird
+                if ((e.metaKey || e.ctrlKey) && e.which === 65) {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (e.shiftKey) {
+                    const input = this.urlInputRef!;
+                    input.setSelectionRange(0, 0);
+                  } else {
+                    const input = this.urlInputRef!;
+                    input.setSelectionRange(0, input.value.length - 1);
+                  }
+                }
+              }}
+              placeholder="1200"
+              style={{ marginLeft: 20, width: 100 }}
+              type="number"
+              value={this.width}
+              onChange={e => {
+                this.width = String(parseInt(e.target.value) || 1200);
+              }}
+            />
+          </div>
+          {this.errorMessage && (
+            <div
+              style={{
+                color: "#721c24",
+                backgroundColor: "#f8d7da",
+                border: "1px solid #f5c6cb",
+                borderRadius: 4,
+                padding: ".75rem 1.25rem",
+                marginTop: 20
+              }}
+            >
+              {this.errorMessage}
+            </div>
+          )}
+          {!this.online && (
+            <div
+              style={{
+                color: "#721c24",
+                backgroundColor: "#f8d7da",
+                border: "1px solid #f5c6cb",
+                borderRadius: 4,
+                padding: ".75rem 1.25rem",
+                marginTop: 20
+              }}
+            >
+              You need to be online to use this plugin
+            </div>
+          )}
+          {this.loading ? (
+            <>
+              <Typography
+                variant="caption"
+                style={{
+                  textAlign: "center",
+                  marginTop: 20,
+                  marginBottom: 10,
+                  color: themeVars.colors.primary,
+                  fontStyle: "italic"
+                }}
+              >
+                Crunching code... this can take a minute or two...
+              </Typography>
+              <Loading />
+              {/* <LinearProgress
+                variant="query"
+                style={{ marginTop: 20, width: "100%" }}
+              /> */}
+            </>
+          ) : (
+            <Button
+              type="submit"
+              disabled={Boolean(this.errorMessage || this.loading || !this.online)}
+              style={{ marginTop: 20 }}
+              fullWidth
+              color="primary"
+              variant="contained"
+              onClick={this.onCreate}
+            >
+              Import
+            </Button>
+          )}
+        </form>
 
-        <div style="margin-top: 10px; text-align: center">
+        <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
           Made with ❤️ by{" "}
-          <a href="https://builder.io" target="_blank">
+          <a
+            style={{ color: themeVars.colors.primary }}
+            href="https://builder.io"
+            target="_blank"
+          >
             Builder.io
           </a>
         </div>
@@ -115,4 +337,12 @@ class App extends React.Component {
   }
 }
 
-ReactDOM.render(<App />, document.getElementById("react-page"));
+ReactDOM.render(
+  <MuiThemeProvider theme={theme}>
+    <>
+      <CssBaseline />
+      <App />
+    </>
+  </MuiThemeProvider>,
+  document.getElementById("react-page")
+);

@@ -2,6 +2,11 @@
   "compilerOptions": {
     "target": "es6",
     "lib": ["es2016", "dom"],
-    "jsx": "react"
-  }
+    "jsx": "react",
+    "strict": true,
+    "experimentalDecorators": true,
+    "typeRoots": ["node_modules/@types"],
+    "moduleResolution": "node"
+  },
+  "exclude": ["dist", "node_modules", ".cache", ".cache-loader", ".next"]
 }
