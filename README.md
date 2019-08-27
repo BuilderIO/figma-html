@@ -38,7 +38,6 @@ If you find any issues or have feedback at all please [make an issue](https://gi
 
 <br />
 <br />
-<br />
 <p align="center">
   Made with ❤️ by <a target="_blank" href="https://builder.io/">Builder.io</a>
 </p>
