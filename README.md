@@ -35,3 +35,10 @@ Importing HTML layers to Figma is a best-effort process. Even getting 90% there 
 - all fonts have to be uploaded to Figma or a best effort fallback will be used
 
 If you find any issues or have feedback at all please [make an issue](https://github.com/BuilderIO/html-to-figma/issues/new)
+
+<br />
+<br />
+<br />
+<p align="center">
+  Made with ❤️ by <a target="_blank" href="https://builder.io/">Builder.io</a>
+</p>
