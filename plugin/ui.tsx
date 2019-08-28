@@ -13,8 +13,10 @@ import {
   Tooltip,
   FormControlLabel,
   Divider,
-  MenuItem
+  MenuItem,
+  IconButton
 } from "@material-ui/core";
+import ExpandMore from "@material-ui/icons/ExpandMore";
 import green from "@material-ui/core/colors/green";
 import { theme as themeVars } from "./constants/theme";
 import "./ui.css";
@@ -187,7 +189,7 @@ class App extends SafeComponent {
       }
       node.data.component = component;
     }
-    this.saveUpdates()
+    this.saveUpdates();
   }
 
   form: HTMLFormElement | null = null;
@@ -233,7 +235,7 @@ class App extends SafeComponent {
       () => {
         let height = settings.ui.baseHeight;
         if (this.showMoreOptions) {
-          height += 40;
+          height += 50;
         }
         if (this.showExperimental) {
           height += 200;
@@ -379,37 +381,75 @@ class App extends SafeComponent {
           }}
         >
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <TextField
-              label="URL to import"
-              autoFocus
-              fullWidth
-              inputRef={ref => (this.urlInputRef = ref)}
-              disabled={this.loading}
-              required
-              onKeyDown={e => {
-                // Default cmd + a functionality as weird
-                if ((e.metaKey || e.ctrlKey) && e.which === 65) {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  if (e.shiftKey) {
-                    const input = this.urlInputRef!;
-                    input.setSelectionRange(0, 0);
-                  } else {
-                    this.selectAllUrlInputText();
+            <div style={{ display: "flex", position: "relative" }}>
+              <TextField
+                inputProps={{
+                  style: {
+                    fontSize: 13
                   }
-                }
-              }}
-              placeholder="e.g. https://builder.io"
-              type="url"
-              value={this.urlValue}
-              onChange={e => {
-                let value = e.target.value.trim();
-                if (!value.match(/^https?:\/\//)) {
-                  value = "http://" + value;
-                }
-                this.urlValue = value;
-              }}
-            />
+                }}
+                label="URL to import"
+                autoFocus
+                fullWidth
+                inputRef={ref => (this.urlInputRef = ref)}
+                disabled={this.loading}
+                required
+                onKeyDown={e => {
+                  // Default cmd + a functionality as weird
+                  if ((e.metaKey || e.ctrlKey) && e.which === 65) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                      const input = this.urlInputRef!;
+                      input.setSelectionRange(0, 0);
+                    } else {
+                      this.selectAllUrlInputText();
+                    }
+                  }
+                }}
+                placeholder="e.g. https://builder.io"
+                type="url"
+                value={this.urlValue}
+                onChange={e => {
+                  let value = e.target.value.trim();
+                  if (!value.match(/^https?:\/\//)) {
+                    value = "http://" + value;
+                  }
+                  this.urlValue = value;
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  right: -8,
+                  top: 11,
+                  backgroundColor: "rgba(255, 255, 255, 0.7)",
+                  borderRadius: 100
+                }}
+              >
+                <Tooltip placement="left" title="More options" enterDelay={1000}>
+                  <IconButton
+                    style={{
+                      padding: 5,
+                      color: "#bbb"
+                    }}
+                    onClick={() =>
+                      (this.showMoreOptions = !this.showMoreOptions)
+                    }
+                  >
+                    <ExpandMore
+                      style={{
+                        transition: "transform 0.2s ease-in-out",
+                        transform: this.showMoreOptions
+                          ? "rotateZ(180deg)"
+                          : "none"
+                      }}
+                      fontSize="small"
+                    />
+                  </IconButton>
+                </Tooltip>
+              </div>
+            </div>
             {this.showMoreOptions && (
               <div
                 style={{
@@ -424,7 +464,10 @@ class App extends SafeComponent {
                   inputProps={{
                     min: "200",
                     max: "3000",
-                    step: "10"
+                    step: "10",
+                    style: {
+                      fontSize: 13
+                    }
                   }}
                   disabled={this.loading}
                   onKeyDown={e => {
@@ -454,7 +497,7 @@ class App extends SafeComponent {
                   PopperProps={{
                     modifiers: { flip: { behavior: ["top"] } }
                   }}
-                  enterDelay={100}
+                  enterDelay={300}
                   placement="top"
                   title="Nest layers in frames"
                 >
@@ -552,7 +595,7 @@ class App extends SafeComponent {
               Import
             </Button>
           )}
-          {!this.loading && (
+          {/* {!this.loading && (
             <Button
               size="small"
               style={{
@@ -567,7 +610,7 @@ class App extends SafeComponent {
             >
               {this.showMoreOptions ? "less" : "more"} options
             </Button>
-          )}
+          )} */}
         </form>
 
         <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
@@ -602,7 +645,7 @@ class App extends SafeComponent {
             href="https://github.com/BuilderIO/html-to-figma/issues"
             target="_blank"
           >
-            Help + feedback
+            Feedback
           </a>
           <span
             style={{
@@ -624,7 +667,7 @@ class App extends SafeComponent {
             href="https://github.com/BuilderIO/html-to-figma"
             target="_blank"
           >
-            Source code
+            Source
           </a>
           <span
             style={{
@@ -667,9 +710,11 @@ class App extends SafeComponent {
                 Experiments
               </div>
 
-              <div style={{ marginTop: 15, color: "#888" }}>
-                {this.selection.length} elements selected
-              </div>
+              {!this.selection.length && (
+                <div style={{ marginTop: 15, color: "#888" }}>
+                  {this.selection.length} elements selected
+                </div>
+              )}
               {!!this.selection.length && (
                 <div style={{ marginTop: 15, color: "#888" }}>
                   {/* Hello */}
@@ -699,7 +744,7 @@ class App extends SafeComponent {
                       .map(item => (
                         <MenuItem
                           style={{
-                            fontSize: 11,
+                            fontSize: 12,
                             textTransform: "capitalize",
                             opacity: item === invalidComponentOption ? 0.5 : 1
                           }}
@@ -711,19 +756,33 @@ class App extends SafeComponent {
                       ))}
                   </TextField>
 
-                  <Tooltip title="Export to Builder to convert this page into code">
-                    <>
+                  <Tooltip
+                    PopperProps={{
+                      modifiers: {
+                        preventOverflow: {
+                          boundariesElement: document.body
+                        }
+                      }
+                    }}
+                    title="Export to Builder to convert this page into code - coming soon!"
+                  >
+                    <span>
                       {/* TODO: check validitiy and prompt, select all elements not valid */}
                       <Button
                         style={{ marginTop: 15, fontWeight: 400 }}
+                        disabled
                         size="small"
                         fullWidth
                         color="primary"
                         variant="outlined"
+                        onClick={() => {
+                          // TODO: analyze if page is properly nested and annotated, if not
+                          // suggest in the UI what needs grouping
+                        }}
                       >
                         Export to Builder
                       </Button>
-                    </>
+                    </span>
                   </Tooltip>
                 </div>
               )}
