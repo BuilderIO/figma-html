@@ -67,7 +67,7 @@ figma.ui.onmessage = async msg => {
     for (const key in b) {
       const value = b[key];
       if (
-        value &&
+        typeof value != "undefined" &&
         ["width", "height", "type", "ref", "children"].indexOf(key) === -1
       ) {
         a[key] = b[key];
