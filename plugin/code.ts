@@ -1,9 +1,11 @@
 import { traverseLayers } from "./functions/traverse-layers";
+import { settings } from "./constants/settings";
+import { fastClone } from "./functions/fast-clone";
 
 // This shows the HTML page in "ui.html".
 figma.showUI(__html__, {
-  width: 500,
-  height: 300
+  width: settings.ui.baseWidth,
+  height: settings.ui.baseHeight
 });
 
 async function processImages(layer: RectangleNode | TextNode) {
@@ -59,21 +61,111 @@ async function getMatchingFont(fontStr: string, availableFonts: Font[]) {
 
 const fontCache: { [key: string]: FontName | undefined } = {};
 
+const selectionIds = (selection: ReadonlyArray<SceneNode>) =>
+  selection
+    .map(item => item.id)
+    .sort()
+    .join();
+
+let selection: ReadonlyArray<SceneNode> = [];
+
+function serialize(
+  element: DefaultContainerMixin & BaseNode & FrameNode & RectangleNode
+) {
+  return fastClone({
+    id: element.id,
+    type: element.type,
+    x: element.x,
+    y: element.y,
+    width: element.width,
+    height: element.height,
+    data: JSON.parse(element.getSharedPluginData("builder", "data") || "{}"),
+    constraints: element.constraints,
+    fills: element.fills,
+    backgrounds: element.backgrounds,
+    name: element.name,
+    removed: element.removed,
+    visible: element.visible,
+    locked: element.locked,
+    opacity: element.opacity,
+    blendMode: element.blendMode,
+    isMask: element.isMask,
+    effects: element.effects,
+    effectStyleId: element.effectStyleId,
+    fillStyleId: element.fillStyleId,
+    strokes: element.strokes,
+    strokeStyleId: element.strokeStyleId,
+    strokeWeight: element.strokeWeight,
+    strokeAlign: element.strokeAlign,
+    strokeCap: element.strokeCap,
+    strokeJoin: element.strokeJoin,
+    dashPattern: element.dashPattern,
+    relativeTransform: element.relativeTransform,
+    absoluteTransform: element.absoluteTransform,
+    rotation: element.rotation,
+    exportSettings: element.exportSettings,
+    cornerRadius: element.cornerRadius,
+    cornerSmoothing: element.cornerSmoothing,
+    topLeftRadius: element.topLeftRadius,
+    topRightRadius: element.topRightRadius,
+    bottomLeftRadius: element.bottomLeftRadius,
+    bottomRightRadius: element.bottomLeftRadius
+  });
+}
+
+setInterval(() => {
+  if (selectionIds(selection) !== selectionIds(figma.currentPage.selection)) {
+    selection = figma.currentPage.selection;
+    figma.ui.postMessage({
+      type: "selectionChange",
+      elements: figma.currentPage.selection.map(el => serialize(el as any))
+    });
+  }
+}, 200);
+
+type AnyStringMap = { [key: string]: any };
+
 // Calls to "parent.postMessage" from within the HTML page will trigger this
 // callback. The callback will be passed the "pluginMessage" property of the
 // posted message.
 figma.ui.onmessage = async msg => {
-  function assign(a: any, b: any) {
+  function assign(a: BaseNode & AnyStringMap, b: AnyStringMap) {
     for (const key in b) {
       const value = b[key];
-      if (
+      if (key === "data" && value && typeof value === "object") {
+        const currentData =
+          JSON.parse(a.getSharedPluginData("builder", "data") || "{}") || {};
+        const newData = value;
+        const mergedData = Object.assign({}, currentData, newData);
+        // TODO merge plugin data
+        a.setSharedPluginData("builder", "data", JSON.stringify(mergedData));
+      } else if (
         typeof value != "undefined" &&
-        ["width", "height", "type", "ref", "children"].indexOf(key) === -1
+        ["width", "height", "type", "ref", "children", "svg"].indexOf(key) ===
+          -1
       ) {
-        a[key] = b[key];
+        try {
+          a[key] = b[key];
+        } catch (err) {
+          console.warn(`Assign error for property "${key}"`, a, b, err);
+        }
       }
     }
   }
+  if (msg.type === "resize") {
+    figma.ui.resize(msg.width, msg.height);
+  }
+
+  if (msg.type === "updateElements") {
+    const elements = msg.elements;
+    for (const element of elements) {
+      const el = figma.getNodeById(element.id);
+      if (el) {
+        assign(el, element);
+      }
+    }
+  }
+
   if (msg.type === "import") {
     const availableFonts = (await figma.listAvailableFontsAsync()).filter(
       font => font.fontName.style === "Regular"
@@ -83,7 +175,9 @@ figma.ui.onmessage = async msg => {
     const { layers } = data;
     const rects: SceneNode[] = [];
     let baseFrame: PageNode | FrameNode = figma.currentPage;
-    let frameRoot: PageNode | FrameNode = baseFrame;
+    // TS bug? TS is implying that frameRoot is PageNode and ignoring the type declaration
+    // and the reassignment unless I force it to treat baseFrame as any
+    let frameRoot: PageNode | FrameNode = baseFrame as any;
     for (const rootLayer of layers) {
       await traverseLayers(rootLayer, async (layer, parent) => {
         try {
@@ -98,6 +192,7 @@ figma.ui.onmessage = async msg => {
             layer.ref = frame;
             if (!parent) {
               frameRoot = frame;
+              baseFrame = frame;
             }
             // baseFrame = frame;
           } else if (layer.type === "SVG") {
@@ -107,6 +202,7 @@ figma.ui.onmessage = async msg => {
             node.resize(layer.width, layer.height);
             layer.ref = node;
             rects.push(node);
+            assign(node, layer);
             ((parent && (parent as any).ref) || baseFrame).appendChild(node);
           } else if (layer.type === "RECTANGLE") {
             const rect = figma.createRectangle();
@@ -166,10 +262,13 @@ figma.ui.onmessage = async msg => {
         }
       });
     }
+    if (frameRoot.type === "FRAME") {
+      figma.currentPage.selection = [frameRoot];
+    }
     figma.viewport.scrollAndZoomIntoView([frameRoot]);
+    figma.closePlugin();
   }
 
   // Make sure to close the plugin when you're done. Otherwise the plugin will
   // keep running, which shows the cancel button at the bottom of the screen.
-  figma.closePlugin();
 };

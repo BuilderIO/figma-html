@@ -11,7 +11,9 @@ import {
   Typography,
   Switch,
   Tooltip,
-  FormControlLabel
+  FormControlLabel,
+  Divider,
+  MenuItem
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
 import { theme as themeVars } from "./constants/theme";
@@ -19,6 +21,8 @@ import "./ui.css";
 import { SafeComponent } from "./classes/safe-component";
 import Loading from "./components/loading";
 import { traverseLayers } from "./functions/traverse-layers";
+import { settings } from "./constants/settings";
+import { fastClone } from "./functions/fast-clone";
 
 declare var process: {
   env: {
@@ -131,6 +135,18 @@ async function processImages(layer: Node) {
     : Promise.resolve([]);
 }
 
+type Component = "row" | "columns" | "grid" | "stack" | "canvas";
+const componentTypes: Component[] = [
+  "row",
+  "columns",
+  "grid",
+  "stack",
+  "canvas"
+];
+
+const invalidComponentOption = "...";
+type InvalidComponentOption = typeof invalidComponentOption;
+
 @observer
 class App extends SafeComponent {
   @observable loading = false;
@@ -138,8 +154,41 @@ class App extends SafeComponent {
   @observable width = lsGet(WIDTH_LS_KEY) || "1200";
   @observable online = navigator.onLine;
   @observable useFrames = lsGet(FRAMES_LS_KEY) || false;
+  @observable showExperimental = false;
+  @observable showMoreOptions = false;
+  @observable selection: (BaseNode & { data?: { [key: string]: any } })[] = [];
 
   @observable errorMessage = "";
+
+  @computed get component() {
+    if (!this.selection.length) {
+      return invalidComponentOption;
+    }
+    const first = this.selection[0].data;
+    if (
+      !(first && first.component && componentTypes.includes(first.component))
+    ) {
+      return invalidComponentOption;
+    }
+    let value = first && first.component;
+    for (const item of this.selection.slice(1)) {
+      const itemValue = item && item.data && item.data.component;
+      if (itemValue !== value) {
+        return invalidComponentOption;
+      }
+    }
+    return value;
+  }
+
+  set component(component: Component | typeof invalidComponentOption) {
+    for (const node of this.selection) {
+      if (!node.data) {
+        node.data = {};
+      }
+      node.data.component = component;
+    }
+    this.saveUpdates()
+  }
 
   form: HTMLFormElement | null = null;
   urlInputRef: HTMLInputElement | null = null;
@@ -168,7 +217,55 @@ class App extends SafeComponent {
 
     this.safeListenToEvent(window, "offline", () => (this.online = false));
     this.safeListenToEvent(window, "online", () => (this.online = true));
+
+    this.safeListenToEvent(window, "message", e => {
+      const data = (e as MessageEvent).data.pluginMessage;
+      if (!data) {
+        return;
+      }
+      if (data.type === "selectionChange") {
+        this.selection = data.elements;
+      }
+    });
+
+    this.safeReaction(
+      () => `${this.showMoreOptions}:${this.showExperimental}`,
+      () => {
+        let height = settings.ui.baseHeight;
+        if (this.showMoreOptions) {
+          height += 40;
+        }
+        if (this.showExperimental) {
+          height += 200;
+        }
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: "resize",
+              width: settings.ui.baseWidth,
+              height
+            }
+          },
+          "*"
+        );
+      },
+      { fireImmediately: false }
+    );
   }
+
+  saveUpdates = () => {
+    if (this.selection.length) {
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "updateElements",
+            elements: fastClone(this.selection)
+          }
+        },
+        "*"
+      );
+    }
+  };
 
   onCreate = () => {
     if (this.loading) {
@@ -256,23 +353,34 @@ class App extends SafeComponent {
 
   render() {
     return (
-      <div style={{ display: "flex", flexDirection: "column", padding: 20 }}>
-        <Typography style={{ textAlign: "center", marginTop: 0 }} variant="h6">
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          padding: 15,
+          fontWeight: 400
+        }}
+      >
+        {/* <Typography style={{ textAlign: "center", marginTop: 0 }} variant="h6">
           Import from URL
-        </Typography>
+        </Typography> */}
 
         <form
           ref={ref => (this.form = ref)}
           // {...{ validate: 'true' }}
-          style={{ display: "flex", flexDirection: "column", marginTop: 20 }}
+          style={{
+            display: "flex",
+            flexDirection: "column"
+            // marginTop: 20
+          }}
           onSubmit={e => {
             e.preventDefault();
             this.onCreate();
           }}
         >
-          <div style={{ display: "flex" }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
             <TextField
-              label="URL"
+              label="URL to import"
               autoFocus
               fullWidth
               inputRef={ref => (this.urlInputRef = ref)}
@@ -302,72 +410,85 @@ class App extends SafeComponent {
                 this.urlValue = value;
               }}
             />
-            <TextField
-              label="Width"
-              required
-              inputProps={{
-                min: "200",
-                max: "3000",
-                step: "10"
-              }}
-              disabled={this.loading}
-              onKeyDown={e => {
-                // Default cmd + a functionality as weird
-                if ((e.metaKey || e.ctrlKey) && e.which === 65) {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  if (e.shiftKey) {
-                    const input = this.urlInputRef!;
-                    input.setSelectionRange(0, 0);
-                  } else {
-                    const input = this.urlInputRef!;
-                    input.setSelectionRange(0, input.value.length - 1);
-                  }
-                }
-              }}
-              placeholder="1200"
-              style={{ marginLeft: 20, width: 100 }}
-              type="number"
-              value={this.width}
-              onChange={e => {
-                this.width = String(parseInt(e.target.value) || 1200);
-              }}
-            />
-            <Tooltip
-              PopperProps={{
-                modifiers: { flip: { behavior: ["top"] } }
-              }}
-              enterDelay={100}
-              placement="top"
-              title="Nest layers in frames"
-            >
-              <FormControlLabel
-                value="Use Frames"
-                style={{ marginLeft: 20 }}
-                control={
-                  <Switch
-                    size="small"
-                    // style={{ marginLeft: 20 }}
-                    color="primary"
-                    value={this.useFrames}
-                    onChange={e => (this.useFrames = e.target.checked)}
+            {this.showMoreOptions && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-end",
+                  marginTop: 15
+                }}
+              >
+                <TextField
+                  label="Width"
+                  required
+                  inputProps={{
+                    min: "200",
+                    max: "3000",
+                    step: "10"
+                  }}
+                  disabled={this.loading}
+                  onKeyDown={e => {
+                    // Default cmd + a functionality as weird
+                    if ((e.metaKey || e.ctrlKey) && e.which === 65) {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      if (e.shiftKey) {
+                        const input = this.urlInputRef!;
+                        input.setSelectionRange(0, 0);
+                      } else {
+                        const input = this.urlInputRef!;
+                        input.setSelectionRange(0, input.value.length - 1);
+                      }
+                    }
+                  }}
+                  placeholder="1200"
+                  // style={{ marginLeft: 20 , width: 100  }}
+                  fullWidth
+                  type="number"
+                  value={this.width}
+                  onChange={e => {
+                    this.width = String(parseInt(e.target.value) || 1200);
+                  }}
+                />
+                <Tooltip
+                  PopperProps={{
+                    modifiers: { flip: { behavior: ["top"] } }
+                  }}
+                  enterDelay={100}
+                  placement="top"
+                  title="Nest layers in frames"
+                >
+                  <FormControlLabel
+                    value="Use Frames"
+                    disabled={this.loading}
+                    style={{ marginLeft: 20 }}
+                    control={
+                      <Switch
+                        // disabled={this.loading}
+                        size="small"
+                        // style={{ marginLeft: 20 }}
+                        color="primary"
+                        value={this.useFrames}
+                        onChange={e => (this.useFrames = e.target.checked)}
+                      />
+                    }
+                    label={
+                      <span
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.6,
+                          position: "relative",
+                          top: -9
+                        }}
+                      >
+                        Frames
+                      </span>
+                    }
+                    labelPlacement="top"
                   />
-                }
-                label={
-                  <span
-                    style={{
-                      fontSize: 12,
-                      opacity: 0.6,
-                      position: "relative",
-                      top: -9
-                    }}
-                  >
-                    Frames
-                  </span>
-                }
-                labelPlacement="top"
-              />
-            </Tooltip>
+                </Tooltip>
+              </div>
+            )}
           </div>
           {this.errorMessage && (
             <div
@@ -431,6 +552,22 @@ class App extends SafeComponent {
               Import
             </Button>
           )}
+          {!this.loading && (
+            <Button
+              size="small"
+              style={{
+                opacity: 0.4,
+                marginTop: 10,
+                marginBottom: -20,
+                fontSize: 10,
+                fontWeight: 400
+              }}
+              fullWidth
+              onClick={() => (this.showMoreOptions = !this.showMoreOptions)}
+            >
+              {this.showMoreOptions ? "less" : "more"} options
+            </Button>
+          )}
         </form>
 
         <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
@@ -453,16 +590,16 @@ class App extends SafeComponent {
             alignItems: "center",
             justifyContent: "center",
             opacity: 0.8,
-            fontWeight: 400
+            fontWeight: 400,
+            fontSize: 9
           }}
         >
           <a
             style={{
               color: "#999",
-              textDecoration: "none",
-              fontSize: 11
+              textDecoration: "none"
             }}
-            href="https://github.com/BuilderIO/html-to-figma/issues/new"
+            href="https://github.com/BuilderIO/html-to-figma/issues"
             target="_blank"
           >
             Help + feedback
@@ -470,26 +607,129 @@ class App extends SafeComponent {
           <span
             style={{
               display: "inline-block",
-              height: 12,
+              height: 10,
               width: 1,
               background: "#999",
               marginTop: 1,
-              marginLeft: 10
+              opacity: 0.8,
+              marginLeft: 5
             }}
           />
           <a
             style={{
               color: "#999",
               textDecoration: "none",
-              fontSize: 11,
-              marginLeft: 10
+              marginLeft: 5
             }}
             href="https://github.com/BuilderIO/html-to-figma"
             target="_blank"
           >
             Source code
           </a>
+          <span
+            style={{
+              display: "inline-block",
+              height: 10,
+              width: 1,
+              background: "#999",
+              marginTop: 1,
+              opacity: 0.8,
+              marginLeft: 5
+            }}
+          />
+          <a
+            style={{
+              color: this.showExperimental ? themeVars.colors.primary : "#999",
+              textDecoration: "none",
+              marginLeft: 5,
+              cursor: "pointer"
+            }}
+            onClick={() => (this.showExperimental = !this.showExperimental)}
+          >
+            Labs
+          </a>
         </div>
+        {this.showExperimental && (
+          <div
+            style={{
+              marginTop: 20
+            }}
+          >
+            <Divider style={{ margin: "0 -15px" }} />
+            <div style={{ fontSize: 11 }}>
+              <div
+                style={{
+                  fontWeight: "bold",
+                  fontSize: 11,
+                  marginTop: 15
+                }}
+              >
+                Experiments
+              </div>
+
+              <div style={{ marginTop: 15, color: "#888" }}>
+                {this.selection.length} elements selected
+              </div>
+              {!!this.selection.length && (
+                <div style={{ marginTop: 15, color: "#888" }}>
+                  {/* Hello */}
+                  <TextField
+                    SelectProps={{
+                      renderValue: (val: any) => (
+                        <span
+                          style={{ textTransform: "capitalize", fontSize: 12 }}
+                        >
+                          {val}
+                        </span>
+                      )
+                    }}
+                    label="Component type"
+                    select
+                    fullWidth
+                    value={this.component}
+                    onChange={e => {
+                      const value = e.target.value;
+                      if (componentTypes.includes(value as Component)) {
+                        this.component = value as Component;
+                      }
+                    }}
+                  >
+                    {(componentTypes as string[])
+                      .concat([invalidComponentOption])
+                      .map(item => (
+                        <MenuItem
+                          style={{
+                            fontSize: 11,
+                            textTransform: "capitalize",
+                            opacity: item === invalidComponentOption ? 0.5 : 1
+                          }}
+                          key={item}
+                          value={item}
+                        >
+                          {item}
+                        </MenuItem>
+                      ))}
+                  </TextField>
+
+                  <Tooltip title="Export to Builder to convert this page into code">
+                    <>
+                      {/* TODO: check validitiy and prompt, select all elements not valid */}
+                      <Button
+                        style={{ marginTop: 15, fontWeight: 400 }}
+                        size="small"
+                        fullWidth
+                        color="primary"
+                        variant="outlined"
+                      >
+                        Export to Builder
+                      </Button>
+                    </>
+                  </Tooltip>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
