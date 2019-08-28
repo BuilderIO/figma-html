@@ -14,9 +14,17 @@ import {
   FormControlLabel,
   Divider,
   MenuItem,
-  IconButton
+  IconButton,
+  ListItemIcon
 } from "@material-ui/core";
 import ExpandMore from "@material-ui/icons/ExpandMore";
+import MoreHoriz from "@material-ui/icons/MoreHoriz";
+import MoreVert from "@material-ui/icons/MoreVert";
+import ViewColumn from "@material-ui/icons/ViewColumn";
+import FormatAlignLeft from "@material-ui/icons/FormatAlignLeft";
+import GridOn from "@material-ui/icons/GridOn";
+import SettingsEthernet from "@material-ui/icons/SettingsEthernet";
+import Brush from "@material-ui/icons/Brush";
 import green from "@material-ui/core/colors/green";
 import { theme as themeVars } from "./constants/theme";
 import "./ui.css";
@@ -25,6 +33,7 @@ import Loading from "./components/loading";
 import { traverseLayers } from "./functions/traverse-layers";
 import { settings } from "./constants/settings";
 import { fastClone } from "./functions/fast-clone";
+import { SvgIconProps } from "@material-ui/core/SvgIcon";
 
 declare var process: {
   env: {
@@ -137,14 +146,43 @@ async function processImages(layer: Node) {
     : Promise.resolve([]);
 }
 
-type Component = "row" | "columns" | "grid" | "stack" | "canvas";
+type Component = "row" | "columns" | "grid" | "stack" | "absolute" | "scroll";
 const componentTypes: Component[] = [
-  "row",
+  "stack",
   "columns",
   "grid",
-  "stack",
-  "canvas"
+  "row" // TODO: treat this as grid
+  // "absolute",
+  // "scroll"
 ];
+
+const icons: { [key in Component]: React.ComponentType } = {
+  row: MoreHoriz,
+  // stack: MoreVert,
+  stack: (props: SvgIconProps) => (
+    <ViewColumn
+      {...props}
+      style={{
+        ...props.style,
+        transform: "rotateZ(90deg)"
+      }}
+    />
+  ),
+  grid: GridOn,
+  // grid: MoreHoriz,
+  scroll: SettingsEthernet,
+  columns: ViewColumn,
+  absolute: Brush
+};
+
+const componentDescription: { [key in Component]: string } = {
+  row: "Children always sit side by side",
+  stack: "Stack children vertically",
+  grid: "Children go horizontally and wrap to new lines",
+  scroll: "Children scroll left/right on overflow",
+  columns: "Children sit side by side and stack vertically for smaller devices",
+  absolute: "Children are absolute positioned in place"
+};
 
 const invalidComponentOption = "...";
 type InvalidComponentOption = typeof invalidComponentOption;
@@ -427,7 +465,11 @@ class App extends SafeComponent {
                   borderRadius: 100
                 }}
               >
-                <Tooltip placement="left" title="More options" enterDelay={1000}>
+                <Tooltip
+                  placement="left"
+                  title="More options"
+                  enterDelay={1000}
+                >
                   <IconButton
                     style={{
                       padding: 5,
@@ -612,6 +654,120 @@ class App extends SafeComponent {
             </Button>
           )} */}
         </form>
+        {this.showExperimental && (
+          <div
+            style={{
+              marginTop: 15,
+              marginBottom: 15
+            }}
+          >
+            <Divider style={{ margin: "0 -15px" }} />
+            <div style={{ fontSize: 11 }}>
+              <div
+                style={{
+                  fontWeight: "bold",
+                  fontSize: 11,
+                  marginTop: 15
+                }}
+              >
+                Export to code
+              </div>
+
+              {!this.selection.length && (
+                <div style={{ marginTop: 15, color: "#888" }}>
+                  {this.selection.length} elements selected
+                </div>
+              )}
+              {!!this.selection.length && (
+                <div style={{ marginTop: 15, color: "#888" }}>
+                  {/* Hello */}
+                  <TextField
+                    SelectProps={{
+                      renderValue: (val: any) => (
+                        <span
+                          style={{ textTransform: "capitalize", fontSize: 12 }}
+                        >
+                          {val}
+                        </span>
+                      )
+                    }}
+                    label="Component type"
+                    select
+                    fullWidth
+                    value={this.component}
+                    onChange={e => {
+                      const value = e.target.value;
+                      if (componentTypes.includes(value as Component)) {
+                        this.component = value as Component;
+                      }
+                    }}
+                  >
+                    {(componentTypes as string[])
+                      .concat([invalidComponentOption])
+                      .map(item => {
+                        const Icon = icons[item as Component];
+                        const text =
+                          componentDescription[item as Component] || "";
+                        return (
+                          <Tooltip
+                            enterDelay={500}
+                            title={text}
+                            open={text ? undefined : false}
+                          >
+                            <MenuItem
+                              style={{
+                                fontSize: 12,
+                                textTransform: "capitalize",
+                                opacity:
+                                  item === invalidComponentOption ? 0.5 : 1
+                              }}
+                              key={item}
+                              value={item}
+                            >
+                              <ListItemIcon>
+                                {Icon ? <Icon /> : <></>}
+                              </ListItemIcon>
+                              {item}
+                            </MenuItem>
+                          </Tooltip>
+                        );
+                      })}
+                  </TextField>
+
+                  <Tooltip
+                    PopperProps={{
+                      modifiers: {
+                        preventOverflow: {
+                          boundariesElement: document.body
+                        }
+                      }
+                    }}
+                    title="Export to Builder to convert this page into responsive code and/or live websites - coming soon!"
+                  >
+                    <span>
+                      {/* TODO: check validitiy and prompt, select all elements not valid */}
+                      <Button
+                        style={{ marginTop: 15, fontWeight: 400 }}
+                        disabled
+                        size="small"
+                        fullWidth
+                        color="primary"
+                        variant="outlined"
+                        onClick={() => {
+                          // TODO: analyze if page is properly nested and annotated, if not
+                          // suggest in the UI what needs grouping
+                        }}
+                      >
+                        Export to code
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </div>
+              )}
+            </div>
+            <Divider style={{ margin: "0 -15px", marginTop: 15 }} />
+          </div>
+        )}
 
         <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
           Made with ❤️ by{" "}
@@ -689,106 +845,9 @@ class App extends SafeComponent {
             }}
             onClick={() => (this.showExperimental = !this.showExperimental)}
           >
-            Labs
+            Experiments
           </a>
         </div>
-        {this.showExperimental && (
-          <div
-            style={{
-              marginTop: 20
-            }}
-          >
-            <Divider style={{ margin: "0 -15px" }} />
-            <div style={{ fontSize: 11 }}>
-              <div
-                style={{
-                  fontWeight: "bold",
-                  fontSize: 11,
-                  marginTop: 15
-                }}
-              >
-                Experiments
-              </div>
-
-              {!this.selection.length && (
-                <div style={{ marginTop: 15, color: "#888" }}>
-                  {this.selection.length} elements selected
-                </div>
-              )}
-              {!!this.selection.length && (
-                <div style={{ marginTop: 15, color: "#888" }}>
-                  {/* Hello */}
-                  <TextField
-                    SelectProps={{
-                      renderValue: (val: any) => (
-                        <span
-                          style={{ textTransform: "capitalize", fontSize: 12 }}
-                        >
-                          {val}
-                        </span>
-                      )
-                    }}
-                    label="Component type"
-                    select
-                    fullWidth
-                    value={this.component}
-                    onChange={e => {
-                      const value = e.target.value;
-                      if (componentTypes.includes(value as Component)) {
-                        this.component = value as Component;
-                      }
-                    }}
-                  >
-                    {(componentTypes as string[])
-                      .concat([invalidComponentOption])
-                      .map(item => (
-                        <MenuItem
-                          style={{
-                            fontSize: 12,
-                            textTransform: "capitalize",
-                            opacity: item === invalidComponentOption ? 0.5 : 1
-                          }}
-                          key={item}
-                          value={item}
-                        >
-                          {item}
-                        </MenuItem>
-                      ))}
-                  </TextField>
-
-                  <Tooltip
-                    PopperProps={{
-                      modifiers: {
-                        preventOverflow: {
-                          boundariesElement: document.body
-                        }
-                      }
-                    }}
-                    title="Export to Builder to convert this page into code - coming soon!"
-                  >
-                    <span>
-                      {/* TODO: check validitiy and prompt, select all elements not valid */}
-                      <Button
-                        style={{ marginTop: 15, fontWeight: 400 }}
-                        disabled
-                        size="small"
-                        fullWidth
-                        color="primary"
-                        variant="outlined"
-                        onClick={() => {
-                          // TODO: analyze if page is properly nested and annotated, if not
-                          // suggest in the UI what needs grouping
-                        }}
-                      >
-                        Export to Builder
-                      </Button>
-                    </span>
-                  </Tooltip>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     );
   }
