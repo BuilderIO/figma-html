@@ -15,6 +15,14 @@ import { theme as themeVars } from "./constants/theme";
 import "./ui.css";
 import { SafeComponent } from "./classes/safe-component";
 import Loading from "./components/loading";
+import { traverseLayers } from "./functions/traverse-layers";
+
+declare var process: {
+  env: {
+    NODE_ENV: "production" | "development" | undefined;
+    API_ROOT: string | undefined;
+  };
+};
 
 const clamp = (num: number, min: number, max: number) =>
   Math.max(min, Math.min(max, num));
@@ -153,24 +161,29 @@ class App extends SafeComponent {
       const width = clamp(parseInt(this.width) || 1200, 200, 3000);
       const widthString = String(width);
       this.width = widthString;
-      fetch(
-        "https://builder.io/api/v1/url-to-figma?url=" +
-          encodeURIComponent(this.urlValue) +
-          "&width=" +
-          width
-      )
+
+      const apiRoot =
+        process.env.API_ROOT && process.env.NODE_ENV !== "production"
+          ? process.env.API_ROOT
+          : "https://builder.io";
+
+      const encocedUrl = encodeURIComponent(this.urlValue);
+
+      fetch(`${apiRoot}/api/v1/url-to-figma?url=${encocedUrl}&width=${width}`)
         .then(res => res.json())
         .then(data => {
           console.log("data", data);
           const layers = data.layers;
           return Promise.all(
             [data].concat(
-              layers.map((layer: Node) => {
-                if (getImageFills(layer)) {
-                  return processImages(layer).catch(err => {
-                    console.warn("Could not process image", err);
-                  });
-                }
+              layers.map(async (rootLayer: Node) => {
+                await traverseLayers(rootLayer, layer => {
+                  if (getImageFills(layer)) {
+                    return processImages(layer).catch(err => {
+                      console.warn("Could not process image", err);
+                    });
+                  }
+                });
               })
             )
           );
@@ -320,19 +333,18 @@ class App extends SafeComponent {
           )}
           {this.loading ? (
             <>
+              <Loading style={{ marginTop: 20 }} />
               <Typography
                 variant="caption"
                 style={{
                   textAlign: "center",
-                  marginTop: 20,
-                  marginBottom: 10,
+                  marginTop: 10,
                   color: themeVars.colors.primary,
                   fontStyle: "italic"
                 }}
               >
                 Crunching code... this can take a minute or two...
               </Typography>
-              <Loading />
               {/* <LinearProgress
                 variant="query"
                 style={{ marginTop: 20, width: "100%" }}

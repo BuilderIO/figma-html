@@ -8,7 +8,7 @@ const useStyles = makeStyles({
   }
 });
 
-export default function Loading() {
+export default function Loading(props: { style?: React.CSSProperties }) {
   const classes = useStyles();
   const [completed, setCompleted] = React.useState(0);
 
@@ -18,19 +18,19 @@ export default function Loading() {
         if (oldCompleted === 100) {
           return 0;
         }
-        const diff = Math.random() * 10;
+        const diff = Math.random() * 2;
         return Math.min(oldCompleted + diff, 100);
       });
     }
 
-    const timer = setInterval(progress, 2000);
+    const timer = setInterval(progress, 800);
     return () => {
       clearInterval(timer);
     };
   }, []);
 
   return (
-    <div className={classes.root}>
+    <div style={props.style} className={classes.root}>
       <LinearProgress variant="determinate" value={completed} />
     </div>
   );

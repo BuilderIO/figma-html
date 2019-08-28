@@ -7,8 +7,8 @@
     "dist"
   ],
   "scripts": {
-    "dev": "webpack --watch",
-    "build": "webpack --mode production"
+    "dev": "NODE_ENV=development webpack --mode=development --watch",
+    "build": "NODE_ENV=production webpack --mode=production"
   },
   "author": "",
   "license": "MIT",
