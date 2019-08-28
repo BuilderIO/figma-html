@@ -8,7 +8,10 @@ import {
   CssBaseline,
   TextField,
   Button,
-  Typography
+  Typography,
+  Switch,
+  Tooltip,
+  FormControlLabel
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
 import { theme as themeVars } from "./constants/theme";
@@ -23,6 +26,26 @@ declare var process: {
     API_ROOT: string | undefined;
   };
 };
+
+const WIDTH_LS_KEY = "builder.widthSetting";
+const FRAMES_LS_KEY = "builder.useFramesSetting";
+
+function lsGet(key: string) {
+  try {
+    return JSON.parse(localStorage.getItem(key)!);
+  } catch (err) {
+    console.debug("Could not get from local storage", err);
+    return undefined;
+  }
+}
+function lsSet(key: string, value: any) {
+  try {
+    return localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.debug("Could not set to local storage", err);
+    return undefined;
+  }
+}
 
 const clamp = (num: number, min: number, max: number) =>
   Math.max(min, Math.min(max, num));
@@ -112,8 +135,9 @@ async function processImages(layer: Node) {
 class App extends SafeComponent {
   @observable loading = false;
   @observable urlValue = "https://builder.io";
-  @observable width = "1200";
+  @observable width = lsGet(WIDTH_LS_KEY) || "1200";
   @observable online = navigator.onLine;
+  @observable useFrames = lsGet(FRAMES_LS_KEY) || false;
 
   @observable errorMessage = "";
 
@@ -161,6 +185,7 @@ class App extends SafeComponent {
       const width = clamp(parseInt(this.width) || 1200, 200, 3000);
       const widthString = String(width);
       this.width = widthString;
+      lsSet(WIDTH_LS_KEY, widthString);
 
       const apiRoot =
         process.env.API_ROOT && process.env.NODE_ENV !== "production"
@@ -169,7 +194,13 @@ class App extends SafeComponent {
 
       const encocedUrl = encodeURIComponent(this.urlValue);
 
-      fetch(`${apiRoot}/api/v1/url-to-figma?url=${encocedUrl}&width=${width}`)
+      lsSet(FRAMES_LS_KEY, this.useFrames);
+
+      fetch(
+        `${apiRoot}/api/v1/url-to-figma?url=${encocedUrl}&width=${width}&useFrames=${
+          this.useFrames
+        }`
+      )
         .then(res => res.json())
         .then(data => {
           console.log("data", data);
@@ -233,13 +264,13 @@ class App extends SafeComponent {
         <form
           ref={ref => (this.form = ref)}
           // {...{ validate: 'true' }}
-          style={{ display: "flex", flexDirection: "column" }}
+          style={{ display: "flex", flexDirection: "column", marginTop: 20 }}
           onSubmit={e => {
             e.preventDefault();
             this.onCreate();
           }}
         >
-          <div style={{ display: "flex", marginTop: 20 }}>
+          <div style={{ display: "flex" }}>
             <TextField
               label="URL"
               autoFocus
@@ -302,6 +333,41 @@ class App extends SafeComponent {
                 this.width = String(parseInt(e.target.value) || 1200);
               }}
             />
+            <Tooltip
+              PopperProps={{
+                modifiers: { flip: { behavior: ["top"] } }
+              }}
+              enterDelay={100}
+              placement="top"
+              title="Nest layers in frames"
+            >
+              <FormControlLabel
+                value="Use Frames"
+                style={{ marginLeft: 20 }}
+                control={
+                  <Switch
+                    size="small"
+                    // style={{ marginLeft: 20 }}
+                    color="primary"
+                    value={this.useFrames}
+                    onChange={e => (this.useFrames = e.target.checked)}
+                  />
+                }
+                label={
+                  <span
+                    style={{
+                      fontSize: 12,
+                      opacity: 0.6,
+                      position: "relative",
+                      top: -9
+                    }}
+                  >
+                    Frames
+                  </span>
+                }
+                labelPlacement="top"
+              />
+            </Tooltip>
           </div>
           {this.errorMessage && (
             <div
@@ -375,6 +441,53 @@ class App extends SafeComponent {
             target="_blank"
           >
             Builder.io
+          </a>
+        </div>
+
+        <div
+          style={{
+            marginTop: 25,
+            textAlign: "center",
+            color: "#999",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: 0.8,
+            fontWeight: 400
+          }}
+        >
+          <a
+            style={{
+              color: "#999",
+              textDecoration: "none",
+              fontSize: 11
+            }}
+            href="https://github.com/BuilderIO/html-to-figma/issues/new"
+            target="_blank"
+          >
+            Help + feedback
+          </a>
+          <span
+            style={{
+              display: "inline-block",
+              height: 12,
+              width: 1,
+              background: "#999",
+              marginTop: 1,
+              marginLeft: 10
+            }}
+          />
+          <a
+            style={{
+              color: "#999",
+              textDecoration: "none",
+              fontSize: 11,
+              marginLeft: 10
+            }}
+            href="https://github.com/BuilderIO/html-to-figma"
+            target="_blank"
+          >
+            Source code
           </a>
         </div>
       </div>

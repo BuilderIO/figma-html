@@ -66,7 +66,10 @@ figma.ui.onmessage = async msg => {
   function assign(a: any, b: any) {
     for (const key in b) {
       const value = b[key];
-      if (value && ["width", "height", "type", "ref"].indexOf(key) === -1) {
+      if (
+        value &&
+        ["width", "height", "type", "ref", "children"].indexOf(key) === -1
+      ) {
         a[key] = b[key];
       }
     }
@@ -80,18 +83,23 @@ figma.ui.onmessage = async msg => {
     const { layers } = data;
     const rects: SceneNode[] = [];
     let baseFrame: PageNode | FrameNode = figma.currentPage;
+    let frameRoot: PageNode | FrameNode = baseFrame;
     for (const rootLayer of layers) {
       await traverseLayers(rootLayer, async (layer, parent) => {
         try {
-          if (layer.type === "FRAME") {
+          if (layer.type === "FRAME" || layer.type === "GROUP") {
             const frame = figma.createFrame();
             frame.x = layer.x;
             frame.y = layer.y;
             frame.resize(layer.width, layer.height);
+            assign(frame, layer);
             rects.push(frame);
-            baseFrame.appendChild(frame);
+            ((parent && (parent as any).ref) || baseFrame).appendChild(frame);
             layer.ref = frame;
-            baseFrame = frame;
+            if (!parent) {
+              frameRoot = frame;
+            }
+            // baseFrame = frame;
           } else if (layer.type === "SVG") {
             const node = figma.createNodeFromSvg(layer.svg);
             node.x = layer.x;
@@ -99,7 +107,7 @@ figma.ui.onmessage = async msg => {
             node.resize(layer.width, layer.height);
             layer.ref = node;
             rects.push(node);
-            baseFrame.appendChild(node);
+            ((parent && (parent as any).ref) || baseFrame).appendChild(node);
           } else if (layer.type === "RECTANGLE") {
             const rect = figma.createRectangle();
             if (getImageFills(layer)) {
@@ -109,7 +117,7 @@ figma.ui.onmessage = async msg => {
             rect.resize(layer.width, layer.height);
             rects.push(rect);
             layer.ref = rect;
-            baseFrame.appendChild(rect);
+            ((parent && (parent as any).ref) || baseFrame).appendChild(rect);
           } else if (layer.type == "TEXT") {
             const text = figma.createText();
             if (layer.fontFamily) {
@@ -151,27 +159,14 @@ figma.ui.onmessage = async msg => {
               }
             }
             rects.push(text);
-            baseFrame.appendChild(text);
-          } else if (layer.type == "FRAME" || layer.type === 'GROUP') {
-            const frame = figma.createFrame()
-            if (getImageFills(layer)) {
-              await processImages(layer);
-            }
-            assign(frame, layer);
-            frame.resize(layer.width, layer.height);
-            layer.push(frame);
-            layer.ref = frame;
-            baseFrame.appendChild(frame);
-            // TODO
-            // baseFrame = the created frame
+            ((parent && (parent as any).ref) || baseFrame).appendChild(text);
           }
         } catch (err) {
           console.warn("Error on layer:", layer, err);
         }
       });
     }
-
-    figma.viewport.scrollAndZoomIntoView([baseFrame]);
+    figma.viewport.scrollAndZoomIntoView([frameRoot]);
   }
 
   // Make sure to close the plugin when you're done. Otherwise the plugin will
