@@ -13,6 +13,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@builder.io/sdk": "^1.0.40",
     "@material-ui/core": "^4.3.3",
     "@material-ui/icons": "^4.2.1",
     "@types/react": "^16.8.23",

@@ -1,6 +1,6 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { observable, computed } from "mobx";
+import { observable, computed, action } from "mobx";
 import { observer } from "mobx-react";
 import {
   createMuiTheme,
@@ -18,6 +18,9 @@ import {
   ListItemIcon
 } from "@material-ui/core";
 import ExpandMore from "@material-ui/icons/ExpandMore";
+import LaptopMac from "@material-ui/icons/LaptopMac";
+import TabletMac from "@material-ui/icons/TabletMac";
+import PhoneIphone from "@material-ui/icons/PhoneIphone";
 import MoreHoriz from "@material-ui/icons/MoreHoriz";
 import MoreVert from "@material-ui/icons/MoreVert";
 import ViewColumn from "@material-ui/icons/ViewColumn";
@@ -44,6 +47,8 @@ declare var process: {
 
 const WIDTH_LS_KEY = "builder.widthSetting";
 const FRAMES_LS_KEY = "builder.useFramesSetting";
+const EXPERIMENTS_LS_KEY = "builder.showExperiments";
+const MORE_OPTIONS_LS_KEY = "builder.showMoreOptions";
 
 function lsGet(key: string) {
   try {
@@ -194,9 +199,21 @@ class App extends SafeComponent {
   @observable width = lsGet(WIDTH_LS_KEY) || "1200";
   @observable online = navigator.onLine;
   @observable useFrames = lsGet(FRAMES_LS_KEY) || false;
-  @observable showExperimental = false;
-  @observable showMoreOptions = false;
+  @observable showExperimental = lsGet(EXPERIMENTS_LS_KEY) || false;
+  @observable showMoreOptions = lsGet(MORE_OPTIONS_LS_KEY) || false;
   @observable selection: (BaseNode & { data?: { [key: string]: any } })[] = [];
+
+  @observable commandKeyDown = false;
+  @observable shiftKeyDown = false;
+  @observable altKeyDown = false;
+  @observable ctrlKeyDown = false;
+
+  @computed get showExperimentalLink() {
+    return (
+      this.showExperimental ||
+      (this.commandKeyDown && this.shiftKeyDown && this.altKeyDown)
+    );
+  }
 
   @observable errorMessage = "";
 
@@ -250,12 +267,26 @@ class App extends SafeComponent {
     return validURL(this.urlValue);
   }
 
+  @action
+  updateKeyPositions(event: KeyboardEvent) {
+    this.commandKeyDown = event.metaKey;
+    this.altKeyDown = event.altKey;
+    this.shiftKeyDown = event.shiftKey;
+    this.ctrlKeyDown = event.ctrlKey;
+  }
+
   componentDidMount() {
     // TODO: destroy on component unmount
     this.safeReaction(() => this.urlValue, () => (this.errorMessage = ""));
     this.selectAllUrlInputText();
 
     this.safeListenToEvent(window, "offline", () => (this.online = false));
+    this.safeListenToEvent(window, "keydown", e => {
+      this.updateKeyPositions(e as KeyboardEvent);
+    });
+    this.safeListenToEvent(window, "keyup", e => {
+      this.updateKeyPositions(e as KeyboardEvent);
+    });
     this.safeListenToEvent(window, "online", () => (this.online = true));
 
     this.safeListenToEvent(window, "message", e => {
@@ -475,9 +506,10 @@ class App extends SafeComponent {
                       padding: 5,
                       color: "#bbb"
                     }}
-                    onClick={() =>
-                      (this.showMoreOptions = !this.showMoreOptions)
-                    }
+                    onClick={() => {
+                      this.showMoreOptions = !this.showMoreOptions;
+                      lsSet(MORE_OPTIONS_LS_KEY, this.showMoreOptions);
+                    }}
                   >
                     <ExpandMore
                       style={{
@@ -500,41 +532,85 @@ class App extends SafeComponent {
                   marginTop: 15
                 }}
               >
-                <TextField
-                  label="Width"
-                  required
-                  inputProps={{
-                    min: "200",
-                    max: "3000",
-                    step: "10",
-                    style: {
-                      fontSize: 13
-                    }
-                  }}
-                  disabled={this.loading}
-                  onKeyDown={e => {
-                    // Default cmd + a functionality as weird
-                    if ((e.metaKey || e.ctrlKey) && e.which === 65) {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      if (e.shiftKey) {
-                        const input = this.urlInputRef!;
-                        input.setSelectionRange(0, 0);
-                      } else {
-                        const input = this.urlInputRef!;
-                        input.setSelectionRange(0, input.value.length - 1);
+                <div style={{ position: "relative", flexGrow: 1 }}>
+                  <TextField
+                    label="Width"
+                    required
+                    inputProps={{
+                      min: "200",
+                      max: "3000",
+                      step: "10",
+                      style: {
+                        fontSize: 13
                       }
-                    }
-                  }}
-                  placeholder="1200"
-                  // style={{ marginLeft: 20 , width: 100  }}
-                  fullWidth
-                  type="number"
-                  value={this.width}
-                  onChange={e => {
-                    this.width = String(parseInt(e.target.value) || 1200);
-                  }}
-                />
+                    }}
+                    disabled={this.loading}
+                    onKeyDown={e => {
+                      // Default cmd + a functionality as weird
+                      if ((e.metaKey || e.ctrlKey) && e.which === 65) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                          const input = this.urlInputRef!;
+                          input.setSelectionRange(0, 0);
+                        } else {
+                          const input = this.urlInputRef!;
+                          input.setSelectionRange(0, input.value.length - 1);
+                        }
+                      }
+                    }}
+                    placeholder="1200"
+                    // style={{ marginLeft: 20 , width: 100  }}
+                    fullWidth
+                    type="number"
+                    value={this.width}
+                    onChange={e => {
+                      this.width = String(parseInt(e.target.value) || 1200);
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: -4,
+                      top: 18,
+                      backgroundColor: "white",
+                      borderRadius: 100,
+                      display: "flex",
+                      ...(this.loading && {
+                        pointerEvents: "none",
+                        opacity: 0.5
+                      })
+                    }}
+                  >
+                    <IconButton
+                      style={{
+                        padding: 5,
+                        color: this.width === "1200" ? "#888" : "#ddd"
+                      }}
+                      onClick={() => (this.width = "1200")}
+                    >
+                      <LaptopMac style={{ fontSize: 14 }} />
+                    </IconButton>
+                    <IconButton
+                      style={{
+                        padding: 5,
+                        color: this.width === "900" ? "#888" : "#ddd"
+                      }}
+                      onClick={() => (this.width = "900")}
+                    >
+                      <TabletMac style={{ fontSize: 14 }} />
+                    </IconButton>
+                    <IconButton
+                      style={{
+                        padding: 5,
+                        color: this.width === "400" ? "#888" : "#ddd"
+                      }}
+                      onClick={() => (this.width = "400")}
+                    >
+                      <PhoneIphone style={{ fontSize: 14 }} />
+                    </IconButton>
+                  </div>
+                </div>
                 <Tooltip
                   PopperProps={{
                     modifiers: { flip: { behavior: ["top"] } }
@@ -563,7 +639,7 @@ class App extends SafeComponent {
                           fontSize: 12,
                           opacity: 0.6,
                           position: "relative",
-                          top: -9
+                          top: -5
                         }}
                       >
                         Frames
@@ -605,14 +681,25 @@ class App extends SafeComponent {
           )}
           {this.loading ? (
             <>
-              <Loading style={{ marginTop: 20 }} />
+              <style>{`
+
+            `}</style>
+              {/* <Loading style={{ marginTop: 20 }} /> */}
+              {/* Loading ellipsis */}
+              <div style={{ margin: "0 auto" }} className="lds-ellipsis">
+                <div style={{ background: themeVars.colors.primaryLight }} />
+                <div style={{ background: themeVars.colors.primaryLight }} />
+                <div style={{ background: themeVars.colors.primaryLight }} />
+                <div style={{ background: themeVars.colors.primaryLight }} />
+              </div>
               <Typography
                 variant="caption"
                 style={{
                   textAlign: "center",
-                  marginTop: 10,
-                  color: themeVars.colors.primary,
-                  fontStyle: "italic"
+                  // marginTop: 10,
+                  color: themeVars.colors.primaryLight,
+                  marginBottom: -10
+                  // fontStyle: "italic"
                 }}
               >
                 Crunching code... this can take a minute or two...
@@ -825,28 +912,39 @@ class App extends SafeComponent {
           >
             Source
           </a>
-          <span
-            style={{
-              display: "inline-block",
-              height: 10,
-              width: 1,
-              background: "#999",
-              marginTop: 1,
-              opacity: 0.8,
-              marginLeft: 5
-            }}
-          />
-          <a
-            style={{
-              color: this.showExperimental ? themeVars.colors.primary : "#999",
-              textDecoration: "none",
-              marginLeft: 5,
-              cursor: "pointer"
-            }}
-            onClick={() => (this.showExperimental = !this.showExperimental)}
-          >
-            Experiments
-          </a>
+          {this.showExperimentalLink && (
+            <>
+              <span
+                style={{
+                  display: "inline-block",
+                  height: 10,
+                  width: 1,
+                  background: "#999",
+                  marginTop: 1,
+                  opacity: 0.8,
+                  marginLeft: 5
+                }}
+              />
+              <a
+                style={{
+                  color: this.showExperimental
+                    ? themeVars.colors.primary
+                    : "#999",
+                  textDecoration: "none",
+                  marginLeft: 5,
+                  cursor: "pointer",
+                  userSelect: "none"
+                }}
+                onClick={e => {
+                  e.preventDefault();
+                  this.showExperimental = !this.showExperimental;
+                  lsSet(EXPERIMENTS_LS_KEY, this.showExperimental);
+                }}
+              >
+                Experiments
+              </a>
+            </>
+          )}
         </div>
       </div>
     );
