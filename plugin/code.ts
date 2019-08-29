@@ -80,6 +80,7 @@ function serialize(
     width: element.width,
     height: element.height,
     data: JSON.parse(element.getSharedPluginData("builder", "data") || "{}"),
+    children: element.children && element.children.map(child => serialize(child as any)) || undefined,
     constraints: element.constraints,
     fills: element.fills,
     backgrounds: element.backgrounds,
@@ -185,7 +186,7 @@ figma.ui.onmessage = async msg => {
             const frame = figma.createFrame();
             frame.x = layer.x;
             frame.y = layer.y;
-            frame.resize(layer.width, layer.height);
+            frame.resize(layer.width || 1, layer.height || 1);
             assign(frame, layer);
             rects.push(frame);
             ((parent && (parent as any).ref) || baseFrame).appendChild(frame);
@@ -199,7 +200,7 @@ figma.ui.onmessage = async msg => {
             const node = figma.createNodeFromSvg(layer.svg);
             node.x = layer.x;
             node.y = layer.y;
-            node.resize(layer.width, layer.height);
+            node.resize(layer.width || 1, layer.height || 1);
             layer.ref = node;
             rects.push(node);
             assign(node, layer);
@@ -210,7 +211,7 @@ figma.ui.onmessage = async msg => {
               await processImages(layer);
             }
             assign(rect, layer);
-            rect.resize(layer.width, layer.height);
+            rect.resize(layer.width || 1, layer.height || 1);
             rects.push(rect);
             layer.ref = rect;
             ((parent && (parent as any).ref) || baseFrame).appendChild(rect);
@@ -231,7 +232,7 @@ figma.ui.onmessage = async msg => {
             }
             assign(text, layer);
             layer.ref = text;
-            text.resize(layer.width, layer.height);
+            text.resize(layer.width || 1, layer.height || 1);
             text.textAutoResize = "HEIGHT";
             const lineHeight =
               (layer.lineHeight && layer.lineHeight.value) || layer.height;

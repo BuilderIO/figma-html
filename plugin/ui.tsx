@@ -37,6 +37,10 @@ import { traverseLayers } from "./functions/traverse-layers";
 import { settings } from "./constants/settings";
 import { fastClone } from "./functions/fast-clone";
 import { SvgIconProps } from "@material-ui/core/SvgIcon";
+import {
+  figmaToBuilder,
+  getAssumeLayoutTypeForNode
+} from "../lib/figma-to-builder";
 
 declare var process: {
   env: {
@@ -151,7 +155,13 @@ async function processImages(layer: Node) {
     : Promise.resolve([]);
 }
 
-type Component = "row" | "columns" | "grid" | "stack" | "absolute" | "scroll";
+export type Component =
+  | "row"
+  | "columns"
+  | "grid"
+  | "stack"
+  | "absolute"
+  | "scroll";
 const componentTypes: Component[] = [
   "stack",
   "columns",
@@ -199,7 +209,10 @@ class App extends SafeComponent {
   @observable width = lsGet(WIDTH_LS_KEY) || "1200";
   @observable online = navigator.onLine;
   @observable useFrames = lsGet(FRAMES_LS_KEY) || false;
-  @observable showExperimental = lsGet(EXPERIMENTS_LS_KEY) || false;
+  @observable showExperimental =
+    lsGet(EXPERIMENTS_LS_KEY) ||
+    process.env.NODE_ENV === "development" ||
+    false;
   @observable showMoreOptions = lsGet(MORE_OPTIONS_LS_KEY) || false;
   @observable selection: (BaseNode & { data?: { [key: string]: any } })[] = [];
 
@@ -207,6 +220,8 @@ class App extends SafeComponent {
   @observable shiftKeyDown = false;
   @observable altKeyDown = false;
   @observable ctrlKeyDown = false;
+
+  dataToPost: any;
 
   @computed get showExperimentalLink() {
     return (
@@ -221,17 +236,20 @@ class App extends SafeComponent {
     if (!this.selection.length) {
       return invalidComponentOption;
     }
+    const firstNode = this.selection[0];
     const first = this.selection[0].data;
     if (
       !(first && first.component && componentTypes.includes(first.component))
     ) {
-      return invalidComponentOption;
+      const assumed = getAssumeLayoutTypeForNode(firstNode as any) as any;
+      return assumed === "unknown" ? invalidComponentOption : assumed;
     }
     let value = first && first.component;
     for (const item of this.selection.slice(1)) {
       const itemValue = item && item.data && item.data.component;
       if (itemValue !== value) {
-        return invalidComponentOption;
+        const assumed = getAssumeLayoutTypeForNode(firstNode as any) as any;
+        return assumed === "unknown" ? invalidComponentOption : assumed;
       }
     }
     return value;
@@ -290,7 +308,20 @@ class App extends SafeComponent {
     this.safeListenToEvent(window, "online", () => (this.online = true));
 
     this.safeListenToEvent(window, "message", e => {
-      const data = (e as MessageEvent).data.pluginMessage;
+      const { data: rawData, source } = (e as MessageEvent);
+      if (rawData && rawData.type) {
+        if (rawData.type === "builder.loaded") {
+          console.log("got message...", source);
+          if (source && this.dataToPost) {
+            source.postMessage({
+              type: "builder.updateEditorData",
+              data: this.dataToPost
+            }, '*');
+          }
+        }
+      }
+
+      const data = rawData.pluginMessage;
       if (!data) {
         return;
       }
@@ -319,8 +350,7 @@ class App extends SafeComponent {
           },
           "*"
         );
-      },
-      { fireImmediately: false }
+      }
     );
   }
 
@@ -799,6 +829,7 @@ class App extends SafeComponent {
                           <Tooltip
                             enterDelay={500}
                             title={text}
+                            key={item}
                             open={text ? undefined : false}
                           >
                             <MenuItem
@@ -808,7 +839,6 @@ class App extends SafeComponent {
                                 opacity:
                                   item === invalidComponentOption ? 0.5 : 1
                               }}
-                              key={item}
                               value={item}
                             >
                               <ListItemIcon>
@@ -829,13 +859,13 @@ class App extends SafeComponent {
                         }
                       }
                     }}
-                    title="Export to Builder to convert this page into responsive code and/or live websites - coming soon!"
+                    enterDelay={1000}
+                    title="Export to Builder to convert this page into responsive code and/or live websites"
                   >
                     <span>
                       {/* TODO: check validitiy and prompt, select all elements not valid */}
                       <Button
                         style={{ marginTop: 15, fontWeight: 400 }}
-                        disabled
                         size="small"
                         fullWidth
                         color="primary"
@@ -843,6 +873,20 @@ class App extends SafeComponent {
                         onClick={() => {
                           // TODO: analyze if page is properly nested and annotated, if not
                           // suggest in the UI what needs grouping
+                          const block = figmaToBuilder(this
+                            .selection[0] as any);
+
+                          const data = {
+                            data: {
+                              blocks: [block]
+                            }
+                          };
+                          this.dataToPost = data;
+                          open(
+                            // TODO: attempt to pass data in URL
+                            "http://localhost:1234/studio",
+                            "_blank"
+                          );
                         }}
                       >
                         Export to code
