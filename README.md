@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="Html to figma" src="https://i.imgur.com/6HJJBQL.jpg" />
+  <img alt="Html to figma" src="https://imgur.com/kN2pjFr.jpg" />
 </p>
 
 <br />
