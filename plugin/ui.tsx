@@ -260,19 +260,11 @@ class App extends SafeComponent {
       return invalidComponentOption;
     }
     const firstNode = this.selection[0];
-    const first = this.selection[0].data;
-    if (
-      !(first && first.component && componentTypes.includes(first.component))
-    ) {
-      const assumed = getAssumeLayoutTypeForNode(firstNode as any) as any;
-      return assumed === "unknown" ? invalidComponentOption : assumed;
-    }
-    let value = first && first.component;
+    let value = getAssumeLayoutTypeForNode(firstNode as any) as any;
     for (const item of this.selection.slice(1)) {
-      const itemValue = item && item.data && item.data.component;
+      const itemValue = getAssumeLayoutTypeForNode(item as any) as any;
       if (itemValue !== value) {
-        const assumed = getAssumeLayoutTypeForNode(firstNode as any) as any;
-        return assumed === "unknown" ? invalidComponentOption : assumed;
+        return invalidComponentOption;
       }
     }
     return value;
@@ -946,6 +938,7 @@ class App extends SafeComponent {
                               console.warn("No selection with images");
                               return;
                             }
+
                             // TODO: analyze if page is properly nested and annotated, if not
                             // suggest in the UI what needs grouping
                             const block = figmaToBuilder(this

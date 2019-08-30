@@ -87,14 +87,15 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
   const numberValue = <T>(thing: T, property: keyof T) =>
     typeof thing[property] === "number" ? thing[property] + "px" : undefined;
 
-  const image = getImage(node);
-
   // TODO: top and left margin distances
 
   const styles: Partial<CSSStyleDeclaration> = {
     display: "flex",
     flexDirection: "column",
     position: "relative",
+    alignItems: "stretch",
+    flexShrink: "0",
+    boxSizing: "border-box",
     ...(layout === "stack" && {
       flexDirection: "column"
     }),
@@ -180,7 +181,7 @@ export function sortChildren(nodes: SceneNode[]) {
 
 export function processBackgroundLayer(node: SceneNode) {
   if (hasChildren(node)) {
-    const lastChild = node.children[node.children.length - 1];
+    const lastChild = node.children[0];
     if (
       lastChild.x === 0 &&
       lastChild.y === 0 &&
@@ -188,25 +189,24 @@ export function processBackgroundLayer(node: SceneNode) {
       lastChild.height === node.height
     ) {
       console.log("replacing a background");
-      const last = (node.children as SceneNode[]).pop();
+      const last = (node.children as SceneNode[]).shift();
       Object.assign(node, last, {
-        type: node.type
+        type: node.type,
+        children: node.children.concat(hasChildren(last) ? last.children : [])
       });
     }
   }
 }
 export function processFillImages(node: SceneNode) {
   if (isGeometryNode(node)) {
-    if (Array.isArray(node.fills)) {
-      (node.fills as Paint[]).forEach(fill => {
+    if (typeof node.fills !== "symbol") {
+      node.fills.forEach(fill => {
         if (!fill.visible) {
           return;
         }
         if (fill.type === "IMAGE") {
           const intArr = (fill as any).intArr as Uint8Array | undefined;
           if (intArr) {
-            // const buffer = intArr.buffer;
-            // TODO: upload to Builder
             try {
               const url =
                 "data:image/png;base64," + arrayBufferToBase64(intArr);
@@ -214,6 +214,8 @@ export function processFillImages(node: SceneNode) {
             } catch (err) {
               console.warn("Could not set background image", node, fill, err);
             }
+          } else {
+            console.log("no intarr", fill, node);
           }
         }
       });
@@ -288,52 +290,103 @@ export function canConvertToBuilder(node: SceneNode) {
   return Boolean(assumed && assumed !== "unknown");
 }
 
-export const collidesVertically = (a: SceneNode, b: SceneNode) =>
-  a.y + a.height > b.y && a.y < b.y + b.height;
 
-export const collidesHorizontally = (a: SceneNode, b: SceneNode) =>
-  a.width + a.x > b.x && a.x < b.width + b.x;
 
-export const collides = (a: SceneNode, b: SceneNode) =>
-  collidesVertically(a, b) && collidesHorizontally(a, b);
+export const xOverlap = (a: SceneNode, b: SceneNode) =>
+  a.y + a.height - b.y;
+
+export const yOverlap = (a: SceneNode, b: SceneNode) =>
+  a.width + a.x - b.x;
 
 // Margins
-// Ordering
+// export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
+//   const data = getMetadata(node);
+//   if (data && data.component) {
+//     return data.component;
+//   }
+
+//   if (hasChildren(node)) {
+//     let mostVerticalChildren = 0;
+//     let mostHorizontalChildren = 0;
+//     if (node.children.length === 1) {
+//       return "stack";
+//     }
+//     for (const child of node.children) {
+//       const siblings = node.children.filter(sibling => sibling !== child);
+//       const horizontalChildren = siblings.filter(sibling =>
+//         collidesVertically(sibling, child)
+//       ).length;
+//       if (horizontalChildren > mostHorizontalChildren) {
+//         mostHorizontalChildren = horizontalChildren;
+//       }
+
+//       const verticalChildren = siblings.filter(sibling =>
+//         collidesHorizontally(sibling, child)
+//       ).length;
+//       if (verticalChildren > mostVerticalChildren) {
+//         mostVerticalChildren = verticalChildren;
+//       }
+//     }
+
+//     console.log({ mostHorizontalChildren, mostVerticalChildren });
+
+//     if (mostHorizontalChildren > 1 && mostHorizontalChildren > 1) {
+//       // return "grid"; // "wrap"?
+//     }
+
+//     if (mostVerticalChildren > mostHorizontalChildren) {
+//       return "stack";
+//     }
+
+//     const widths = node.children.map(item => item.width);
+//     // If each width is alost the same
+//     const minWidth = Math.min(...widths);
+//     const maxWidth = Math.max(...widths);
+//     if (maxWidth - minWidth < maxWidth / 10) {
+//       return "columns";
+//     }
+//     return "row";
+//   }
+
+//   return "unknown";
+// }
+
 export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
-  // TODO: check metadata, if not available fall back by position of inner elements
   const data = getMetadata(node);
   if (data && data.component) {
     return data.component;
   }
 
   if (hasChildren(node)) {
-    let mostVerticalCollisions = 0;
-    let mostHorizontalCollisions = 0;
+    let maxVerticalOverlap = 0;
+    let maxHorizontalOverlap = 0;
     if (node.children.length === 1) {
       return "stack";
     }
     for (const child of node.children) {
       const siblings = node.children.filter(sibling => sibling !== child);
-      const horizontalCollisions = siblings.filter(sibling =>
-        collidesHorizontally(sibling, child)
-      ).length;
-      if (horizontalCollisions > mostHorizontalCollisions) {
-        mostHorizontalCollisions = horizontalCollisions;
-      }
-
-      const verticalCollisions = siblings.filter(sibling =>
+      const horizontalChildren = siblings.filter(sibling =>
         collidesVertically(sibling, child)
       ).length;
-      if (verticalCollisions > mostVerticalCollisions) {
-        mostVerticalCollisions = verticalCollisions;
+      if (horizontalChildren > mostHorizontalChildren) {
+        mostHorizontalChildren = horizontalChildren;
+      }
+
+      const verticalChildren = siblings.filter(sibling =>
+        collidesHorizontally(sibling, child)
+      ).length;
+      if (verticalChildren > mostVerticalChildren) {
+        mostVerticalChildren = verticalChildren;
       }
     }
 
-    if (mostHorizontalCollisions > 1 && mostHorizontalCollisions > 1) {
-      return "grid"; // "wrap"?
+    console.log({ mostHorizontalChildren, mostVerticalChildren });
+
+    if (mostHorizontalChildren > 1 && mostHorizontalChildren > 1) {
+      // return "grid"; // "wrap"?
     }
 
-    if (mostVerticalCollisions > mostHorizontalCollisions) {
+    if (mostVerticalChildren > mostHorizontalChildren) {
       return "stack";
     }
 

@@ -158,7 +158,12 @@ setInterval(async () => {
     figma.ui.postMessage({
       type: "selectionChange",
       elements: await Promise.all(
-        figma.currentPage.selection.map(el => serialize(el as any))
+        figma.currentPage.selection.map(el =>
+          serialize(el as any, {
+            // TODO: only need one level deep......
+            withChildren: true
+          })
+        )
       )
     });
   }
