@@ -156,7 +156,7 @@ async function processImages(layer: Node) {
                   (type.ext.includes("svg") || type.mime.includes("svg"))
                 ) {
                   convertToSvg(await res.text());
-                  return
+                  return;
                 } else {
                   const intArr = new Uint8Array(arrayBuffer);
                   delete image.url;
@@ -222,6 +222,7 @@ type InvalidComponentOption = typeof invalidComponentOption;
 @observer
 class App extends SafeComponent {
   @observable loading = false;
+  @observable generatingCode = false;
   @observable urlValue = "https://builder.io";
   @observable width = lsGet(WIDTH_LS_KEY) || "1200";
   @observable online = navigator.onLine;
@@ -747,7 +748,7 @@ class App extends SafeComponent {
                   // fontStyle: "italic"
                 }}
               >
-                Crunching code... this can take a minute or two...
+                Deep analyzing code... this can take a couple minutes...
               </Typography>
               {/* <LinearProgress
                 variant="query"
@@ -866,6 +867,40 @@ class App extends SafeComponent {
                       })}
                   </TextField>
 
+                  {this.generatingCode && (
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <div
+                        style={{ margin: "10px auto 0" }}
+                        className="lds-ellipsis"
+                      >
+                        <div
+                          style={{ background: themeVars.colors.primaryLight }}
+                        />
+                        <div
+                          style={{ background: themeVars.colors.primaryLight }}
+                        />
+                        <div
+                          style={{ background: themeVars.colors.primaryLight }}
+                        />
+                        <div
+                          style={{ background: themeVars.colors.primaryLight }}
+                        />
+                      </div>
+                      <Typography
+                        variant="caption"
+                        style={{
+                          textAlign: "center",
+                          // marginTop: 10,
+                          color: themeVars.colors.primaryLight,
+                          marginBottom: 10
+                          // fontStyle: "italic"
+                        }}
+                      >
+                        Generating code...
+                      </Typography>
+                    </div>
+                  )}
+
                   <Tooltip
                     PopperProps={{
                       modifiers: {
@@ -879,63 +914,72 @@ class App extends SafeComponent {
                   >
                     <span>
                       {/* TODO: check validitiy and prompt, select all elements not valid */}
-                      <Button
-                        style={{ marginTop: 15, fontWeight: 400 }}
-                        size="small"
-                        fullWidth
-                        color="primary"
-                        variant="outlined"
-                        onClick={async () => {
-                          this.selectionWithImages = null;
-                          parent.postMessage(
-                            {
-                              pluginMessage: {
-                                type: "getSelectionWithImages"
-                              }
-                            },
-                            "*"
-                          );
+                      {!this.generatingCode && (
+                        <Button
+                          style={{ marginTop: 15, fontWeight: 400 }}
+                          size="small"
+                          fullWidth
+                          disabled={this.generatingCode}
+                          color="primary"
+                          variant="outlined"
+                          onClick={async () => {
+                            this.selectionWithImages = null;
+                            parent.postMessage(
+                              {
+                                pluginMessage: {
+                                  type: "getSelectionWithImages"
+                                }
+                              },
+                              "*"
+                            );
 
-                          await when(() => !!this.selectionWithImages);
+                            this.generatingCode = true;
 
-                          if (
-                            !(
-                              this.selectionWithImages &&
-                              this.selectionWithImages[0]
-                            )
-                          ) {
-                            console.warn("No selection with images");
-                            return;
-                          }
-                          // TODO: analyze if page is properly nested and annotated, if not
-                          // suggest in the UI what needs grouping
-                          const block = figmaToBuilder(this
-                            .selectionWithImages[0] as any);
+                            await when(() => !!this.selectionWithImages);
 
-                          const data = {
-                            data: {
-                              blocks: [block]
+                            if (
+                              !(
+                                this.selectionWithImages &&
+                                this.selectionWithImages[0]
+                              )
+                            ) {
+                              console.warn("No selection with images");
+                              return;
                             }
-                          };
+                            // TODO: analyze if page is properly nested and annotated, if not
+                            // suggest in the UI what needs grouping
+                            const block = figmaToBuilder(this
+                              .selectionWithImages[0] as any);
 
-                          var json = JSON.stringify(data);
-                          var blob = new Blob([json], {
-                            type: "application/json"
-                          });
+                            const data = {
+                              data: {
+                                blocks: [block]
+                              }
+                            };
 
-                          const link = document.createElement("a");
-                          link.setAttribute("href", URL.createObjectURL(blob));
-                          link.setAttribute("download", "page.builder.json");
-                          document.body.appendChild(link); // Required for FF
+                            var json = JSON.stringify(data);
+                            var blob = new Blob([json], {
+                              type: "application/json"
+                            });
 
-                          link.click();
-                          document.body.removeChild(link);
+                            const link = document.createElement("a");
+                            link.setAttribute(
+                              "href",
+                              URL.createObjectURL(blob)
+                            );
+                            link.setAttribute("download", "page.builder.json");
+                            document.body.appendChild(link); // Required for FF
 
-                          this.selectionWithImages = null;
-                        }}
-                      >
-                        Export to code
-                      </Button>
+                            link.click();
+                            document.body.removeChild(link);
+
+                            this.generatingCode = false;
+                            this.selectionWithImages = null;
+                          }}
+                        >
+                          Export to code
+                        </Button>
+                      )}
                     </span>
                   </Tooltip>
                 </div>
@@ -949,7 +993,7 @@ class App extends SafeComponent {
           Made with ❤️ by{" "}
           <a
             style={{ color: themeVars.colors.primary }}
-            href="https://builder.io"
+            href="https://builder.io?ref=figma"
             target="_blank"
           >
             Builder.io

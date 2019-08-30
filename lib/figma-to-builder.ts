@@ -1,59 +1,14 @@
 import { BuilderElement } from "@builder.io/sdk";
-
+import { arrayBufferToBase64 } from "./functions/buffer-to-base64";
+type ComponentType =
+  | "row"
+  | "stack"
+  | "columns"
+  | "grid"
+  | "canvas"
+  | "unknown";
 interface NodeMetaData {
-  component?: "row" | "stack" | "columns" | "canvas" | "unknown";
-}
-
-function base64ArrayBuffer(bytes: Uint8Array) {
-  var base64 = "";
-  var encodings =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-  var byteLength = bytes.byteLength;
-  var byteRemainder = byteLength % 3;
-  var mainLength = byteLength - byteRemainder;
-
-  var a, b, c, d;
-  var chunk;
-
-  // Main loop deals with bytes in chunks of 3
-  for (var i = 0; i < mainLength; i = i + 3) {
-    // Combine the three bytes into a single integer
-    chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
-
-    // Use bitmasks to extract 6-bit segments from the triplet
-    a = (chunk & 16515072) >> 18; // 16515072 = (2^6 - 1) << 18
-    b = (chunk & 258048) >> 12; // 258048   = (2^6 - 1) << 12
-    c = (chunk & 4032) >> 6; // 4032     = (2^6 - 1) << 6
-    d = chunk & 63; // 63       = 2^6 - 1
-
-    // Convert the raw binary segments to the appropriate ASCII encoding
-    base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
-  }
-
-  // Deal with the remaining bytes and padding
-  if (byteRemainder == 1) {
-    chunk = bytes[mainLength];
-
-    a = (chunk & 252) >> 2; // 252 = (2^6 - 1) << 2
-
-    // Set the 4 least significant bits to zero
-    b = (chunk & 3) << 4; // 3   = 2^2 - 1
-
-    base64 += encodings[a] + encodings[b] + "==";
-  } else if (byteRemainder == 2) {
-    chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
-
-    a = (chunk & 64512) >> 10; // 64512 = (2^6 - 1) << 10
-    b = (chunk & 1008) >> 4; // 1008  = (2^6 - 1) << 4
-
-    // Set the 2 least significant bits to zero
-    c = (chunk & 15) << 2; // 15    = 2^4 - 1
-
-    base64 += encodings[a] + encodings[b] + encodings[c] + "=";
-  }
-
-  return base64;
+  component?: ComponentType;
 }
 
 export const hasChildren = (node: unknown): node is ChildrenMixin =>
@@ -73,6 +28,19 @@ export const isFrameNode = (node: unknown): node is FrameNode =>
 
 export const isGeometryNode = (node: unknown): node is GeometryMixin =>
   !!(node && (node as any).fills);
+
+export const isImage = (node: unknown): node is GeometryMixin =>
+  Boolean(
+    isGeometryNode(node) &&
+      typeof node.fills !== "symbol" &&
+      node.fills.find(item => item.type === "IMAGE")
+  );
+
+export const getImage = (node: unknown) =>
+  (isGeometryNode(node) &&
+    typeof node.fills !== "symbol" &&
+    (node.fills.find(item => item.type === "IMAGE") as ImagePaint)) ||
+  null;
 
 export const getMetadata = (node: SceneNode): NodeMetaData | null => {
   const anyNode = node as any;
@@ -110,18 +78,29 @@ const el = (options?: Partial<BuilderElement>): BuilderElement => ({
   ...options
 });
 
-export function getCss(node: SceneNode) {
-  const useAbsolute = ["canvas", "unknown"].includes(
-    getAssumeLayoutTypeForNode(node)
-  );
+export function getCss(node: SceneNode, parent: SceneNode | null) {
+  const layout = getAssumeLayoutTypeForNode(node);
+  const useAbsolute =
+    parent &&
+    ["canvas", "unknown"].includes(getAssumeLayoutTypeForNode(parent));
 
   const numberValue = <T>(thing: T, property: keyof T) =>
     typeof thing[property] === "number" ? thing[property] + "px" : undefined;
+
+  const image = getImage(node);
+
+  // TODO: top and left margin distances
 
   const styles: Partial<CSSStyleDeclaration> = {
     display: "flex",
     flexDirection: "column",
     position: "relative",
+    ...(layout === "stack" && {
+      flexDirection: "column"
+    }),
+    ...(layout === "grid" && {
+      flexWrap: "wrap"
+    }),
     ...(useAbsolute && {
       position: "absolute",
       top: node.y + "px",
@@ -152,21 +131,16 @@ export function getCss(node: SceneNode) {
           }
         }
         if (fill.type === "IMAGE") {
-          const intArr = (fill as any).intArr as Uint8Array | undefined;
-          if (intArr) {
+          const url = (fill as any).url;
+          if (url) {
             // const buffer = intArr.buffer;
             // TODO: upload to Builder
-            try {
-              const url = "data:image/png;base64," + base64ArrayBuffer(intArr);
-              styles.backgroundImage = `url("${url}")`;
-              // TODO: detect contain too
-              styles.backgroundSize =
-                fill.scaleMode === "FIT" ? "contain" : "cover"; // fill.
-              styles.backgroundRepeat = "no-repeat";
-              styles.backgroundPosition = "center";
-            } catch (err) {
-              console.warn("Could not set background image", node, fill, err);
-            }
+            styles.backgroundImage = `url("${url}")`;
+            // TODO: detect contain too
+            styles.backgroundSize =
+              fill.scaleMode === "FIT" ? "contain" : "cover"; // fill.
+            styles.backgroundRepeat = "no-repeat";
+            styles.backgroundPosition = "center";
           }
           // TODO:
           // const { color } = fill;
@@ -191,11 +165,83 @@ export function getCss(node: SceneNode) {
   return styles;
 }
 
-export function figmaToBuilder(node: SceneNode): BuilderElement {
+export function sortChildren(nodes: SceneNode[]) {
+  const sortBy = <T>(arr: T[], fn: (item: T) => any) => {
+    return arr.sort((a, b) => {
+      const aVal = fn(a);
+      const bVal = fn(b);
+      return aVal > bVal ? 1 : bVal > aVal ? -1 : 0;
+    });
+  };
+
+  // TODO: this is wrong for grids
+  return sortBy(nodes, node => node.x + node.y);
+}
+
+export function processBackgroundLayer(node: SceneNode) {
+  if (hasChildren(node)) {
+    const lastChild = node.children[node.children.length - 1];
+    if (
+      lastChild.x === 0 &&
+      lastChild.y === 0 &&
+      lastChild.width === node.width &&
+      lastChild.height === node.height
+    ) {
+      console.log("replacing a background");
+      const last = (node.children as SceneNode[]).pop();
+      Object.assign(node, last, {
+        type: node.type
+      });
+    }
+  }
+}
+export function processFillImages(node: SceneNode) {
+  if (isGeometryNode(node)) {
+    if (Array.isArray(node.fills)) {
+      (node.fills as Paint[]).forEach(fill => {
+        if (!fill.visible) {
+          return;
+        }
+        if (fill.type === "IMAGE") {
+          const intArr = (fill as any).intArr as Uint8Array | undefined;
+          if (intArr) {
+            // const buffer = intArr.buffer;
+            // TODO: upload to Builder
+            try {
+              const url =
+                "data:image/png;base64," + arrayBufferToBase64(intArr);
+              (fill as any).url = url;
+            } catch (err) {
+              console.warn("Could not set background image", node, fill, err);
+            }
+          }
+        }
+      });
+    }
+  }
+}
+
+export function figmaToBuilder(
+  figmaNode: SceneNode,
+  parent?: SceneNode | null
+): BuilderElement {
+  // TODO: unsafe - be sure to clone this preserving Uint8Array
+  const node = figmaNode;
+
+  processBackgroundLayer(node);
+  processFillImages(node);
+
+  const layout = getAssumeLayoutTypeForNode(node);
+
+  const children =
+    hasChildren(node) && sortChildren(node.children as SceneNode[]);
+
+  const image = getImage(node);
+
   return el({
     // id: "builder-" + node.id,
     responsiveStyles: {
-      large: getCss(node)
+      large: getCss(node, parent || null)
     },
     layerName: node.name,
     component: isTextNode(node)
@@ -205,10 +251,35 @@ export function figmaToBuilder(node: SceneNode): BuilderElement {
             text: node.characters || ""
           }
         }
+      : layout === "columns"
+      ? {
+          name: "Columns",
+          // TODO: gutter var = average distance
+          options: {
+            // TODO: widths
+            columns:
+              children &&
+              children.map((child: SceneNode) => ({
+                blocks: [figmaToBuilder(child)]
+              }))
+          }
+        }
+      : image
+      ? // TODO: delete background image if set
+        {
+          name: "Image",
+          options: {
+            image: (image as any).url,
+            aspectRatio: node.height / node.width,
+            backgroundPosition: "center",
+            backgroundSize: image.scaleMode === "FIT" ? "contain" : "cover"
+          }
+        }
       : undefined,
-    children: hasChildren(node)
-      ? node.children.map(child => figmaToBuilder(child))
-      : undefined
+    children:
+      children && layout !== "columns"
+        ? children.map((child: SceneNode) => figmaToBuilder(child, node))
+        : undefined
   });
 }
 
@@ -217,12 +288,64 @@ export function canConvertToBuilder(node: SceneNode) {
   return Boolean(assumed && assumed !== "unknown");
 }
 
-// TODO: full info like margins too...
-export function getAssumeLayoutTypeForNode(node: SceneNode) {
+export const collidesVertically = (a: SceneNode, b: SceneNode) =>
+  a.y + a.height > b.y && a.y < b.y + b.height;
+
+export const collidesHorizontally = (a: SceneNode, b: SceneNode) =>
+  a.width + a.x > b.x && a.x < b.width + b.x;
+
+export const collides = (a: SceneNode, b: SceneNode) =>
+  collidesVertically(a, b) && collidesHorizontally(a, b);
+
+// Margins
+// Ordering
+export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
   // TODO: check metadata, if not available fall back by position of inner elements
   const data = getMetadata(node);
   if (data && data.component) {
     return data.component;
   }
+
+  if (hasChildren(node)) {
+    let mostVerticalCollisions = 0;
+    let mostHorizontalCollisions = 0;
+    if (node.children.length === 1) {
+      return "stack";
+    }
+    for (const child of node.children) {
+      const siblings = node.children.filter(sibling => sibling !== child);
+      const horizontalCollisions = siblings.filter(sibling =>
+        collidesHorizontally(sibling, child)
+      ).length;
+      if (horizontalCollisions > mostHorizontalCollisions) {
+        mostHorizontalCollisions = horizontalCollisions;
+      }
+
+      const verticalCollisions = siblings.filter(sibling =>
+        collidesVertically(sibling, child)
+      ).length;
+      if (verticalCollisions > mostVerticalCollisions) {
+        mostVerticalCollisions = verticalCollisions;
+      }
+    }
+
+    if (mostHorizontalCollisions > 1 && mostHorizontalCollisions > 1) {
+      return "grid"; // "wrap"?
+    }
+
+    if (mostVerticalCollisions > mostHorizontalCollisions) {
+      return "stack";
+    }
+
+    const widths = node.children.map(item => item.width);
+    // If each width is alost the same
+    const minWidth = Math.min(...widths);
+    const maxWidth = Math.max(...widths);
+    if (maxWidth - minWidth < maxWidth / 10) {
+      return "columns";
+    }
+    return "row";
+  }
+
   return "unknown";
 }
