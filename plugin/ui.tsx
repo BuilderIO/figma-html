@@ -1,6 +1,6 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { observable, computed, action } from "mobx";
+import { observable, computed, action, when } from "mobx";
 import { observer } from "mobx-react";
 import {
   createMuiTheme,
@@ -41,19 +41,14 @@ import {
   figmaToBuilder,
   getAssumeLayoutTypeForNode
 } from "../lib/figma-to-builder";
-
-declare var process: {
-  env: {
-    NODE_ENV: "production" | "development" | undefined;
-    API_ROOT: string | undefined;
-  };
-};
+import * as fileType from "file-type";
 
 const WIDTH_LS_KEY = "builder.widthSetting";
 const FRAMES_LS_KEY = "builder.useFramesSetting";
 const EXPERIMENTS_LS_KEY = "builder.showExperiments";
 const MORE_OPTIONS_LS_KEY = "builder.showMoreOptions";
 
+// TODO: make async and use figma.clientStorage
 function lsGet(key: string) {
   try {
     return JSON.parse(localStorage.getItem(key)!);
@@ -109,47 +104,69 @@ function getImageFills(layer: Node) {
 // TODO: CACHE!
 async function processImages(layer: Node) {
   const images = getImageFills(layer);
+
+  const convertToSvg = (value: string) => {
+    (layer as any).type = "SVG";
+    (layer as any).svg = value;
+    if (typeof layer.fills !== "symbol") {
+      layer.fills = layer.fills.filter(item => item.type !== "IMAGE");
+    }
+  };
   return images
     ? Promise.all(
-        images.map(image => {
-          if (image) {
-            const url = image.url;
-            if (url.startsWith("data:")) {
-              const type = url.split(/[:,;]/)[1];
-              if (type.includes("svg")) {
-                const svgValue = decodeURIComponent(url.split(",")[1]);
-                (layer as any).type = "SVG";
-                (layer as any).svg = svgValue;
-                layer.fills = [];
-                return Promise.resolve();
-              } else {
-                if (url.includes(BASE64_MARKER)) {
-                  image.intArr = convertDataURIToBinary(url);
-                  delete image.url;
+        images.map(async image => {
+          try {
+            if (image) {
+              const url = image.url;
+              if (url.startsWith("data:")) {
+                const type = url.split(/[:,;]/)[1];
+                if (type.includes("svg")) {
+                  const svgValue = decodeURIComponent(url.split(",")[1]);
+                  convertToSvg(svgValue);
+                  return Promise.resolve();
                 } else {
-                  console.info(
-                    "Found data url that could not be converted",
-                    url
-                  );
+                  if (url.includes(BASE64_MARKER)) {
+                    image.intArr = convertDataURIToBinary(url);
+                    delete image.url;
+                  } else {
+                    console.info(
+                      "Found data url that could not be converted",
+                      url
+                    );
+                  }
+                  return;
                 }
-                return Promise.resolve();
+              }
+
+              const isSvg = url.endsWith(".svg");
+              const res = await fetch(
+                "https://builder.io/api/v1/proxy-api?url=" +
+                  encodeURIComponent(url)
+              );
+
+              const contentType = res.headers.get("content-type");
+              if (isSvg || (contentType && contentType.includes("svg"))) {
+                const text = await res.text();
+                convertToSvg(text);
+              } else {
+                const arrayBuffer = await res.arrayBuffer();
+                const type = fileType(arrayBuffer);
+                if (
+                  type &&
+                  (type.ext.includes("svg") || type.mime.includes("svg"))
+                ) {
+                  convertToSvg(await res.text());
+                  return
+                } else {
+                  const intArr = new Uint8Array(arrayBuffer);
+                  delete image.url;
+                  image.intArr = intArr;
+                }
               }
             }
-            return fetch(
-              "https://builder.io/api/v1/proxy-api?url=" +
-                encodeURIComponent(url)
-            )
-              .then(res => res.arrayBuffer())
-              .then(buffer => {
-                const intArr = new Uint8Array(buffer);
-                delete image.url;
-                image.intArr = intArr;
-              })
-              .catch(err => {
-                console.warn("Image fetch error", err, image, layer);
-              });
+          } catch (err) {
+            console.warn("Could not fetch image", layer, err);
           }
-          return Promise.resolve();
         })
       )
     : Promise.resolve([]);
@@ -215,6 +232,11 @@ class App extends SafeComponent {
     false;
   @observable showMoreOptions = lsGet(MORE_OPTIONS_LS_KEY) || false;
   @observable selection: (BaseNode & { data?: { [key: string]: any } })[] = [];
+  @observable.ref selectionWithImages:
+    | (BaseNode & {
+        data?: { [key: string]: any };
+      })[]
+    | null = null;
 
   @observable commandKeyDown = false;
   @observable shiftKeyDown = false;
@@ -308,18 +330,7 @@ class App extends SafeComponent {
     this.safeListenToEvent(window, "online", () => (this.online = true));
 
     this.safeListenToEvent(window, "message", e => {
-      const { data: rawData, source } = (e as MessageEvent);
-      if (rawData && rawData.type) {
-        if (rawData.type === "builder.loaded") {
-          console.log("got message...", source);
-          if (source && this.dataToPost) {
-            source.postMessage({
-              type: "builder.updateEditorData",
-              data: this.dataToPost
-            }, '*');
-          }
-        }
-      }
+      const { data: rawData, source } = e as MessageEvent;
 
       const data = rawData.pluginMessage;
       if (!data) {
@@ -327,6 +338,13 @@ class App extends SafeComponent {
       }
       if (data.type === "selectionChange") {
         this.selection = data.elements;
+      }
+      if (data.type === "selectionWithImages") {
+        console.log("selection with images", data);
+        this.selectionWithImages = data.elements;
+      }
+      if (data.type === "doneLoading") {
+        this.loading = false;
       }
     });
 
@@ -422,9 +440,6 @@ class App extends SafeComponent {
             { pluginMessage: { type: "import", data: data[0] } },
             "*"
           );
-          // setTimeout(() => {
-          //   this.loading = false;
-          // }, 50);
         })
         .catch(err => {
           this.loading = false;
@@ -870,23 +885,53 @@ class App extends SafeComponent {
                         fullWidth
                         color="primary"
                         variant="outlined"
-                        onClick={() => {
+                        onClick={async () => {
+                          this.selectionWithImages = null;
+                          parent.postMessage(
+                            {
+                              pluginMessage: {
+                                type: "getSelectionWithImages"
+                              }
+                            },
+                            "*"
+                          );
+
+                          await when(() => !!this.selectionWithImages);
+
+                          if (
+                            !(
+                              this.selectionWithImages &&
+                              this.selectionWithImages[0]
+                            )
+                          ) {
+                            console.warn("No selection with images");
+                            return;
+                          }
                           // TODO: analyze if page is properly nested and annotated, if not
                           // suggest in the UI what needs grouping
                           const block = figmaToBuilder(this
-                            .selection[0] as any);
+                            .selectionWithImages[0] as any);
 
                           const data = {
                             data: {
                               blocks: [block]
                             }
                           };
-                          this.dataToPost = data;
-                          open(
-                            // TODO: attempt to pass data in URL
-                            "http://localhost:1234/studio",
-                            "_blank"
-                          );
+
+                          var json = JSON.stringify(data);
+                          var blob = new Blob([json], {
+                            type: "application/json"
+                          });
+
+                          const link = document.createElement("a");
+                          link.setAttribute("href", URL.createObjectURL(blob));
+                          link.setAttribute("download", "page.builder.json");
+                          document.body.appendChild(link); // Required for FF
+
+                          link.click();
+                          document.body.removeChild(link);
+
+                          this.selectionWithImages = null;
                         }}
                       >
                         Export to code

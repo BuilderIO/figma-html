@@ -1,6 +1,7 @@
 import { traverseLayers } from "./functions/traverse-layers";
 import { settings } from "./constants/settings";
 import { fastClone } from "./functions/fast-clone";
+import { isGeometryNode } from "../lib/figma-to-builder";
 
 // This shows the HTML page in "ui.html".
 figma.showUI(__html__, {
@@ -69,20 +70,57 @@ const selectionIds = (selection: ReadonlyArray<SceneNode>) =>
 
 let selection: ReadonlyArray<SceneNode> = [];
 
-function serialize(
-  element: DefaultContainerMixin & BaseNode & FrameNode & RectangleNode
-) {
-  return fastClone({
+async function serialize(
+  element: DefaultContainerMixin &
+    BaseNode &
+    FrameNode &
+    RectangleNode &
+    TextNode,
+  options: {
+    withImages?: boolean;
+    withChildren?: boolean;
+  } = {}
+): Promise<any> {
+  const fills =
+    (element.fills && (fastClone(element.fills) as Paint[])) || undefined;
+  if (options.withImages && fills) {
+    for (const fill of fills) {
+      if (fill.type === "IMAGE" && fill.imageHash) {
+        const image = figma.getImageByHash(fill.imageHash);
+        try {
+          const bytes = await image.getBytesAsync();
+          (fill as any).intArr = bytes;
+        } catch (err) {
+          console.warn("Could not get image for layer", element, fill, err);
+        }
+      }
+    }
+  }
+  // TODO: better way to enumerate everything, including getters, that is not function
+  return {
     id: element.id,
     type: element.type,
     x: element.x,
     y: element.y,
     width: element.width,
     height: element.height,
+    characters: element.characters,
     data: JSON.parse(element.getSharedPluginData("builder", "data") || "{}"),
-    children: element.children && element.children.map(child => serialize(child as any)) || undefined,
+    children:
+      (options.withChildren &&
+        element.children &&
+        (await Promise.all(
+          element.children.map(child => serialize(child as any, options))
+        ))) ||
+      undefined,
     constraints: element.constraints,
-    fills: element.fills,
+    fills: fills,
+    fontSize: element.fontSize,
+    fontName: element.fontName,
+    lineHeight: element.lineHeight,
+    letterSpacing: element.letterSpacing,
+    textAlignVertical: element.textAlignVertical,
+    textAlignHorizontal: element.textAlignHorizontal,
     backgrounds: element.backgrounds,
     name: element.name,
     removed: element.removed,
@@ -111,15 +149,17 @@ function serialize(
     topRightRadius: element.topRightRadius,
     bottomLeftRadius: element.bottomLeftRadius,
     bottomRightRadius: element.bottomLeftRadius
-  });
+  };
 }
 
-setInterval(() => {
+setInterval(async () => {
   if (selectionIds(selection) !== selectionIds(figma.currentPage.selection)) {
     selection = figma.currentPage.selection;
     figma.ui.postMessage({
       type: "selectionChange",
-      elements: figma.currentPage.selection.map(el => serialize(el as any))
+      elements: await Promise.all(
+        figma.currentPage.selection.map(el => serialize(el as any))
+      )
     });
   }
 }, 200);
@@ -155,6 +195,20 @@ figma.ui.onmessage = async msg => {
   }
   if (msg.type === "resize") {
     figma.ui.resize(msg.width, msg.height);
+  }
+
+  if (msg.type === "getSelectionWithImages") {
+    figma.ui.postMessage({
+      type: "selectionWithImages",
+      elements: await Promise.all(
+        figma.currentPage.selection.slice(0, 1).map(el =>
+          serialize(el as any, {
+            withChildren: true,
+            withImages: true
+          })
+        )
+      )
+    });
   }
 
   if (msg.type === "updateElements") {
@@ -266,8 +320,17 @@ figma.ui.onmessage = async msg => {
     if (frameRoot.type === "FRAME") {
       figma.currentPage.selection = [frameRoot];
     }
+
+    figma.ui.postMessage({
+      type: "doneLoading",
+      rootId: frameRoot.id
+    });
+
     figma.viewport.scrollAndZoomIntoView([frameRoot]);
-    figma.closePlugin();
+
+    if (process.env.NODE_ENV !== "development") {
+      figma.closePlugin();
+    }
   }
 
   // Make sure to close the plugin when you're done. Otherwise the plugin will
