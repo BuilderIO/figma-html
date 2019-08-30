@@ -488,6 +488,17 @@ class App extends SafeComponent {
           }}
         >
           <div style={{ display: "flex", flexDirection: "column" }}>
+            {this.showExperimental && (
+              <div
+                style={{
+                  fontWeight: "bold",
+                  fontSize: 11,
+                  marginBottom: 10
+                }}
+              >
+                Import from code
+              </div>
+            )}
             <div style={{ display: "flex", position: "relative" }}>
               <TextField
                 inputProps={{
@@ -740,7 +751,8 @@ class App extends SafeComponent {
                   // fontStyle: "italic"
                 }}
               >
-                Deep analyzing code... this can take a couple minutes...
+                Deep analyzing code... <br />
+                This can take a couple minutes...
               </Typography>
               {/* <LinearProgress
                 variant="query"
@@ -909,11 +921,10 @@ class App extends SafeComponent {
                       {!this.generatingCode && (
                         <Button
                           style={{ marginTop: 15, fontWeight: 400 }}
-                          size="small"
                           fullWidth
                           disabled={this.generatingCode}
                           color="primary"
-                          variant="outlined"
+                          variant="contained"
                           onClick={async () => {
                             this.selectionWithImages = null;
                             parent.postMessage(

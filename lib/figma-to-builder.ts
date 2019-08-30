@@ -78,10 +78,29 @@ const el = (options?: Partial<BuilderElement>): BuilderElement => ({
   ...options
 });
 
+const isCenteredX = (node: SceneNode, parent: SceneNode) => {
+  const nodeCenterX = node.x + node.width / 2;
+  const parentCenterX = parent.x + parent.width / 2;
+  return Math.abs(nodeCenterX - parentCenterX) < 5;
+};
+const isCenteredY = (node: SceneNode, parent: SceneNode) => {
+  const nodeCenterY = node.y + node.height / 2;
+  const parentCenterY = parent.y + parent.height / 2;
+  //                                            <3 lol
+  return Math.abs(nodeCenterY - parentCenterY) < 5;
+};
+
+const isImageNode = (node: SceneNode) => {
+  const image = getImage(node);
+  const assumedLayout = getAssumeLayoutTypeForNode(node)
+  return image && !isTextNode(node) && assumedLayout !== 'columns'
+}
+
 export function getCss(node: SceneNode, parent: SceneNode | null) {
   const layout = getAssumeLayoutTypeForNode(node);
   const parentLayout = parent && getAssumeLayoutTypeForNode(parent);
   const useAbsolute = false as boolean;
+
   // parentLayout && ["canvas", "unknown"].includes(parentLayout);
 
   const numberValue = <T>(thing: T, property: keyof T) =>
@@ -93,12 +112,13 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
     display: "flex",
     position: "relative",
     flexShrink: "0",
+    flexDirection: "column",
     boxSizing: "border-box",
-    ...(layout === "stack" && {
-      flexDirection: "column",
-      alignItems: "stretch"
+    ...(layout === "row" && {
+      flexDirection: "row"
     }),
     ...(layout === "grid" && {
+      flexDirection: "row",
       flexWrap: "wrap"
     }),
     ...(useAbsolute && {
@@ -115,18 +135,44 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
     const index = parent.children.indexOf(node);
     const priorSibling = index > 0 && parent.children[index - 1];
     if (parentLayout === "stack") {
-      styles.marginLeft = node.x + "px";
-      if (priorSibling) {
-        styles.marginTop = `${node.y -
-          (priorSibling.y + priorSibling.height)}px`;
+      if (isCenteredX(node, parent) && node.x) {
+        styles.marginLeft = "auto";
+        styles.marginRight = "auto";
+      } else {
+        styles.marginLeft = node.x + "px";
+      }
+
+      if (isCenteredY(node, parent) && node.y) {
+        styles.marginTop = "auto";
+        styles.marginBottom = "auto";
+      } else if (priorSibling) {
+        styles.marginTop = `${Math.max(
+          node.y - (priorSibling.y + priorSibling.height),
+          0
+        )}px`;
+      } else {
+        styles.marginTop = node.y + 'px'
       }
     }
 
     if (parentLayout === "row") {
-      styles.marginTop = node.y + "px";
-      if (priorSibling) {
-        styles.marginLeft = `${node.x -
-          (priorSibling.x + priorSibling.width)}px`;
+      if (isCenteredY(node, parent) && node.y) {
+        styles.marginTop = "auto";
+        styles.marginBottom = "auto";
+      } else {
+        styles.marginTop = node.y + "px";
+      }
+
+      if (isCenteredX(node, parent) && node.x) {
+        styles.marginLeft = "auto";
+        styles.marginRight = "auto";
+      } else if (priorSibling) {
+        styles.marginLeft = `${Math.max(
+          node.x - (priorSibling.x + priorSibling.width),
+          0
+        )}px`;
+      } else {
+        styles.marginLeft = node.x + 'px'
       }
     }
   }
@@ -134,14 +180,14 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
   if (hasChildren(node)) {
     if (layout === "stack") {
       const lastChild = last(node.children);
-      if (lastChild) {
+      if (lastChild && !isCenteredY(lastChild, node) && !isImageNode(node)) {
         styles.paddingBottom =
           Math.max(node.height - (lastChild.y + lastChild.height), 0) + "px";
       }
     }
     if (layout === "row") {
       const lastChild = last(node.children);
-      if (lastChild) {
+      if (lastChild && !isCenteredX(lastChild, node)) {
         styles.paddingRight =
           Math.max(node.width - (lastChild.x + lastChild.width), 0) + "px";
       }
@@ -170,8 +216,8 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
         }
         if (fill.type === "IMAGE") {
           if (
-            !isTextNode(node) &&
-            getAssumeLayoutTypeForNode(node) !== "columns"
+            isTextNode(node) ||
+            getAssumeLayoutTypeForNode(node) === "columns"
           ) {
             const url = (fill as any).url;
             if (url) {
@@ -221,6 +267,7 @@ export function processBackgroundLayer(node: SceneNode) {
   if (hasChildren(node)) {
     const lastChild = node.children[0];
     if (
+      !hasChildren(lastChild) &&
       lastChild.x === 0 &&
       lastChild.y === 0 &&
       lastChild.width === node.width &&
@@ -306,6 +353,7 @@ export function figmaToBuilder(
             columns:
               children &&
               children.map((child: SceneNode) => ({
+                // width: 100 / children.length,
                 blocks: [figmaToBuilder(child)]
               }))
           }
