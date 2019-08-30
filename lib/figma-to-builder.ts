@@ -81,8 +81,8 @@ const el = (options?: Partial<BuilderElement>): BuilderElement => ({
 export function getCss(node: SceneNode, parent: SceneNode | null) {
   const layout = getAssumeLayoutTypeForNode(node);
   const parentLayout = parent && getAssumeLayoutTypeForNode(parent);
-  const useAbsolute = false as boolean
-    // parentLayout && ["canvas", "unknown"].includes(parentLayout);
+  const useAbsolute = false as boolean;
+  // parentLayout && ["canvas", "unknown"].includes(parentLayout);
 
   const numberValue = <T>(thing: T, property: keyof T) =>
     typeof thing[property] === "number" ? thing[property] + "px" : undefined;
@@ -334,6 +334,12 @@ export function canConvertToBuilder(node: SceneNode) {
   return Boolean(assumed && assumed !== "unknown");
 }
 
+export const collidesVertically = (a: SceneNode, b: SceneNode, margin = 0) =>
+  a.y + a.height + margin > b.y && a.y - margin < b.y + b.height;
+
+export const collidesHorizontally = (a: SceneNode, b: SceneNode) =>
+  a.x + a.width > b.x && a.x < b.x + b.width;
+
 export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
   const data = getMetadata(node);
   if (data && data.component) {
@@ -357,20 +363,42 @@ export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
     if (children.length < 2) {
       return "stack";
     }
-    const minX = sortBy(children, child => child.x)[0];
-    const maxX = last(sortBy(children, child => child.x + child.width));
-    const xDelta = maxX.x + maxX.width - minX.x;
 
-    const minY = sortBy(children, child => child.y)[0];
-    const maxY = last(sortBy(children, child => child.y + child.width));
-    const yDelta = maxY.y + maxY.width - minY.y;
+    let xOverlap = 0;
+    let yOverlap = 0;
+    for (const child of children) {
+      const siblings = children.filter(item => item !== child);
+      for (const sibling of siblings) {
+        const childLeft = child.x;
+        const childRight = child.x + child.width;
+        const siblingLeft = sibling.x;
+        const siblibgRight = sibling.x + sibling.width;
 
-    // TODO: if the overlaps are very similar, it is grid
-    if (Math.abs(xDelta - yDelta) < (xDelta - yDelta) / 2) {
-      return "grid";
+        const leastRight = Math.min(childRight, siblibgRight);
+        const mostLeft = Math.max(childLeft, siblingLeft);
+        if (leastRight > mostLeft) {
+          xOverlap += leastRight - mostLeft;
+        }
+
+        const childTop = child.y;
+        const childBottom = child.y + child.height;
+        const siblingTop = sibling.y;
+        const siblibgBottom = sibling.y + sibling.height;
+
+        const leastBottom = Math.min(childBottom, siblibgBottom);
+        const mostTop = Math.max(childTop, siblingTop);
+        if (leastBottom > mostTop) {
+          yOverlap += leastBottom - mostTop;
+        }
+      }
     }
 
-    if (yDelta > xDelta) {
+    // // TODO: if the overlaps are very similar, it is grid
+    // if (Math.abs(xOverlap - yOverlap) < (xOverlap - yOverlap) / 2) {
+    //   return "grid";
+    // }
+
+    if (xOverlap > yOverlap) {
       return "stack";
     }
 
