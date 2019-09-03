@@ -222,6 +222,11 @@ type InvalidComponentOption = typeof invalidComponentOption;
 @observer
 class App extends SafeComponent {
   @observable loading = false;
+  @observable apiRoot =
+    process.env.API_ROOT && process.env.NODE_ENV !== "production"
+      ? process.env.API_ROOT
+      : "https://builder.io";
+
   @observable generatingCode = false;
   @observable urlValue = "https://builder.io";
   @observable width = lsGet(WIDTH_LS_KEY) || "1200";
@@ -231,7 +236,7 @@ class App extends SafeComponent {
     lsGet(EXPERIMENTS_LS_KEY) ||
     process.env.NODE_ENV === "development" ||
     false;
-  @observable showMoreOptions = lsGet(MORE_OPTIONS_LS_KEY) || false;
+  @observable showMoreOptions = true; // lsGet(MORE_OPTIONS_LS_KEY) || false;
   @observable selection: (BaseNode & { data?: { [key: string]: any } })[] = [];
   @observable.ref selectionWithImages:
     | (BaseNode & {
@@ -396,10 +401,7 @@ class App extends SafeComponent {
       this.width = widthString;
       lsSet(WIDTH_LS_KEY, widthString);
 
-      const apiRoot =
-        process.env.API_ROOT && process.env.NODE_ENV !== "production"
-          ? process.env.API_ROOT
-          : "https://builder.io";
+      const apiRoot = this.apiRoot;
 
       const encocedUrl = encodeURIComponent(this.urlValue);
 
@@ -536,7 +538,7 @@ class App extends SafeComponent {
                   this.urlValue = value;
                 }}
               />
-              <div
+              {/* <div
                 style={{
                   position: "absolute",
                   right: -8,
@@ -571,7 +573,7 @@ class App extends SafeComponent {
                     />
                   </IconButton>
                 </Tooltip>
-              </div>
+              </div> */}
             </div>
             {this.showMoreOptions && (
               <div
@@ -660,43 +662,45 @@ class App extends SafeComponent {
                     </IconButton>
                   </div>
                 </div>
-                <Tooltip
-                  PopperProps={{
-                    modifiers: { flip: { behavior: ["top"] } }
-                  }}
-                  enterDelay={300}
-                  placement="top"
-                  title="Nest layers in frames"
-                >
-                  <FormControlLabel
-                    value="Use Frames"
-                    disabled={this.loading}
-                    style={{ marginLeft: 20 }}
-                    control={
-                      <Switch
-                        // disabled={this.loading}
-                        size="small"
-                        // style={{ marginLeft: 20 }}
-                        color="primary"
-                        value={this.useFrames}
-                        onChange={e => (this.useFrames = e.target.checked)}
-                      />
-                    }
-                    label={
-                      <span
-                        style={{
-                          fontSize: 12,
-                          opacity: 0.6,
-                          position: "relative",
-                          top: -5
-                        }}
-                      >
-                        Frames
-                      </span>
-                    }
-                    labelPlacement="top"
-                  />
-                </Tooltip>
+                {this.showExperimental && (
+                  <Tooltip
+                    PopperProps={{
+                      modifiers: { flip: { behavior: ["top"] } }
+                    }}
+                    enterDelay={300}
+                    placement="top"
+                    title="Nest layers in frames"
+                  >
+                    <FormControlLabel
+                      value="Use Frames"
+                      disabled={this.loading}
+                      style={{ marginLeft: 20 }}
+                      control={
+                        <Switch
+                          // disabled={this.loading}
+                          size="small"
+                          // style={{ marginLeft: 20 }}
+                          color="primary"
+                          value={this.useFrames}
+                          onChange={e => (this.useFrames = e.target.checked)}
+                        />
+                      }
+                      label={
+                        <span
+                          style={{
+                            fontSize: 12,
+                            opacity: 0.6,
+                            position: "relative",
+                            top: -5
+                          }}
+                        >
+                          Frames
+                        </span>
+                      }
+                      labelPlacement="top"
+                    />
+                  </Tooltip>
+                )}
               </div>
             )}
           </div>
@@ -751,7 +755,7 @@ class App extends SafeComponent {
                   // fontStyle: "italic"
                 }}
               >
-                Deep analyzing code... <br />
+                Analyzing code... <br />
                 This can take a couple minutes...
               </Typography>
               {/* <LinearProgress
@@ -792,205 +796,254 @@ class App extends SafeComponent {
           )} */}
         </form>
         {this.showExperimental && (
-          <div
-            style={{
-              marginTop: 15,
-              marginBottom: 15
-            }}
-          >
-            <Divider style={{ margin: "0 -15px" }} />
-            <div style={{ fontSize: 11 }}>
-              <div
-                style={{
-                  fontWeight: "bold",
-                  fontSize: 11,
-                  marginTop: 15
-                }}
-              >
-                Export to code
-              </div>
-
-              {!this.selection.length && (
-                <div style={{ marginTop: 15, color: "#888" }}>
-                  {this.selection.length} elements selected
+          <>
+            <div
+              style={{
+                marginTop: 15,
+                marginBottom: 10
+              }}
+            >
+              <Divider style={{ margin: "0 -15px" }} />
+              <div style={{ fontSize: 11 }}>
+                <div
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: 11,
+                    marginTop: 15
+                  }}
+                >
+                  Dev options
                 </div>
-              )}
-              {!!this.selection.length && (
-                <div style={{ marginTop: 15, color: "#888" }}>
-                  {/* Hello */}
-                  <TextField
-                    SelectProps={{
-                      renderValue: (val: any) => (
-                        <span
-                          style={{ textTransform: "capitalize", fontSize: 12 }}
-                        >
-                          {val}
-                        </span>
-                      )
-                    }}
-                    label="Component type"
-                    select
-                    fullWidth
-                    value={this.component}
-                    onChange={e => {
-                      const value = e.target.value;
-                      if (componentTypes.includes(value as Component)) {
-                        this.component = value as Component;
-                      }
-                    }}
-                  >
-                    {(componentTypes as string[])
-                      .concat([invalidComponentOption])
-                      .map(item => {
-                        const Icon = icons[item as Component];
-                        const text =
-                          componentDescription[item as Component] || "";
-                        return (
-                          <Tooltip
-                            enterDelay={500}
-                            title={text}
-                            key={item}
-                            open={text ? undefined : false}
+                <TextField
+                  label="API Root"
+                  fullWidth
+                  style={{ marginTop: 15 }}
+                  inputProps={{
+                    style: {
+                      fontSize: 13
+                    }
+                  }}
+                  value={this.apiRoot}
+                  onChange={e => {
+                    this.apiRoot = e.target.value;
+                  }}
+                />
+              </div>
+            </div>
+            <div
+              style={{
+                marginTop: 15,
+                marginBottom: 15
+              }}
+            >
+              <Divider style={{ margin: "0 -15px" }} />
+              <div style={{ fontSize: 11 }}>
+                <div
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: 11,
+                    marginTop: 15
+                  }}
+                >
+                  Export to code
+                </div>
+
+                {!this.selection.length && (
+                  <div style={{ marginTop: 15, color: "#888" }}>
+                    {this.selection.length} elements selected
+                  </div>
+                )}
+                {!!this.selection.length && (
+                  <div style={{ marginTop: 15, color: "#888" }}>
+                    {/* Hello */}
+                    <TextField
+                      SelectProps={{
+                        renderValue: (val: any) => (
+                          <span
+                            style={{
+                              textTransform: "capitalize",
+                              fontSize: 12
+                            }}
                           >
-                            <MenuItem
-                              style={{
-                                fontSize: 12,
-                                textTransform: "capitalize",
-                                opacity:
-                                  item === invalidComponentOption ? 0.5 : 1
-                              }}
-                              value={item}
-                            >
-                              <ListItemIcon>
-                                {Icon ? <Icon /> : <></>}
-                              </ListItemIcon>
-                              {item}
-                            </MenuItem>
-                          </Tooltip>
-                        );
-                      })}
-                  </TextField>
-
-                  {this.generatingCode && (
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                      <div
-                        style={{ margin: "10px auto 0" }}
-                        className="lds-ellipsis"
-                      >
-                        <div
-                          style={{ background: themeVars.colors.primaryLight }}
-                        />
-                        <div
-                          style={{ background: themeVars.colors.primaryLight }}
-                        />
-                        <div
-                          style={{ background: themeVars.colors.primaryLight }}
-                        />
-                        <div
-                          style={{ background: themeVars.colors.primaryLight }}
-                        />
-                      </div>
-                      <Typography
-                        variant="caption"
-                        style={{
-                          textAlign: "center",
-                          // marginTop: 10,
-                          color: themeVars.colors.primaryLight,
-                          marginBottom: 10
-                          // fontStyle: "italic"
-                        }}
-                      >
-                        Generating code...
-                      </Typography>
-                    </div>
-                  )}
-
-                  <Tooltip
-                    PopperProps={{
-                      modifiers: {
-                        preventOverflow: {
-                          boundariesElement: document.body
+                            {val}
+                          </span>
+                        )
+                      }}
+                      label="Component type"
+                      select
+                      fullWidth
+                      value={this.component}
+                      onChange={e => {
+                        const value = e.target.value;
+                        if (componentTypes.includes(value as Component)) {
+                          this.component = value as Component;
                         }
-                      }
-                    }}
-                    enterDelay={1000}
-                    title="Export to Builder to convert this page into responsive code and/or live websites"
-                  >
-                    <span>
-                      {/* TODO: check validitiy and prompt, select all elements not valid */}
-                      {!this.generatingCode && (
-                        <Button
-                          style={{ marginTop: 15, fontWeight: 400 }}
-                          fullWidth
-                          disabled={this.generatingCode}
-                          color="primary"
-                          variant="contained"
-                          onClick={async () => {
-                            this.selectionWithImages = null;
-                            parent.postMessage(
-                              {
-                                pluginMessage: {
-                                  type: "getSelectionWithImages"
-                                }
-                              },
-                              "*"
-                            );
+                      }}
+                    >
+                      {(componentTypes as string[])
+                        .concat([invalidComponentOption])
+                        .map(item => {
+                          const Icon = icons[item as Component];
+                          const text =
+                            componentDescription[item as Component] || "";
+                          return (
+                            <Tooltip
+                              enterDelay={500}
+                              title={text}
+                              key={item}
+                              open={text ? undefined : false}
+                            >
+                              <MenuItem
+                                style={{
+                                  fontSize: 12,
+                                  textTransform: "capitalize",
+                                  opacity:
+                                    item === invalidComponentOption ? 0.5 : 1
+                                }}
+                                value={item}
+                              >
+                                <ListItemIcon>
+                                  {Icon ? <Icon /> : <></>}
+                                </ListItemIcon>
+                                {item}
+                              </MenuItem>
+                            </Tooltip>
+                          );
+                        })}
+                    </TextField>
 
-                            this.generatingCode = true;
-
-                            await when(() => !!this.selectionWithImages);
-
-                            if (
-                              !(
-                                this.selectionWithImages &&
-                                this.selectionWithImages[0]
-                              )
-                            ) {
-                              console.warn("No selection with images");
-                              return;
-                            }
-
-                            // TODO: analyze if page is properly nested and annotated, if not
-                            // suggest in the UI what needs grouping
-                            const block = figmaToBuilder(this
-                              .selectionWithImages[0] as any);
-
-                            const data = {
-                              data: {
-                                blocks: [block]
-                              }
-                            };
-
-                            var json = JSON.stringify(data);
-                            var blob = new Blob([json], {
-                              type: "application/json"
-                            });
-
-                            const link = document.createElement("a");
-                            link.setAttribute(
-                              "href",
-                              URL.createObjectURL(blob)
-                            );
-                            link.setAttribute("download", "page.builder.json");
-                            document.body.appendChild(link); // Required for FF
-
-                            link.click();
-                            document.body.removeChild(link);
-
-                            this.generatingCode = false;
-                            this.selectionWithImages = null;
+                    {this.generatingCode && (
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <div
+                          style={{ margin: "10px auto 0" }}
+                          className="lds-ellipsis"
+                        >
+                          <div
+                            style={{
+                              background: themeVars.colors.primaryLight
+                            }}
+                          />
+                          <div
+                            style={{
+                              background: themeVars.colors.primaryLight
+                            }}
+                          />
+                          <div
+                            style={{
+                              background: themeVars.colors.primaryLight
+                            }}
+                          />
+                          <div
+                            style={{
+                              background: themeVars.colors.primaryLight
+                            }}
+                          />
+                        </div>
+                        <Typography
+                          variant="caption"
+                          style={{
+                            textAlign: "center",
+                            // marginTop: 10,
+                            color: themeVars.colors.primaryLight,
+                            marginBottom: 10
+                            // fontStyle: "italic"
                           }}
                         >
-                          Export to code
-                        </Button>
-                      )}
-                    </span>
-                  </Tooltip>
-                </div>
-              )}
+                          Generating code...
+                        </Typography>
+                      </div>
+                    )}
+
+                    <Tooltip
+                      PopperProps={{
+                        modifiers: {
+                          preventOverflow: {
+                            boundariesElement: document.body
+                          }
+                        }
+                      }}
+                      enterDelay={1000}
+                      title="Export to Builder to convert this page into responsive code and/or live websites"
+                    >
+                      <span>
+                        {/* TODO: check validitiy and prompt, select all elements not valid */}
+                        {!this.generatingCode && (
+                          <Button
+                            style={{ marginTop: 15, fontWeight: 400 }}
+                            fullWidth
+                            disabled={this.generatingCode}
+                            color="primary"
+                            variant="contained"
+                            onClick={async () => {
+                              this.selectionWithImages = null;
+                              parent.postMessage(
+                                {
+                                  pluginMessage: {
+                                    type: "getSelectionWithImages"
+                                  }
+                                },
+                                "*"
+                              );
+
+                              this.generatingCode = true;
+
+                              await when(() => !!this.selectionWithImages);
+
+                              if (
+                                !(
+                                  this.selectionWithImages &&
+                                  this.selectionWithImages[0]
+                                )
+                              ) {
+                                console.warn("No selection with images");
+                                return;
+                              }
+
+                              // TODO: analyze if page is properly nested and annotated, if not
+                              // suggest in the UI what needs grouping
+                              const block = figmaToBuilder(this
+                                .selectionWithImages[0] as any);
+
+                              const data = {
+                                data: {
+                                  blocks: [block]
+                                }
+                              };
+
+                              var json = JSON.stringify(data);
+                              var blob = new Blob([json], {
+                                type: "application/json"
+                              });
+
+                              const link = document.createElement("a");
+                              link.setAttribute(
+                                "href",
+                                URL.createObjectURL(blob)
+                              );
+                              link.setAttribute(
+                                "download",
+                                "page.builder.json"
+                              );
+                              document.body.appendChild(link); // Required for FF
+
+                              link.click();
+                              document.body.removeChild(link);
+
+                              this.generatingCode = false;
+                              this.selectionWithImages = null;
+                            }}
+                          >
+                            Export to code
+                          </Button>
+                        )}
+                      </span>
+                    </Tooltip>
+                  </div>
+                )}
+              </div>
+              <Divider style={{ margin: "0 -15px", marginTop: 15 }} />
             </div>
-            <Divider style={{ margin: "0 -15px", marginTop: 15 }} />
-          </div>
+          </>
         )}
 
         <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>

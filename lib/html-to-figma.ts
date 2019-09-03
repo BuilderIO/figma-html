@@ -1,4 +1,11 @@
-export default function htmlToFigma(selector = "body", useFrames: boolean) {
+export default function htmlToFigma(
+  selector = "body",
+  useFrames = false,
+  time = false
+) {
+  if (time) {
+    console.time("Parse dom");
+  }
   function getAppliedComputedStyles(
     element: Element,
     pseudo?: string
@@ -77,12 +84,12 @@ export default function htmlToFigma(selector = "body", useFrames: boolean) {
     return Object.keys(obj).length;
   }
 
-  interface SvgNode extends DefaultShapeMixin {
+  interface SvgNode extends DefaultShapeMixin, ConstraintMixin {
     type: "SVG";
     svg: string;
   }
 
-  type WithRef<T> = Partial<T> & { ref?: Element | TextNode };
+  type WithRef<T> = Partial<T> & { ref?: Element | Node };
 
   type LayerNode = WithRef<RectangleNode | TextNode | FrameNode | SvgNode>;
 
@@ -141,9 +148,28 @@ export default function htmlToFigma(selector = "body", useFrames: boolean) {
   }
 
   if (el) {
-    const els = el.querySelectorAll("*");
+    // Process SVG <use> elements
+    for (const use of Array.from(el.querySelectorAll("use"))) {
+      const symbolSelector = use.href.baseVal;
+      const symbol: SVGSymbolElement | null = document.querySelector(
+        symbolSelector
+      );
+      if (symbol) {
+        use.outerHTML = symbol.innerHTML;
+      }
+    }
+
+    const els = Array.from(el.querySelectorAll("*"));
 
     if (els) {
+      // Include shadow dom
+      // for (const el of els) {
+      //   if (el.shadowRoot) {
+      //     const shadowEls = Array.from(el.shadowRoot.querySelectorAll('*'));
+      //     els.push(...shadowEls);
+      //   }
+      // }
+
       Array.from(els).forEach(el => {
         if (isHidden(el)) {
           return;
@@ -501,7 +527,7 @@ export default function htmlToFigma(selector = "body", useFrames: boolean) {
             width: Math.round(rect.width),
             height: Math.round(rect.height),
             type: "TEXT",
-            characters: node.textContent.trim().replace(/\s+/, " ") || ""
+            characters: node.textContent.trim().replace(/\s+/g, " ") || ""
           } as WithRef<TextNode>;
 
           const fills: SolidPaint[] = [];
@@ -635,7 +661,7 @@ export default function htmlToFigma(selector = "body", useFrames: boolean) {
       return response;
     }
 
-    const refMap = new WeakMap<Element | TextNode, LayerNode>();
+    const refMap = new WeakMap<Element | Node, LayerNode>();
     layers.forEach(layer => {
       if (layer.ref) {
         refMap.set(layer.ref, layer);
@@ -647,7 +673,7 @@ export default function htmlToFigma(selector = "body", useFrames: boolean) {
     while (updated) {
       updated = false;
       if (iterations++ > 10000) {
-        console.error("Too many tree iterations");
+        console.error("Too many tree iterations 1");
         break;
       }
 
@@ -682,9 +708,20 @@ export default function htmlToFigma(selector = "body", useFrames: boolean) {
                 // console.log('index d', newIndex);
                 // layers.splice(newIndex, 1);
               } else {
+                let parentRef = parentLayer.ref;
+                if (
+                  parentRef &&
+                  parentRef instanceof Node &&
+                  parentRef.nodeType === Node.TEXT_NODE
+                ) {
+                  parentRef = parentRef.parentElement as Element;
+                }
+                const overflowHidden =
+                  parentRef instanceof Element &&
+                  getComputedStyle(parentRef).overflow !== "visible";
                 const newParent: LayerNode = {
                   type: "FRAME",
-                  clipsContent: false,
+                  clipsContent: !!overflowHidden,
                   // type: 'GROUP',
                   x: parentLayer.x,
                   y: parentLayer.y,
@@ -740,7 +777,136 @@ export default function htmlToFigma(selector = "body", useFrames: boolean) {
         );
       });
     }
+    // Collect tree of depeest common parents and make groups
+    let secondUpdate = true;
+    let secondIterations = 0;
+    while (secondUpdate) {
+      if (secondIterations++ > 10000) {
+        console.error("Too many tree iterations 2");
+        break;
+      }
+      secondUpdate = false;
+      function getParents(node: Element | Node): Element[] {
+        let el: Element | null =
+          node instanceof Node && node.nodeType === Node.TEXT_NODE
+            ? node.parentElement
+            : (node as Element);
 
+        let parents: Element[] = [];
+        while (el && (el = el.parentElement)) {
+          parents.push(el);
+        }
+        return parents;
+      }
+
+      function getDepth(node: Element | Node) {
+        return getParents(node).length;
+      }
+      // console.log(1);
+
+      traverse(root, (layer, parent) => {
+        if (secondUpdate) {
+          return;
+        }
+        if (layer.type === "FRAME") {
+          // Final all child elements with layers, and add groups around  any with a shared parent not shared by another
+          const ref = layer.ref as Element;
+          // console.log(2);
+          if (layer.children && layer.children.length > 2) {
+            const childRefs =
+              layer.children &&
+              (layer.children as LayerNode[]).map(child => child.ref!);
+
+            let lowestCommonDenominator = layer.ref!;
+            let lowestCommonDenominatorDepth = getDepth(
+              lowestCommonDenominator
+            );
+            // console.log(3);
+
+            // Find lowest common demoninator with greatest depth
+            for (const childRef of childRefs) {
+              const otherChildRefs = childRefs.filter(
+                item => item !== childRef
+              );
+              const childParents = getParents(childRef);
+              // console.log('parents 1 length', childParents.length);
+              for (const otherChildRef of otherChildRefs) {
+                const otherParents = getParents(otherChildRef);
+                // console.log('parents 2 length', otherParents.length);
+                for (const parent of otherParents) {
+                  if (
+                    childParents.includes(parent) &&
+                    layer.ref!.contains(parent)
+                  ) {
+                    const depth = getDepth(parent);
+                    if (depth > lowestCommonDenominatorDepth) {
+                      // console.log('change lcd?');
+                      lowestCommonDenominator = parent;
+                      lowestCommonDenominatorDepth = depth;
+                    }
+                  }
+                }
+              }
+            }
+            // console.log(4);
+            if (
+              lowestCommonDenominator &&
+              lowestCommonDenominator !== layer.ref
+            ) {
+              // console.log(5);
+              // Make a group around all children elements
+              const newChildren = layer.children!.filter((item: any) =>
+                lowestCommonDenominator.contains(item.ref)
+              );
+
+              if (newChildren.length !== layer.children.length) {
+                const lcdRect = (lowestCommonDenominator as Element).getBoundingClientRect();
+                // console.log(6);
+                // console.log('newChildren.length', newChildren.length);
+
+                const overflowHidden =
+                  lowestCommonDenominator instanceof Element &&
+                  getComputedStyle(lowestCommonDenominator).overflow !==
+                    "visible";
+
+                const newParent: LayerNode = {
+                  type: "FRAME",
+                  clipsContent: !!overflowHidden,
+                  ref: lowestCommonDenominator as Element,
+                  x: lcdRect.left,
+                  y: lcdRect.top,
+                  width: lcdRect.width,
+                  height: lcdRect.height,
+                  backgrounds: [] as any,
+                  children: newChildren as any
+                };
+                refMap.set(lowestCommonDenominator, ref);
+                let firstIndex = layer.children.length - 1;
+                for (const child of newChildren) {
+                  const childIndex = layer.children.indexOf(child as any);
+                  // console.log('index a', childIndex);
+                  if (childIndex > -1 && childIndex < firstIndex) {
+                    firstIndex = childIndex;
+                  }
+                }
+                // console.log('firstIndex', firstIndex);
+                (layer.children as any).splice(firstIndex, 0, newParent);
+                for (const child of newChildren) {
+                  const index = layer.children.indexOf(child);
+                  // console.log('index b', index);
+                  if (index > -1) {
+                    (layer.children as any).splice(index, 1);
+                  }
+                }
+                // console.log(7);
+                secondUpdate = true;
+              }
+            }
+          }
+        }
+        // TODO
+      });
+    }
     // Update all positions
     traverse(root, layer => {
       if (layer.type === "FRAME" || layer.type === "GROUP") {
@@ -765,17 +931,62 @@ export default function htmlToFigma(selector = "body", useFrames: boolean) {
       });
     });
   }
+  function addConstraints(layers: LayerNode[]) {
+    layers.concat([root]).forEach(layer => {
+      traverse(layer, child => {
+        if (child.type === "SVG") {
+          child.constraints = {
+            horizontal: "CENTER",
+            vertical: "MIN"
+          };
+        } else {
+          let hasFixedWidth = false;
+          const ref = layer.ref;
+          if (ref) {
+            // TODO: also if is shrink width and padding and text align center hm
+            const el = ref instanceof Element ? ref : ref.parentElement;
+            if (el instanceof HTMLElement) {
+              const currentStyleDisplay = el.style.display;
+              el.style.display = "none";
+              const computedWidth = getComputedStyle(el).width;
+              el.style.display = currentStyleDisplay;
+              if (computedWidth && computedWidth.match(/^[\d\.]+px$/)) {
+                hasFixedWidth = true;
+              }
+            }
+          }
+          // if (hasFixedWidth) {
+          //   console.log('HAS FIXED WIDTH');
+          // }
+          child.constraints = {
+            horizontal: hasFixedWidth ? "CENTER" : "SCALE",
+            vertical: "MIN"
+          };
+        }
+      });
+    });
+  }
 
   // TODO: arg can be passed in
   const MAKE_TREE = useFrames;
   if (MAKE_TREE) {
     (root as any).children = layers.slice(1);
     makeTree();
+    addConstraints([root]);
     removeRefs([root]);
+    if (time) {
+      console.log("\n");
+      console.timeEnd("Parse dom");
+    }
     return [root];
   }
 
   removeRefs(layers);
+
+  if (time) {
+    console.log("\n");
+    console.timeEnd("Parse dom");
+  }
 
   return layers;
 }
