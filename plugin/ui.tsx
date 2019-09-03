@@ -139,6 +139,9 @@ async function processImages(layer: Node) {
               }
 
               const isSvg = url.endsWith(".svg");
+
+              // Proxy returned content through Builder so we can access cross origin for
+              // pulling in photos, etc
               const res = await fetch(
                 "https://builder.io/api/v1/proxy-api?url=" +
                   encodeURIComponent(url)
@@ -407,6 +410,8 @@ class App extends SafeComponent {
 
       lsSet(FRAMES_LS_KEY, this.useFrames);
 
+      // We need to run the code to process DOM through a backend to run it in a headless browser.
+      // Builder.io provides this for the Figma plugin for free.
       fetch(
         `${apiRoot}/api/v1/url-to-figma?url=${encocedUrl}&width=${width}&useFrames=${
           this.useFrames
