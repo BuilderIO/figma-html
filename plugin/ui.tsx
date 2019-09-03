@@ -42,6 +42,7 @@ import {
   getAssumeLayoutTypeForNode
 } from "../lib/figma-to-builder";
 import * as fileType from "file-type";
+import * as escapeHtml from "escape-html";
 
 const WIDTH_LS_KEY = "builder.widthSetting";
 const FRAMES_LS_KEY = "builder.useFramesSetting";
@@ -281,10 +282,19 @@ class App extends SafeComponent {
   set component(component: Component | typeof invalidComponentOption) {
     for (const node of this.selection) {
       if (!node.data) {
-        node.data = {};
+        node.data = {
+          component
+        };
+      } else {
+        node.data.component = component;
       }
-      node.data.component = component;
+      console.log("setting node.data.component");
     }
+    console.log(
+      "set component",
+      component,
+      JSON.stringify(this.selection.map(item => item.data), null, 2)
+    );
     this.saveUpdates();
   }
 
@@ -357,7 +367,7 @@ class App extends SafeComponent {
           height += 50;
         }
         if (this.showExperimental) {
-          height += 200;
+          height += 300;
         }
         parent.postMessage(
           {
@@ -413,9 +423,7 @@ class App extends SafeComponent {
       // We need to run the code to process DOM through a backend to run it in a headless browser.
       // Builder.io provides this for the Figma plugin for free.
       fetch(
-        `${apiRoot}/api/v1/url-to-figma?url=${encocedUrl}&width=${width}&useFrames=${
-          this.useFrames
-        }`
+        `${apiRoot}/api/v1/url-to-figma?url=${encocedUrl}&width=${width}&useFrames=${this.useFrames}`
       )
         .then(res => res.json())
         .then(data => {
@@ -739,11 +747,6 @@ class App extends SafeComponent {
           )}
           {this.loading ? (
             <>
-              <style>{`
-
-            `}</style>
-              {/* <Loading style={{ marginTop: 20 }} /> */}
-              {/* Loading ellipsis */}
               <div style={{ margin: "0 auto" }} className="lds-ellipsis">
                 <div style={{ background: themeVars.colors.primaryLight }} />
                 <div style={{ background: themeVars.colors.primaryLight }} />
@@ -763,10 +766,6 @@ class App extends SafeComponent {
                 Analyzing code... <br />
                 This can take a couple minutes...
               </Typography>
-              {/* <LinearProgress
-                variant="query"
-                style={{ marginTop: 20, width: "100%" }}
-              /> */}
             </>
           ) : (
             <Button
@@ -783,58 +782,9 @@ class App extends SafeComponent {
               Import
             </Button>
           )}
-          {/* {!this.loading && (
-            <Button
-              size="small"
-              style={{
-                opacity: 0.4,
-                marginTop: 10,
-                marginBottom: -20,
-                fontSize: 10,
-                fontWeight: 400
-              }}
-              fullWidth
-              onClick={() => (this.showMoreOptions = !this.showMoreOptions)}
-            >
-              {this.showMoreOptions ? "less" : "more"} options
-            </Button>
-          )} */}
         </form>
         {this.showExperimental && (
           <>
-            <div
-              style={{
-                marginTop: 15,
-                marginBottom: 10
-              }}
-            >
-              <Divider style={{ margin: "0 -15px" }} />
-              <div style={{ fontSize: 11 }}>
-                <div
-                  style={{
-                    fontWeight: "bold",
-                    fontSize: 11,
-                    marginTop: 15
-                  }}
-                >
-                  Dev options
-                </div>
-                <TextField
-                  label="API Root"
-                  fullWidth
-                  style={{ marginTop: 15 }}
-                  inputProps={{
-                    style: {
-                      fontSize: 13
-                    }
-                  }}
-                  value={this.apiRoot}
-                  onChange={e => {
-                    this.apiRoot = e.target.value;
-                  }}
-                />
-              </div>
-            </div>
             <div
               style={{
                 marginTop: 15,
@@ -867,7 +817,13 @@ class App extends SafeComponent {
                           <span
                             style={{
                               textTransform: "capitalize",
-                              fontSize: 12
+                              fontSize: 12,
+                              opacity:
+                                this.selection[0] &&
+                                this.selection[0].data &&
+                                this.selection[0].data.component
+                                  ? 1
+                                  : 0.5
                             }}
                           >
                             {val}
@@ -879,10 +835,12 @@ class App extends SafeComponent {
                       fullWidth
                       value={this.component}
                       onChange={e => {
-                        const value = e.target.value;
-                        if (componentTypes.includes(value as Component)) {
-                          this.component = value as Component;
+                        let value = e.target.value;
+                        if (value === invalidComponentOption) {
+                          value = undefined as any
                         }
+
+                        this.component = value as Component;
                       }}
                     >
                       {(componentTypes as string[])
@@ -892,27 +850,29 @@ class App extends SafeComponent {
                           const text =
                             componentDescription[item as Component] || "";
                           return (
-                            <Tooltip
-                              enterDelay={500}
-                              title={text}
-                              key={item}
-                              open={text ? undefined : false}
+                            <MenuItem
+                              style={{
+                                fontSize: 12,
+                                textTransform: "capitalize",
+                                opacity:
+                                  item === invalidComponentOption ? 0.5 : 1
+                              }}
+                              value={item}
                             >
-                              <MenuItem
-                                style={{
-                                  fontSize: 12,
-                                  textTransform: "capitalize",
-                                  opacity:
-                                    item === invalidComponentOption ? 0.5 : 1
-                                }}
-                                value={item}
+                              <Tooltip
+                                enterDelay={500}
+                                title={text}
+                                key={item}
+                                open={text ? undefined : false}
                               >
-                                <ListItemIcon>
-                                  {Icon ? <Icon /> : <></>}
-                                </ListItemIcon>
-                                {item}
-                              </MenuItem>
-                            </Tooltip>
+                                <>
+                                  <ListItemIcon>
+                                    {Icon ? <Icon /> : <></>}
+                                  </ListItemIcon>
+                                  {item}
+                                </>
+                              </Tooltip>
+                            </MenuItem>
                           );
                         })}
                     </TextField>
@@ -1015,6 +975,32 @@ class App extends SafeComponent {
                                 }
                               };
 
+                              const USE_FORM = false;
+                              if (USE_FORM) {
+                                const json = JSON.stringify(data);
+                                const div = document.createElement("div");
+                                div.innerHTML = `
+                                <form method='POST' enctype='text/plain' target="_blank" action="http://localhost:5000/import-doc?url=http://localhost:1234">
+                                <input name='{"doc": ${escapeHtml(
+                                  json
+                                )}, "_": "' value='"}'>
+                                <button type="submit"></button>
+                                </form>
+                            `;
+
+                                document.body.appendChild(div);
+                                const button = div.querySelector(
+                                  "button[type=submit]"
+                                );
+                                if (button instanceof HTMLElement) {
+                                  button.click();
+                                }
+                                div.remove();
+                                this.generatingCode = false;
+                                this.selectionWithImages = null;
+                                return;
+                              }
+
                               var json = JSON.stringify(data);
                               var blob = new Blob([json], {
                                 type: "application/json"
@@ -1048,6 +1034,37 @@ class App extends SafeComponent {
               </div>
               <Divider style={{ margin: "0 -15px", marginTop: 15 }} />
             </div>
+            <div
+              style={{
+                marginBottom: 10
+              }}
+            >
+              <div style={{ fontSize: 11 }}>
+                <div
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: 11
+                  }}
+                >
+                  Dev options
+                </div>
+                <TextField
+                  label="API Root"
+                  fullWidth
+                  style={{ marginTop: 15 }}
+                  inputProps={{
+                    style: {
+                      fontSize: 13
+                    }
+                  }}
+                  value={this.apiRoot}
+                  onChange={e => {
+                    this.apiRoot = e.target.value;
+                  }}
+                />
+              </div>
+            </div>
+            <Divider style={{ margin: "0 -15px" }} />
           </>
         )}
 

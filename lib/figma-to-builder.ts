@@ -79,27 +79,32 @@ const el = (options?: Partial<BuilderElement>): BuilderElement => ({
 });
 
 const isCenteredX = (node: SceneNode, parent: SceneNode) => {
+  if (Math.abs(parent.width - node.width) < parent.width / 10) {
+    // Full width, don't center
+    return false;
+  }
   const nodeCenterX = node.x + node.width / 2;
   const parentCenterX = parent.x + parent.width / 2;
-  return Math.abs(nodeCenterX - parentCenterX) < 5;
+  return Math.abs(nodeCenterX - parentCenterX) < parent.width / 10;
 };
 const isCenteredY = (node: SceneNode, parent: SceneNode) => {
-  const nodeCenterY = node.y + node.height / 2;
-  const parentCenterY = parent.y + parent.height / 2;
-  //                                            <3 lol
-  return Math.abs(nodeCenterY - parentCenterY) < 5;
+  return false;
+  // const nodeCenterY = node.y + node.height / 2;
+  // const parentCenterY = parent.y + parent.height / 2;
+  // //
+  // return Math.abs(nodeCenterY - parentCenterY) < parent.height / 5;
 };
 
 const isImageNode = (node: SceneNode) => {
   const image = getImage(node);
-  const assumedLayout = getAssumeLayoutTypeForNode(node)
-  return image && !isTextNode(node) && assumedLayout !== 'columns'
-}
+  const assumedLayout = getAssumeLayoutTypeForNode(node);
+  return image && !isTextNode(node) && assumedLayout !== "columns";
+};
 
 export function getCss(node: SceneNode, parent: SceneNode | null) {
   const layout = getAssumeLayoutTypeForNode(node);
   const parentLayout = parent && getAssumeLayoutTypeForNode(parent);
-  const useAbsolute = false as boolean;
+  const useAbsolute = parentLayout === "unknown";
 
   // parentLayout && ["canvas", "unknown"].includes(parentLayout);
 
@@ -131,9 +136,11 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
   };
 
   if (parent && hasChildren(parent)) {
+    const sortedChildren = sortBy(parent.children, child => child.x + child.y);
+
     // TODO grid
-    const index = parent.children.indexOf(node);
-    const priorSibling = index > 0 && parent.children[index - 1];
+    const index = sortedChildren.indexOf(node);
+    const priorSibling = index > 0 && sortedChildren[index - 1];
     if (parentLayout === "stack") {
       if (isCenteredX(node, parent) && node.x) {
         styles.marginLeft = "auto";
@@ -151,11 +158,11 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
           0
         )}px`;
       } else {
-        styles.marginTop = node.y + 'px'
+        styles.marginTop = node.y + "px";
       }
     }
 
-    if (parentLayout === "row") {
+    if (parentLayout === "row" || parentLayout === "grid") {
       if (isCenteredY(node, parent) && node.y) {
         styles.marginTop = "auto";
         styles.marginBottom = "auto";
@@ -167,12 +174,16 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
         styles.marginLeft = "auto";
         styles.marginRight = "auto";
       } else if (priorSibling) {
+        console.log(
+          "row prior siling",
+          node.x - (priorSibling.x + priorSibling.width)
+        );
         styles.marginLeft = `${Math.max(
           node.x - (priorSibling.x + priorSibling.width),
           0
         )}px`;
       } else {
-        styles.marginLeft = node.x + 'px'
+        styles.marginLeft = node.x + "px";
       }
     }
   }
@@ -264,7 +275,7 @@ export function sortChildren(nodes: SceneNode[]) {
 }
 
 export function processBackgroundLayer(node: SceneNode) {
-  if (hasChildren(node)) {
+  if (hasChildren(node) && node.children.length) {
     const lastChild = node.children[0];
     if (
       !hasChildren(lastChild) &&
@@ -334,9 +345,12 @@ export function figmaToBuilder(
       large: getCss(node, parent || null)
     },
     // TODO: maybe put original layer ID in metadata
-    layerName:
-      node.name +
-      (process.env.NODE_ENV === "development" ? " - " + node.id : ""),
+    layerName: node.name,
+    ...({
+      meta: {
+        figmaLayerId: node.id
+      }
+    } as any),
     component: isTextNode(node)
       ? {
           name: "Text",
@@ -454,11 +468,19 @@ export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
     // If each width is alost the same
     const minWidth = Math.min(...widths);
     const maxWidth = Math.max(...widths);
-    if (maxWidth - minWidth < maxWidth / 10) {
+    if (maxWidth - minWidth < maxWidth / 5) {
+      // TODO: take parent arg
+      const allWidths = node.children.reduce(
+        (memo, item) => item.width + memo,
+        0
+      );
+      if (xOverlap > allWidths / 10) {
+        return "stack";
+      }
       return "columns";
     }
     return "row";
   }
 
-  return "unknown";
+  return "canvas";
 }
