@@ -697,16 +697,10 @@ export default function htmlToFigma(
                 if (originalParent) {
                   const index = (originalParent as any).children.indexOf(layer);
                   (originalParent as any).children.splice(index, 1);
-                  // console.log('index a', index);
                   (parentLayer.children as Array<any>).push(layer);
-                  // layer.x = layer.x! - (parentLayer as any).x!;
-                  // layer.y = layer.y! - (parentLayer as any).y!;
                   updated = true;
                   return;
                 }
-                // const newIndex = layers.indexOf(layer);
-                // console.log('index d', newIndex);
-                // layers.splice(newIndex, 1);
               } else {
                 let parentRef = parentLayer.ref;
                 if (
@@ -729,26 +723,13 @@ export default function htmlToFigma(
                   height: parentLayer.height,
                   ref: parentLayer.ref,
                   backgrounds: [
-                    // {
-                    //   type: 'SOLID',
-                    //   color: { r: 1, b: 1, g: 1 },
-                    //   opacity: 0,
-                    //   visible: false,
-                    // } as SolidPaint,
                   ] as any,
                   children: [parentLayer, layer] as any[]
                 };
-                // parentLayer.x = 0;
-                // parentLayer.y = 0;
-                // layer.x = layer.x! - parentLayer.x;
-                // layer.y = layer.y! - parentLayer.y;
-                // Hm...
-                // layers.push(newParent);
-                // allLayers.push(newParent);
 
                 const parent = getParent(parentLayer);
                 if (!parent) {
-                  console.log(
+                  console.warn(
                     "\n\nCANT FIND PARENT\n",
                     JSON.stringify({ ...parentLayer, ref: null })
                   );
@@ -756,18 +737,14 @@ export default function htmlToFigma(
                 }
                 if (originalParent) {
                   const index = (originalParent as any).children.indexOf(layer);
-                  // console.log('index b', index);
                   (originalParent as any).children.splice(index, 1);
                 }
                 delete parentLayer.ref;
                 const newIndex = (parent as any).children.indexOf(parentLayer);
-                // console.log('index c', newIndex);
                 refMap.set(parentElement, newParent);
                 (parent as any).children.splice(newIndex, 1, newParent);
                 updated = true;
                 return;
-                // console.log('\n\nFOUND\n', JSON.stringify({ ...parentLayer, ref: null }));
-                // updated = true;
               }
             }
           }
@@ -802,7 +779,6 @@ export default function htmlToFigma(
       function getDepth(node: Element | Node) {
         return getParents(node).length;
       }
-      // console.log(1);
 
       traverse(root, (layer, parent) => {
         if (secondUpdate) {
@@ -811,7 +787,6 @@ export default function htmlToFigma(
         if (layer.type === "FRAME") {
           // Final all child elements with layers, and add groups around  any with a shared parent not shared by another
           const ref = layer.ref as Element;
-          // console.log(2);
           if (layer.children && layer.children.length > 2) {
             const childRefs =
               layer.children &&
@@ -821,7 +796,6 @@ export default function htmlToFigma(
             let lowestCommonDenominatorDepth = getDepth(
               lowestCommonDenominator
             );
-            // console.log(3);
 
             // Find lowest common demoninator with greatest depth
             for (const childRef of childRefs) {
@@ -829,10 +803,8 @@ export default function htmlToFigma(
                 item => item !== childRef
               );
               const childParents = getParents(childRef);
-              // console.log('parents 1 length', childParents.length);
               for (const otherChildRef of otherChildRefs) {
                 const otherParents = getParents(otherChildRef);
-                // console.log('parents 2 length', otherParents.length);
                 for (const parent of otherParents) {
                   if (
                     childParents.includes(parent) &&
@@ -840,7 +812,6 @@ export default function htmlToFigma(
                   ) {
                     const depth = getDepth(parent);
                     if (depth > lowestCommonDenominatorDepth) {
-                      // console.log('change lcd?');
                       lowestCommonDenominator = parent;
                       lowestCommonDenominatorDepth = depth;
                     }
@@ -848,12 +819,10 @@ export default function htmlToFigma(
                 }
               }
             }
-            // console.log(4);
             if (
               lowestCommonDenominator &&
               lowestCommonDenominator !== layer.ref
             ) {
-              // console.log(5);
               // Make a group around all children elements
               const newChildren = layer.children!.filter((item: any) =>
                 lowestCommonDenominator.contains(item.ref)
@@ -861,8 +830,6 @@ export default function htmlToFigma(
 
               if (newChildren.length !== layer.children.length) {
                 const lcdRect = (lowestCommonDenominator as Element).getBoundingClientRect();
-                // console.log(6);
-                // console.log('newChildren.length', newChildren.length);
 
                 const overflowHidden =
                   lowestCommonDenominator instanceof Element &&
@@ -884,27 +851,22 @@ export default function htmlToFigma(
                 let firstIndex = layer.children.length - 1;
                 for (const child of newChildren) {
                   const childIndex = layer.children.indexOf(child as any);
-                  // console.log('index a', childIndex);
                   if (childIndex > -1 && childIndex < firstIndex) {
                     firstIndex = childIndex;
                   }
                 }
-                // console.log('firstIndex', firstIndex);
                 (layer.children as any).splice(firstIndex, 0, newParent);
                 for (const child of newChildren) {
                   const index = layer.children.indexOf(child);
-                  // console.log('index b', index);
                   if (index > -1) {
                     (layer.children as any).splice(index, 1);
                   }
                 }
-                // console.log(7);
                 secondUpdate = true;
               }
             }
           }
         }
-        // TODO
       });
     }
     // Update all positions
@@ -955,9 +917,6 @@ export default function htmlToFigma(
               }
             }
           }
-          // if (hasFixedWidth) {
-          //   console.log('HAS FIXED WIDTH');
-          // }
           child.constraints = {
             horizontal: hasFixedWidth ? "CENTER" : "SCALE",
             vertical: "MIN"
@@ -975,7 +934,7 @@ export default function htmlToFigma(
     addConstraints([root]);
     removeRefs([root]);
     if (time) {
-      console.log("\n");
+      console.info("\n");
       console.timeEnd("Parse dom");
     }
     return [root];
@@ -984,7 +943,7 @@ export default function htmlToFigma(
   removeRefs(layers);
 
   if (time) {
-    console.log("\n");
+    console.info("\n");
     console.timeEnd("Parse dom");
   }
 
