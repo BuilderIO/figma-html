@@ -813,7 +813,9 @@ class App extends SafeComponent {
               >
                 Or try our{" "}
                 <a
-                  style={{ color: themeVars.colors.primary, cursor: "pointer" }}
+                  style={{ color: themeVars.colors.primary, cursor: "pointer", textDecoration: 'none' }}
+                  href="https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim"
+                  target="_blank"
                 >
                   chrome extension
                 </a>{" "}

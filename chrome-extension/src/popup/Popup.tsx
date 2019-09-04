@@ -25,6 +25,8 @@ export default class Popup extends React.Component<AppProps, AppState> {
   htmlToFigma() {
     this.loading = true;
     chrome.runtime.sendMessage({ inject: true }, response => {
+      // TODO: detect error and display
+      console.log("response", response);
       this.loading = false;
       this.done = true;
     });
@@ -89,7 +91,14 @@ export default class Popup extends React.Component<AppProps, AppState> {
 
         <div style={{ marginTop: 30, textAlign: "center", color: "#666" }}>
           Made with{" "}
-          <Heart style={{ color: "rgb(236, 55, 88)", fontSize: 16, verticalAlign: 'middle' }} /> by{" "}
+          <Heart
+            style={{
+              color: "rgb(236, 55, 88)",
+              fontSize: 16,
+              verticalAlign: "middle"
+            }}
+          />{" "}
+          by{" "}
           <a
             style={{ color: theme.colors.primary }}
             href="https://builder.io?ref=figma"

@@ -12,7 +12,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             file: "js/inject.js"
           },
           args => {
-            sendResponse({ done: true });
+            sendResponse({ done: true, args});
           }
         );
       }
