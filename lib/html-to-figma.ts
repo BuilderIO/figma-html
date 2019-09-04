@@ -1,4 +1,4 @@
-export default function htmlToFigma(
+export function htmlToFigma(
   selector = "body",
   useFrames = false,
   time = false
@@ -150,12 +150,16 @@ export default function htmlToFigma(
   if (el) {
     // Process SVG <use> elements
     for (const use of Array.from(el.querySelectorAll("use"))) {
-      const symbolSelector = use.href.baseVal;
-      const symbol: SVGSymbolElement | null = document.querySelector(
-        symbolSelector
-      );
-      if (symbol) {
-        use.outerHTML = symbol.innerHTML;
+      try {
+        const symbolSelector = use.href.baseVal;
+        const symbol: SVGSymbolElement | null = document.querySelector(
+          symbolSelector
+        );
+        if (symbol) {
+          use.outerHTML = symbol.innerHTML;
+        }
+      } catch (err) {
+        console.warn("Error querying <use> tag href", err);
       }
     }
 
@@ -722,8 +726,7 @@ export default function htmlToFigma(
                   width: parentLayer.width,
                   height: parentLayer.height,
                   ref: parentLayer.ref,
-                  backgrounds: [
-                  ] as any,
+                  backgrounds: [] as any,
                   children: [parentLayer, layer] as any[]
                 };
 

@@ -1,53 +1,52 @@
+import {
+  Button,
+  createMuiTheme,
+  CssBaseline,
+  Divider,
+  FormControlLabel,
+  IconButton,
+  ListItemIcon,
+  MenuItem,
+  MuiThemeProvider,
+  Switch,
+  TextField,
+  Tooltip,
+  Typography
+} from "@material-ui/core";
+import green from "@material-ui/core/colors/green";
+import { SvgIconProps } from "@material-ui/core/SvgIcon";
+import Brush from "@material-ui/icons/Brush";
+import GridOn from "@material-ui/icons/GridOn";
+import LaptopMac from "@material-ui/icons/LaptopMac";
+import MoreHoriz from "@material-ui/icons/MoreHoriz";
+import PhoneIphone from "@material-ui/icons/PhoneIphone";
+import SettingsEthernet from "@material-ui/icons/SettingsEthernet";
+import TabletMac from "@material-ui/icons/TabletMac";
+import ViewColumn from "@material-ui/icons/ViewColumn";
+import * as escapeHtml from "escape-html";
+import * as fileType from "file-type";
+import { action, computed, observable, when } from "mobx";
+import { observer } from "mobx-react";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { observable, computed, action, when } from "mobx";
-import { observer } from "mobx-react";
-import {
-  createMuiTheme,
-  MuiThemeProvider,
-  CssBaseline,
-  TextField,
-  Button,
-  Typography,
-  Switch,
-  Tooltip,
-  FormControlLabel,
-  Divider,
-  MenuItem,
-  IconButton,
-  ListItemIcon
-} from "@material-ui/core";
-import ExpandMore from "@material-ui/icons/ExpandMore";
-import LaptopMac from "@material-ui/icons/LaptopMac";
-import TabletMac from "@material-ui/icons/TabletMac";
-import PhoneIphone from "@material-ui/icons/PhoneIphone";
-import MoreHoriz from "@material-ui/icons/MoreHoriz";
-import MoreVert from "@material-ui/icons/MoreVert";
-import ViewColumn from "@material-ui/icons/ViewColumn";
-import FormatAlignLeft from "@material-ui/icons/FormatAlignLeft";
-import GridOn from "@material-ui/icons/GridOn";
-import SettingsEthernet from "@material-ui/icons/SettingsEthernet";
-import Brush from "@material-ui/icons/Brush";
-import green from "@material-ui/core/colors/green";
-import { theme as themeVars } from "./constants/theme";
-import "./ui.css";
-import { SafeComponent } from "./classes/safe-component";
-import Loading from "./components/loading";
-import { traverseLayers } from "./functions/traverse-layers";
-import { settings } from "./constants/settings";
-import { fastClone } from "./functions/fast-clone";
-import { SvgIconProps } from "@material-ui/core/SvgIcon";
 import {
   figmaToBuilder,
   getAssumeLayoutTypeForNode
 } from "../lib/figma-to-builder";
-import * as fileType from "file-type";
-import * as escapeHtml from "escape-html";
+import { SafeComponent } from "./classes/safe-component";
+import { settings } from "./constants/settings";
+import { theme as themeVars } from "./constants/theme";
+import { fastClone } from "./functions/fast-clone";
+import { traverseLayers } from "./functions/traverse-layers";
+import "./ui.css";
+import { BuilderElement } from "@builder.io/sdk";
 
 const WIDTH_LS_KEY = "builder.widthSetting";
 const FRAMES_LS_KEY = "builder.useFramesSetting";
 const EXPERIMENTS_LS_KEY = "builder.showExperiments";
 const MORE_OPTIONS_LS_KEY = "builder.showMoreOptions";
+
+const EDITOR_TAG: any = "builder-editor";
 
 // TODO: make async and use figma.clientStorage
 function lsGet(key: string) {
@@ -225,6 +224,8 @@ type InvalidComponentOption = typeof invalidComponentOption;
 
 @observer
 class App extends SafeComponent {
+  editorRef: HTMLIFrameElement | null = null;
+
   @observable loading = false;
   @observable apiRoot =
     process.env.API_ROOT && process.env.NODE_ENV !== "production"
@@ -252,6 +253,9 @@ class App extends SafeComponent {
   @observable shiftKeyDown = false;
   @observable altKeyDown = false;
   @observable ctrlKeyDown = false;
+  @observable showBuilderPreview = false;
+  @observable.ref previewData: any;
+  editorScriptAdded = false;
 
   dataToPost: any;
 
@@ -329,6 +333,18 @@ class App extends SafeComponent {
   componentDidMount() {
     // TODO: destroy on component unmount
     this.safeReaction(() => this.urlValue, () => (this.errorMessage = ""));
+    this.safeReaction(
+      () => this.showBuilderPreview,
+      showBuilderPreview => {
+        if (showBuilderPreview && !this.editorScriptAdded) {
+          const script = document.createElement("script");
+          script.src = "https://cdn.builder.io/js/editor@1.0.38-1";
+          script.async = true;
+          document.body.appendChild(script);
+          this.editorScriptAdded = true;
+        }
+      }
+    );
     this.selectAllUrlInputText();
 
     this.safeListenToEvent(window, "offline", () => (this.online = false));
@@ -360,7 +376,8 @@ class App extends SafeComponent {
     });
 
     this.safeReaction(
-      () => `${this.showMoreOptions}:${this.showExperimental}`,
+      () =>
+        `${this.showMoreOptions}:${this.showExperimental}:${this.showBuilderPreview}"`,
       () => {
         let height = settings.ui.baseHeight;
         if (this.showMoreOptions) {
@@ -373,7 +390,8 @@ class App extends SafeComponent {
           {
             pluginMessage: {
               type: "resize",
-              width: settings.ui.baseWidth,
+              width:
+                settings.ui.baseWidth + (this.showBuilderPreview ? 300 : 0),
               height
             }
           },
@@ -414,7 +432,7 @@ class App extends SafeComponent {
       this.width = widthString;
       lsSet(WIDTH_LS_KEY, widthString);
 
-      const apiRoot = this.apiRoot;
+      const apiRoot = this.apiRoot || 'https://builder.io';
 
       const encocedUrl = encodeURIComponent(this.urlValue);
 
@@ -837,7 +855,7 @@ class App extends SafeComponent {
                       onChange={e => {
                         let value = e.target.value;
                         if (value === invalidComponentOption) {
-                          value = undefined as any
+                          value = undefined as any;
                         }
 
                         this.component = value as Component;
@@ -851,6 +869,7 @@ class App extends SafeComponent {
                             componentDescription[item as Component] || "";
                           return (
                             <MenuItem
+                              key={item}
                               style={{
                                 fontSize: 12,
                                 textTransform: "capitalize",
@@ -919,67 +938,55 @@ class App extends SafeComponent {
                       </div>
                     )}
 
-                    <Tooltip
-                      PopperProps={{
-                        modifiers: {
-                          preventOverflow: {
-                            boundariesElement: document.body
-                          }
-                        }
-                      }}
-                      enterDelay={1000}
-                      title="Export to Builder to convert this page into responsive code and/or live websites"
-                    >
-                      <span>
-                        {/* TODO: check validitiy and prompt, select all elements not valid */}
-                        {!this.generatingCode && (
-                          <Button
-                            style={{ marginTop: 15, fontWeight: 400 }}
-                            fullWidth
-                            disabled={this.generatingCode}
-                            color="primary"
-                            variant="contained"
-                            onClick={async () => {
-                              this.selectionWithImages = null;
-                              parent.postMessage(
-                                {
-                                  pluginMessage: {
-                                    type: "getSelectionWithImages"
-                                  }
-                                },
-                                "*"
-                              );
-
-                              this.generatingCode = true;
-
-                              await when(() => !!this.selectionWithImages);
-
-                              if (
-                                !(
-                                  this.selectionWithImages &&
-                                  this.selectionWithImages[0]
-                                )
-                              ) {
-                                console.warn("No selection with images");
-                                return;
+                    {/* TODO: check validitiy and prompt, select all elements not valid */}
+                    {!this.generatingCode && (
+                      <Button
+                        style={{ marginTop: 15, fontWeight: 400 }}
+                        fullWidth
+                        disabled={this.generatingCode}
+                        color="primary"
+                        variant="contained"
+                        onClick={async () => {
+                          this.selectionWithImages = null;
+                          parent.postMessage(
+                            {
+                              pluginMessage: {
+                                type: "getSelectionWithImages"
                               }
+                            },
+                            "*"
+                          );
 
-                              // TODO: analyze if page is properly nested and annotated, if not
-                              // suggest in the UI what needs grouping
-                              const block = figmaToBuilder(this
-                                .selectionWithImages[0] as any);
+                          this.generatingCode = true;
 
-                              const data = {
-                                data: {
-                                  blocks: [block]
-                                }
-                              };
+                          await when(() => !!this.selectionWithImages);
 
-                              const USE_FORM = false;
-                              if (USE_FORM) {
-                                const json = JSON.stringify(data);
-                                const div = document.createElement("div");
-                                div.innerHTML = `
+                          if (
+                            !(
+                              this.selectionWithImages &&
+                              this.selectionWithImages[0]
+                            )
+                          ) {
+                            console.warn("No selection with images");
+                            return;
+                          }
+
+                          // TODO: analyze if page is properly nested and annotated, if not
+                          // suggest in the UI what needs grouping
+                          const block = figmaToBuilder(this
+                            .selectionWithImages[0] as any);
+
+                          const data = {
+                            data: {
+                              blocks: [block]
+                            }
+                          };
+
+                          const USE_FORM = false;
+                          if (USE_FORM) {
+                            const json = JSON.stringify(data);
+                            const div = document.createElement("div");
+                            div.innerHTML = `
                                 <form method='POST' enctype='text/plain' target="_blank" action="http://localhost:5000/import-doc?url=http://localhost:1234">
                                 <input name='{"doc": ${escapeHtml(
                                   json
@@ -988,47 +995,155 @@ class App extends SafeComponent {
                                 </form>
                             `;
 
-                                document.body.appendChild(div);
-                                const button = div.querySelector(
-                                  "button[type=submit]"
-                                );
-                                if (button instanceof HTMLElement) {
-                                  button.click();
-                                }
-                                div.remove();
-                                this.generatingCode = false;
-                                this.selectionWithImages = null;
-                                return;
-                              }
+                            document.body.appendChild(div);
+                            const button = div.querySelector(
+                              "button[type=submit]"
+                            );
+                            if (button instanceof HTMLElement) {
+                              button.click();
+                            }
+                            div.remove();
+                            this.generatingCode = false;
+                            this.selectionWithImages = null;
+                            return;
+                          }
 
-                              var json = JSON.stringify(data);
-                              var blob = new Blob([json], {
-                                type: "application/json"
-                              });
+                          var json = JSON.stringify(data);
+                          var blob = new Blob([json], {
+                            type: "application/json"
+                          });
 
-                              const link = document.createElement("a");
-                              link.setAttribute(
-                                "href",
-                                URL.createObjectURL(blob)
-                              );
-                              link.setAttribute(
-                                "download",
-                                "page.builder.json"
-                              );
-                              document.body.appendChild(link); // Required for FF
+                          const link = document.createElement("a");
+                          link.setAttribute("href", URL.createObjectURL(blob));
+                          link.setAttribute("download", "page.builder.json");
+                          document.body.appendChild(link); // Required for FF
 
-                              link.click();
-                              document.body.removeChild(link);
+                          link.click();
+                          document.body.removeChild(link);
 
-                              this.generatingCode = false;
-                              this.selectionWithImages = null;
+                          this.generatingCode = false;
+                          this.selectionWithImages = null;
+                        }}
+                      >
+                        Export to code
+                      </Button>
+                    )}
+
+                    <Button
+                      style={{
+                        marginTop: 15,
+                        fontWeight: 400
+                        // marginLeft: 15
+                      }}
+                      fullWidth
+                      disabled={this.generatingCode}
+                      color="primary"
+                      variant="contained"
+                      onClick={async () => {
+                        this.showBuilderPreview = true; // !this.showBuilderPreview;
+                        this.selectionWithImages = null;
+                        parent.postMessage(
+                          {
+                            pluginMessage: {
+                              type: "getSelectionWithImages"
+                            }
+                          },
+                          "*"
+                        );
+
+                        await when(() => !!this.selectionWithImages);
+
+                        if (
+                          !(
+                            this.selectionWithImages &&
+                            this.selectionWithImages[0]
+                          )
+                        ) {
+                          console.warn("No selection with images");
+                          return;
+                        }
+
+                        // TODO: analyze if page is properly nested and annotated, if not
+                        // suggest in the UI what needs grouping
+                        const block = figmaToBuilder(this
+                          .selectionWithImages[0] as any);
+
+                        const previewData = fastClone({
+                          modelId: "dummy",
+                          data: {
+                            blocks: [block]
+                          }
+                        });
+                        // console.log('ref?', this.editorRef, previewData)
+                        // ;(window as any).ref = this.editorRef
+                        // if (this.editorRef) {
+                        //   this.editorRef.data = previewData
+                        // }
+                        if (this.editorRef && this.editorRef.contentWindow) {
+                          this.editorRef.contentWindow.postMessage({
+                            type: 'builder.contentUpdate',
+                            data: {
+                              key: 'page',
+                              data: previewData
+                            }
+                          }, '*')
+                        }
+                        // const frame = document.querySelector(
+                        //   "builder-editor iframe"
+                        // );
+                        // if (frame instanceof HTMLIFrameElement) {
+                        //   if (frame.contentWindow) {
+                        //     frame.contentWindow.postMessage(
+                        //       {
+                        //         type: "builder.updateEditorData",
+                        //         data: {
+                        //           data: previewData
+                        //         }
+                        //       },
+                        //       "*"
+                        //     );
+                        //   }
+                        // }
+                        this.selectionWithImages = null;
+                      }}
+                    >
+                      Live preview
+                    </Button>
+                    {this.showBuilderPreview && (
+                      <div style={{ width: "100%", marginTop: 15 }}>
+                        <div
+                          style={{
+                            // width: "300%",
+                            height: 600,
+                            // transform: "scale(0.33) translateZ(0)",
+                            // transformOrigin: "top left",
+                            display: "flex",
+                            flexDirection: "column"
+                          }}
+                        >
+                          <iframe
+                            ref={ref => this.editorRef = ref}
+                            style={{
+                              width: "100%",
+                              border: 0,
+                              height: "100%"
                             }}
-                          >
-                            Export to code
-                          </Button>
-                        )}
-                      </span>
-                    </Tooltip>
+                            src="https://preview.builder.live?model=page&amp;apiKey=123&amp;builder.cachebust=true&amp;builder.preview=page&amp;builder.noCache=true&amp;builder.frameEditing=page"
+                          ></iframe>
+                          {/* <EDITOR_TAG
+                            // data={this.previewData}
+                            host="https://6648e9ad.ngrok.io"
+                            style={{
+                              width: "100%",
+                              height: "100%"
+                            }}
+                            env="qa"
+                            ref={(ref: any) => (this.editorRef = ref)}
+                            api-key="builder"
+                          /> */}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1058,6 +1173,7 @@ class App extends SafeComponent {
                     }
                   }}
                   value={this.apiRoot}
+                  placeholder="https://builder.io"
                   onChange={e => {
                     this.apiRoot = e.target.value;
                   }}

@@ -4,9 +4,10 @@
     "lib": ["es2016", "dom"],
     "jsx": "react",
     "strict": true,
+    "declaration": true,
     "experimentalDecorators": true,
     "typeRoots": ["node_modules/@types"],
     "moduleResolution": "node"
   },
-  "exclude": ["dist", "node_modules", ".cache", ".cache-loader", ".next"]
+  "exclude": ["dist", "node_modules", ".cache", ".cache-loader", ".next", "chrome-extension"]
 }

@@ -174,10 +174,10 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
         styles.marginLeft = "auto";
         styles.marginRight = "auto";
       } else if (priorSibling) {
-        console.log(
-          "row prior siling",
-          node.x - (priorSibling.x + priorSibling.width)
-        );
+        // console.log(
+        //   "row prior siling",
+        //   node.x - (priorSibling.x + priorSibling.width)
+        // );
         styles.marginLeft = `${Math.max(
           node.x - (priorSibling.x + priorSibling.width),
           0
@@ -284,7 +284,6 @@ export function processBackgroundLayer(node: SceneNode) {
       lastChild.width === node.width &&
       lastChild.height === node.height
     ) {
-      console.log("replacing a background");
       const last = (node.children as SceneNode[]).shift();
       Object.assign(node, last, {
         type: node.type,

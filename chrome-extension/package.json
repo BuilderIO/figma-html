@@ -1,0 +1,39 @@
+{
+  "name": "@builder.io/html-to-figma-chrome-extension",
+  "version": "0.0.1",
+  "description": "Chrome extension to grab current page HTML and import it to Figma",
+  "scripts": {
+    "build": "webpack --config webpack.prod.js",
+    "dev": "webpack --config webpack.dev.js --watch",
+    "watch": "webpack -w --config webpack.dev.js",
+    "lint": "tslint 'src/**/*.{ts, tsx}'"
+  },
+  "typings": "dist/main.d.ts",
+  "author": "Steve Sewell",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chrome": "0.0.88",
+    "@types/fs-extra-promise": "^1.0.8",
+    "@types/react": "^16.9.2",
+    "@types/react-dom": "^16.9.0",
+    "css-loader": "^3.2.0",
+    "fs-extra-promise": "^1.0.1",
+    "node-sass": "^4.12.0",
+    "sass-loader": "^8.0.0",
+    "style-loader": "^1.0.0",
+    "ts-loader": "^6.0.4",
+    "tslint-config-airbnb": "^5.11.1",
+    "tslint-react": "^4.0.0",
+    "typescript": "^3.6.2",
+    "webpack": "^4.39.3",
+    "webpack-cli": "^3.3.7",
+    "webpack-merge": "^4.2.2"
+  },
+  "dependencies": {
+    "@builder.io/html-to-figma": "0.0.1",
+    "@material-ui/core": "^4.4.0",
+    "@material-ui/icons": "^4.2.1",
+    "react": "^16.9.0",
+    "react-dom": "^16.9.0"
+  }
+}

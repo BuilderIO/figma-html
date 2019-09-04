@@ -2,13 +2,16 @@
   "name": "@builder.io/html-to-figma",
   "version": "0.0.1",
   "description": "Convert HTML to figma",
-  "main": "dist/lib.js",
+  "main": "dist/main.js",
+  "browser": "dist/browser.js",
   "files": [
     "dist"
   ],
   "scripts": {
     "dev": "NODE_ENV=development webpack --mode=development --watch",
-    "build": "NODE_ENV=production webpack --mode=production"
+    "build": "NODE_ENV=production webpack --mode=production",
+    "release:patch": "npm version patch && npm run build && npm publish",
+    "release:dev": "npm version prerelease && npm run build && npm publish --tag dev"
   },
   "author": "",
   "license": "MIT",
@@ -36,6 +39,7 @@
   },
   "devDependencies": {
     "@types/escape-html": "0.0.20",
-    "@types/file-type": "^10.9.1"
+    "@types/file-type": "^10.9.1",
+    "typescript-declaration-webpack-plugin": "^0.1.1"
   }
 }
