@@ -432,7 +432,7 @@ class App extends SafeComponent {
       this.width = widthString;
       lsSet(WIDTH_LS_KEY, widthString);
 
-      const apiRoot = this.apiRoot || 'https://builder.io';
+      const apiRoot = this.apiRoot || "https://builder.io";
 
       const encocedUrl = encodeURIComponent(this.urlValue);
 
@@ -786,19 +786,92 @@ class App extends SafeComponent {
               </Typography>
             </>
           ) : (
-            <Button
-              type="submit"
-              disabled={Boolean(
-                this.errorMessage || this.loading || !this.online
-              )}
-              style={{ marginTop: 20 }}
-              fullWidth
-              color="primary"
-              variant="contained"
-              onClick={this.onCreate}
-            >
-              Import
-            </Button>
+            <>
+              <Button
+                type="submit"
+                disabled={Boolean(
+                  this.errorMessage || this.loading || !this.online
+                )}
+                style={{ marginTop: 20 }}
+                fullWidth
+                color="primary"
+                variant="contained"
+                onClick={this.onCreate}
+              >
+                Import
+              </Button>
+              <Tooltip title="Import a file from the HTML to Figma Chrome Extnesion">
+                <Button
+                  type="submit"
+                  onClick={() => {
+                    this.loading = true;
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    document.body.appendChild(input);
+                    input.click();
+
+                    // TODO: parse and upload images!
+                    input.addEventListener("change", event => {
+                      const file = (event.target as any).files[0];
+                      if (file) {
+                        var reader = new FileReader();
+
+                        // Closure to capture the file information.
+                        reader.onload = e => {
+                          const text = (e.target as any).result;
+                          try {
+                            const json = JSON.parse(text);
+                            Promise.all(
+                              json.layers.map(async (rootLayer: Node) => {
+                                await traverseLayers(rootLayer, layer => {
+                                  if (getImageFills(layer)) {
+                                    return processImages(layer).catch(err => {
+                                      console.warn(
+                                        "Could not process image",
+                                        err
+                                      );
+                                    });
+                                  }
+                                });
+                              })
+                            )
+                              .then(() => {
+                                parent.postMessage(
+                                  {
+                                    pluginMessage: {
+                                      type: "import",
+                                      data: json
+                                    }
+                                  },
+                                  "*"
+                                );
+                              })
+                              .catch(err => {
+                                this.loading = false;
+                                console.error(err);
+                                alert(err);
+                              });
+                          } catch (err) {
+                            alert("File read error: " + err);
+                            this.loading = false;
+                          }
+                          input.remove();
+                        };
+
+                        reader.readAsText(file);
+                      } else {
+                        this.loading = false;
+                      }
+                    });
+                  }}
+                  style={{ marginTop: 20, fontWeight: 200 }}
+                  fullWidth
+                  color="primary"
+                >
+                  Upload .figma.json file
+                </Button>
+              </Tooltip>
+            </>
           )}
         </form>
         {this.showExperimental && (
@@ -1080,13 +1153,16 @@ class App extends SafeComponent {
                         //   this.editorRef.data = previewData
                         // }
                         if (this.editorRef && this.editorRef.contentWindow) {
-                          this.editorRef.contentWindow.postMessage({
-                            type: 'builder.contentUpdate',
-                            data: {
-                              key: 'page',
-                              data: previewData
-                            }
-                          }, '*')
+                          this.editorRef.contentWindow.postMessage(
+                            {
+                              type: "builder.contentUpdate",
+                              data: {
+                                key: "page",
+                                data: previewData
+                              }
+                            },
+                            "*"
+                          );
                         }
                         // const frame = document.querySelector(
                         //   "builder-editor iframe"
@@ -1122,7 +1198,7 @@ class App extends SafeComponent {
                           }}
                         >
                           <iframe
-                            ref={ref => this.editorRef = ref}
+                            ref={ref => (this.editorRef = ref)}
                             style={{
                               width: "100%",
                               border: 0,

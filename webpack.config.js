@@ -55,7 +55,7 @@ module.exports = (env, argv) => {
       output: {
         ...baseConfig.output,
         library: "htmlToFigma",
-        libraryTarget: "umd",
+        libraryTarget: "var",
         filename: "browser.js"
       }
     },
