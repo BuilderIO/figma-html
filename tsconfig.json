@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "outDir": "dist",
+    "declarationDir": "dist",
     "target": "es6",
     "lib": ["es2016", "dom"],
     "jsx": "react",
