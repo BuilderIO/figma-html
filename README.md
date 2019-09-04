@@ -14,7 +14,8 @@ Figma plugin to convert HTML from a URL to Figma
 1. In Figma hit cmd+/ and search "html to figma" and hit enter
 1. Enter a URL you want to import
 
-<img src="https://i.imgur.com/YNDD9dH.gif" alt="Demo" width="500" />
+<img src="https://i.imgur.com/YNDD9dH.gif" alt="Plugin demo" width="480" />
+
 
 ## Why?
 
@@ -34,6 +35,13 @@ A few known limitations:
 - all fonts have to be uploaded to Figma or a best effort fallback will be used
 
 If you find any issues or have feedback at all please [make an issue](https://github.com/BuilderIO/html-to-figma/issues/new)
+
+## Chrome Extension
+
+Want to capture a page behind an auth wall, or in a specific state you need to navigate to? Then the [chrome extension](https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim) is for you!
+
+<img src="https://imgur.com/ARz16KC.gif" alt="Chrome extension demo" width="480" />
+
 
 ## Using the library
 
