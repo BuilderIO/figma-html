@@ -8,7 +8,7 @@
 
 2) Go to a page, click the extension icon, and choose "capture current page"
 
-3) Open figma and be sure you have the [figma pluggin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma) installed
+3) Open figma and be sure you have the [figma plugin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma) installed
 
 4) Hit command + / and type "html to figma" and hit enter
 

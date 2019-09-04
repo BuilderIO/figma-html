@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Button, CircularProgress, Typography, Paper } from "@material-ui/core";
-import CheckCircle from "@material-ui/icons/CheckCircle";
+import CheckCircle from "@material-ui/icons/CheckCircleOutline";
 import Heart from "@material-ui/icons/Favorite";
 import { observer } from "mobx-react";
 import { observable } from "mobx";
@@ -21,12 +21,25 @@ export default class Popup extends React.Component<AppProps, AppState> {
   @observable selector = "body";
   @observable loading = false;
   @observable done = false;
+  @observable error = "";
+
+  componentDidMount() {
+    chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
+      const activeTab = tabs[0];
+      if (activeTab) {
+        if (activeTab.url) {
+          if (activeTab.url.startsWith("https://chrome.google.com")) {
+            this.error =
+              "You can't run this extension in the Chrome web store itself, please try another URL";
+          }
+        }
+      }
+    });
+  }
 
   htmlToFigma() {
     this.loading = true;
     chrome.runtime.sendMessage({ inject: true }, response => {
-      // TODO: detect error and display
-      console.log("response", response);
       this.loading = false;
       this.done = true;
     });
@@ -45,42 +58,59 @@ export default class Popup extends React.Component<AppProps, AppState> {
         <img
           style={{
             height: 61,
-            width: 329,
+            width: 250,
             margin: "auto",
             marginBottom: 30,
-            objectFit: "contain"
+            objectFit: "contain",
+            objectPosition: 'center'
           }}
           src={logo}
         />
-        {this.done ? (
+        {this.error ? (
+          <div
+            style={{
+              padding: 15,
+              color: "#a94442",
+              borderRadius: 4,
+              backgroundColor: "#f2dede",
+              border: "1px solid #ebccd1",
+              textAlign: 'center'
+            }}
+          >
+            {this.error}
+          </div>
+        ) : this.done ? (
           <Paper style={{ textAlign: "center", padding: 20 }}>
             <div style={{ display: "flex", justifyContent: "center" }}>
-              <CheckCircle
-                style={{ color: theme.colors.primary }}
-              />
-              <Typography variant="body1" style={{ marginLeft: 10 }}>
+              <CheckCircle style={{ color: theme.colors.primary }} />
+              <Typography variant="body1" style={{ marginLeft: 10, color: theme.colors.primary }}>
                 Done!
               </Typography>
             </div>
-            <Typography variant="body2">
+            <Typography variant="body2" style={{ margin: "15px 0" }}>
               Now grab the{" "}
               <a
                 href="https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma"
                 target="_blank"
                 style={{
-                  color: theme.colors.primary
+                  color: theme.colors.primary,
+                  textDecoration: 'none'
                 }}
               >
                 Figma plugin
               </a>{" "}
               and choose "upload here" to upload the downloaded figma.json file
-              to your current Figma document. <a
-                href="https://github.com/BuilderIO/html-to-figma/tree/master/chrome-extension"
+              to your current Figma document.{" "}
+              <a
+                href="https://github.com/BuilderIO/html-to-figma/blob/master/chrome-extension/README.md"
                 target="_blank"
                 style={{
-                  color: theme.colors.primary
+                  color: theme.colors.primary,
+                  textDecoration: 'none'
                 }}
-              >More info</a>
+              >
+                More info
+              </a>
             </Typography>
             <img
               style={{ margin: "10px 0", maxWidth: "100%" }}
