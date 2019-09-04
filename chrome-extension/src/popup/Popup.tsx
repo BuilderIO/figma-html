@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Button, CircularProgress, Typography } from "@material-ui/core";
+import { Button, CircularProgress, Typography, Paper } from "@material-ui/core";
 import CheckCircle from "@material-ui/icons/CheckCircle";
 import Heart from "@material-ui/icons/Favorite";
 import { observer } from "mobx-react";
@@ -53,13 +53,15 @@ export default class Popup extends React.Component<AppProps, AppState> {
           src={logo}
         />
         {this.done ? (
-          <div style={{ textAlign: "center" }}>
-            <CheckCircle
-              style={{ color: theme.colors.primary, margin: "0 auto" }}
-            />
-            <Typography variant="body1" style={{ margin: "10px" }}>
-              Done!
-            </Typography>
+          <Paper style={{ textAlign: "center", padding: 20 }}>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <CheckCircle
+                style={{ color: theme.colors.primary }}
+              />
+              <Typography variant="body1" style={{ marginLeft: 10 }}>
+                Done!
+              </Typography>
+            </div>
             <Typography variant="body2">
               Now grab the{" "}
               <a
@@ -72,9 +74,20 @@ export default class Popup extends React.Component<AppProps, AppState> {
                 Figma plugin
               </a>{" "}
               and choose "upload here" to upload the downloaded figma.json file
-              to your current Figma document
+              to your current Figma document. <a
+                href="https://github.com/BuilderIO/html-to-figma/tree/master/chrome-extension"
+                target="_blank"
+                style={{
+                  color: theme.colors.primary
+                }}
+              >More info</a>
             </Typography>
-          </div>
+            <img
+              style={{ margin: "10px 0", maxWidth: "100%" }}
+              src="https://imgur.com/ARz16KC.gif"
+              alt="Chrome extension demo"
+            />
+          </Paper>
         ) : this.loading ? (
           <CircularProgress style={{ margin: "20px auto" }} />
         ) : (

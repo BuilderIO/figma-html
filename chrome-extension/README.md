@@ -4,7 +4,17 @@
 
 ## Usage
 
-Coming soon!
+1) Install the Then the [chrome extension](https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim)
+
+2) Go to a page, click the extension icon, and choose "capture current page"
+
+3) Open figma and be sure you have the [figma pluggin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma) installed
+
+4) Hit command + / and type "html to figma" and hit enter
+
+5) Choose "upload here" and upload the file downloaded by the extension
+
+<img src="https://imgur.com/ARz16KC.gif" alt="Chrome extension demo" width="480" />
 
 ## Building
 
