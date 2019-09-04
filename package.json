@@ -1,6 +1,6 @@
 {
   "name": "@builder.io/html-to-figma",
-  "version": "0.0.1",
+  "version": "0.0.2-0",
   "description": "Convert HTML to figma",
   "main": "dist/main.js",
   "browser": "dist/browser.js",
