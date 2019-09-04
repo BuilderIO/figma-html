@@ -40,7 +40,7 @@ If you find any issues or have feedback at all please [make an issue](https://gi
 ```js
 const { htmlToFigma } = require('@builder.io/html-to-figma');
 const layers = htmlToFigma(document.body)
-// E.g. send these to the REST API
+// E.g. send these to the REST API, or generate a .figma.json file that can be uploaded through the Figma plugin
 ```
 
 <br />

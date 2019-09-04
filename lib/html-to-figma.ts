@@ -4,7 +4,7 @@ export interface SvgNode extends DefaultShapeMixin, ConstraintMixin {
 }
 
 export function htmlToFigma(
-  selector = "body",
+  selector: HTMLElement | string = "body",
   useFrames = false,
   time = false
 ) {
@@ -94,7 +94,10 @@ export function htmlToFigma(
   type LayerNode = WithRef<RectangleNode | TextNode | FrameNode | SvgNode>;
 
   const layers: LayerNode[] = [];
-  const el = document.querySelector(selector || "body");
+  const el =
+    selector instanceof HTMLElement
+      ? selector
+      : document.querySelector(selector || "body");
 
   function textNodesUnder(el: Element) {
     let n: Node | null = null;
