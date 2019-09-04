@@ -4,14 +4,17 @@
   "description": "Convert HTML to figma",
   "main": "dist/main.js",
   "browser": "dist/browser.js",
-  "files": [
-    "dist"
-  ],
+  "types": "dist/lib/html-to-figma.d.ts",
+  "files": ["dist"],
   "scripts": {
     "dev": "NODE_ENV=development webpack --mode=development --watch",
-    "build": "NODE_ENV=production webpack --mode=production",
+    "build": "NODE_ENV=production tsc && webpack --mode=production",
     "release:patch": "npm version patch && npm run build && npm publish",
     "release:dev": "npm version prerelease && npm run build && npm publish --tag dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/builderio/html-to-figma"
   },
   "author": "",
   "license": "MIT",

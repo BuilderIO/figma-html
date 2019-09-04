@@ -2,8 +2,6 @@ const webpack = require("webpack");
 const HtmlWebpackInlineSourcePlugin = require("html-webpack-inline-source-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const path = require("path");
-const TypescriptDeclarationPlugin = require('typescript-declaration-webpack-plugin');
-
 
 module.exports = (env, argv) => {
   const baseConfig = {
@@ -64,22 +62,16 @@ module.exports = (env, argv) => {
     {
       ...baseConfig,
       optimization: {
-        minimize: false,
+        minimize: false
       },
       entry: "./lib/html-to-figma.ts",
       output: {
         ...baseConfig.output,
         library: "htmlToFigma",
-        libraryExport: 'htmlToFigma',
+        libraryExport: "htmlToFigma",
         libraryTarget: "commonjs",
         filename: "main.js"
-      },
-      plugins: [
-        ...baseConfig.plugins,
-        new TypescriptDeclarationPlugin({
-          out: 'main.d.ts'
-        })
-      ]
+      }
     }
   ];
 };

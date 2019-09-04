@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "outDir": "dist",
     "target": "es6",
     "lib": ["es2016", "dom"],
     "jsx": "react",
@@ -7,7 +8,8 @@
     "declaration": true,
     "experimentalDecorators": true,
     "typeRoots": ["node_modules/@types"],
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "skipLibCheck": true
   },
   "exclude": ["dist", "node_modules", ".cache", ".cache-loader", ".next", "chrome-extension"]
 }

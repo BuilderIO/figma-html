@@ -1,3 +1,8 @@
+export interface SvgNode extends DefaultShapeMixin, ConstraintMixin {
+  type: "SVG";
+  svg: string;
+}
+
 export function htmlToFigma(
   selector = "body",
   useFrames = false,
@@ -82,11 +87,6 @@ export function htmlToFigma(
   }
   function size(obj: object) {
     return Object.keys(obj).length;
-  }
-
-  interface SvgNode extends DefaultShapeMixin, ConstraintMixin {
-    type: "SVG";
-    svg: string;
   }
 
   type WithRef<T> = Partial<T> & { ref?: Element | Node };
