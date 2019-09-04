@@ -16,6 +16,7 @@ import {
 import green from "@material-ui/core/colors/green";
 import { SvgIconProps } from "@material-ui/core/SvgIcon";
 import Brush from "@material-ui/icons/Brush";
+import HelpOutline from "@material-ui/icons/HelpOutline";
 import GridOn from "@material-ui/icons/GridOn";
 import LaptopMac from "@material-ui/icons/LaptopMac";
 import MoreHoriz from "@material-ui/icons/MoreHoriz";
@@ -800,9 +801,24 @@ class App extends SafeComponent {
               >
                 Import
               </Button>
-              <Tooltip title="Import a file from the HTML to Figma Chrome Extnesion">
-                <Button
-                  type="submit"
+              <div
+                style={{
+                  color: "#888",
+                  fontSize: 12,
+                  textAlign: "center",
+                  marginTop: 15,
+                  userSelect: "none",
+                  marginBottom: -10
+                }}
+              >
+                Or try our{" "}
+                <a
+                  style={{ color: themeVars.colors.primary, cursor: "pointer" }}
+                >
+                  chrome extension
+                </a>{" "}
+                to capture a page in your browser and
+                <a
                   onClick={() => {
                     this.loading = true;
                     const input = document.createElement("input");
@@ -810,9 +826,15 @@ class App extends SafeComponent {
                     document.body.appendChild(input);
                     input.click();
 
+                    input.addEventListener('blur', event => {
+                      if (!(event.target as HTMLInputElement).files!.length) {
+                        this.loading = false
+                      }
+                    })
+
                     // TODO: parse and upload images!
                     input.addEventListener("change", event => {
-                      const file = (event.target as any).files[0];
+                      const file = (event.target as HTMLInputElement).files![0];
                       if (file) {
                         var reader = new FileReader();
 
@@ -864,13 +886,19 @@ class App extends SafeComponent {
                       }
                     });
                   }}
-                  style={{ marginTop: 20, fontWeight: 200 }}
-                  fullWidth
-                  color="primary"
+                  style={{ color: themeVars.colors.primary, cursor: "pointer" }}
                 >
-                  Upload .figma.json file
-                </Button>
-              </Tooltip>
+                  {" "}
+                  upload here{" "}
+                </a>
+                {/* <HelpOutline
+                  style={{
+                    cursor: "pointer",
+                    fontSize: 14,
+                    verticalAlign: "middle"
+                  }}
+                /> */}
+              </div>
             </>
           )}
         </form>

@@ -35,9 +35,13 @@ A few known limitations:
 
 If you find any issues or have feedback at all please [make an issue](https://github.com/BuilderIO/html-to-figma/issues/new)
 
-## Todo
+## Using the library
 
-- Chrome extension
+```js
+const { htmlToFigma } = require('@builder.io/html-to-figma');
+const layers = htmlToFigma(document.body)
+// E.g. send these to the REST API
+```
 
 <br />
 <br />

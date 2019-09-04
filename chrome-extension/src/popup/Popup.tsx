@@ -20,6 +20,7 @@ export default class Popup extends React.Component<AppProps, AppState> {
       <div style={{ width: 400, padding: 20 }}>
         <Button
           fullWidth
+          size="large"
           variant="contained"
           color="primary"
           onClick={() => this.htmlToFigma()}
