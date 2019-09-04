@@ -813,7 +813,11 @@ class App extends SafeComponent {
               >
                 Or try our{" "}
                 <a
-                  style={{ color: themeVars.colors.primary, cursor: "pointer", textDecoration: 'none' }}
+                  style={{
+                    color: themeVars.colors.primary,
+                    cursor: "pointer",
+                    textDecoration: "none"
+                  }}
                   href="https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim"
                   target="_blank"
                 >
@@ -824,15 +828,27 @@ class App extends SafeComponent {
                   onClick={() => {
                     this.loading = true;
                     const input = document.createElement("input");
+
                     input.type = "file";
                     document.body.appendChild(input);
                     input.click();
 
-                    input.addEventListener('blur', event => {
-                      if (!(event.target as HTMLInputElement).files!.length) {
-                        this.loading = false
+                    const onFocus = () => {
+                      if (
+                        input.parentElement &&
+                        (!input.files || input.files.length === 0)
+                      ) {
+                        done();
                       }
-                    })
+                    };
+
+                    const done = () => {
+                      input.remove();
+                      this.loading = false;
+                      document.body.removeEventListener("focus", onFocus);
+                    };
+
+                    document.body.addEventListener("focus", onFocus);
 
                     // TODO: parse and upload images!
                     input.addEventListener("change", event => {
@@ -871,20 +887,19 @@ class App extends SafeComponent {
                                 );
                               })
                               .catch(err => {
-                                this.loading = false;
+                                done();
                                 console.error(err);
                                 alert(err);
                               });
                           } catch (err) {
                             alert("File read error: " + err);
-                            this.loading = false;
+                            done();
                           }
-                          input.remove();
                         };
 
                         reader.readAsText(file);
                       } else {
-                        this.loading = false;
+                        done();
                       }
                     });
                   }}

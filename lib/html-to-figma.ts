@@ -908,25 +908,45 @@ export function htmlToFigma(
             vertical: "MIN"
           };
         } else {
-          let hasFixedWidth = false;
           const ref = layer.ref;
           if (ref) {
-            // TODO: also if is shrink width and padding and text align center hm
-            const el = ref instanceof Element ? ref : ref.parentElement;
-            if (el instanceof HTMLElement) {
-              const currentStyleDisplay = el.style.display;
-              el.style.display = "none";
-              const computedWidth = getComputedStyle(el).width;
-              el.style.display = currentStyleDisplay;
-              if (computedWidth && computedWidth.match(/^[\d\.]+px$/)) {
-                hasFixedWidth = true;
+            const el = ref instanceof HTMLElement ? ref : ref.parentElement;
+            const parent = el && el.parentElement;
+            if (el && parent) {
+              const computed = getComputedStyle(el);
+              const parentStyle = getComputedStyle(parent);
+              let hasAutoMarginLeft = computed.marginLeft === "auto";
+              let hasAutoMarginRight = computed.marginRight === "auto";
+
+              const isInline =
+                computed.display && computed.display.includes("inline");
+              if (isInline) {
+                const parentTextAlign = parentStyle.textAlign;
+                if (parentTextAlign === "center") {
+                  hasAutoMarginLeft = true;
+                  hasAutoMarginRight = true;
+                }
+                if (parentTextAlign === "right") {
+                  hasAutoMarginLeft = true;
+                }
               }
+
+              child.constraints = {
+                horizontal:
+                  hasAutoMarginLeft && hasAutoMarginRight
+                    ? "CENTER"
+                    : hasAutoMarginLeft
+                    ? "MAX"
+                    : "SCALE",
+                vertical: "MIN"
+              };
             }
+          } else {
+            child.constraints = {
+              horizontal: "SCALE",
+              vertical: "MIN"
+            };
           }
-          child.constraints = {
-            horizontal: hasFixedWidth ? "CENTER" : "SCALE",
-            vertical: "MIN"
-          };
         }
       });
     });
