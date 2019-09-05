@@ -8,7 +8,7 @@ var blob = new Blob([json], {
 
 const link = document.createElement("a");
 link.setAttribute("href", URL.createObjectURL(blob));
-link.setAttribute("download", "page.builder.json");
+link.setAttribute("download", "page.figma.json");
 document.body.appendChild(link);
 
 link.click();

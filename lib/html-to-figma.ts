@@ -899,8 +899,9 @@ export function htmlToFigma(
       });
     });
   }
+
   function addConstraints(layers: LayerNode[]) {
-    layers.concat([root]).forEach(layer => {
+    layers.forEach(layer => {
       traverse(layer, child => {
         if (child.type === "SVG") {
           child.constraints = {
@@ -908,26 +909,87 @@ export function htmlToFigma(
             vertical: "MIN"
           };
         } else {
-          const ref = layer.ref;
+          const ref = child.ref;
           if (ref) {
             const el = ref instanceof HTMLElement ? ref : ref.parentElement;
             const parent = el && el.parentElement;
             if (el && parent) {
-              const computed = getComputedStyle(el);
+              const currentDisplay = el.style.display;
+              el.style.display = "none";
+              let computed = getComputedStyle(el);
+              el.style.display = currentDisplay;
               const parentStyle = getComputedStyle(parent);
               let hasAutoMarginLeft = computed.marginLeft === "auto";
               let hasAutoMarginRight = computed.marginRight === "auto";
+              let hasAutoMarginTop = computed.marginTop === "auto";
+              let hasAutoMarginBottom = computed.marginBottom === "auto";
+
+              computed = getComputedStyle(el);
 
               const isInline =
                 computed.display && computed.display.includes("inline");
+
               if (isInline) {
                 const parentTextAlign = parentStyle.textAlign;
                 if (parentTextAlign === "center") {
                   hasAutoMarginLeft = true;
                   hasAutoMarginRight = true;
-                }
-                if (parentTextAlign === "right") {
+                } else if (parentTextAlign === "right") {
                   hasAutoMarginLeft = true;
+                }
+
+                if (computed.verticalAlign === "middle") {
+                  hasAutoMarginTop = true;
+                  hasAutoMarginBottom = true;
+                } else if (computed.verticalAlign === "bottom") {
+                  hasAutoMarginTop = true;
+                  hasAutoMarginBottom = false;
+                }
+              }
+              const parentJustifyContent =
+                parentStyle.display === "flex" &&
+                ((parentStyle.flexDirection === "row" &&
+                  parentStyle.justifyContent) ||
+                  (parentStyle.flexDirection === "column" &&
+                    parentStyle.alignItems));
+
+              if (parentJustifyContent === "center") {
+                hasAutoMarginLeft = true;
+                hasAutoMarginRight = true;
+              } else if (
+                parentJustifyContent &&
+                (parentJustifyContent.includes("end") ||
+                  parentJustifyContent.includes("right"))
+              ) {
+                hasAutoMarginLeft = true;
+                hasAutoMarginRight = false;
+              }
+
+              const parentAlignItems =
+                parentStyle.display === "flex" &&
+                ((parentStyle.flexDirection === "column" &&
+                  parentStyle.justifyContent) ||
+                  (parentStyle.flexDirection === "row" &&
+                    parentStyle.alignItems));
+              if (parentAlignItems === "center") {
+                hasAutoMarginTop = true;
+                hasAutoMarginBottom = true;
+              } else if (
+                parentAlignItems &&
+                (parentAlignItems.includes("end") ||
+                  parentAlignItems.includes("bottom"))
+              ) {
+                hasAutoMarginTop = true;
+                hasAutoMarginBottom = false;
+              }
+
+              if (child.type === "TEXT") {
+                if (computed.textAlign === "center") {
+                  hasAutoMarginLeft = true;
+                  hasAutoMarginRight = true;
+                } else if (computed.textAlign === "right") {
+                  hasAutoMarginLeft = true;
+                  hasAutoMarginRight = false;
                 }
               }
 
@@ -938,7 +1000,12 @@ export function htmlToFigma(
                     : hasAutoMarginLeft
                     ? "MAX"
                     : "SCALE",
-                vertical: "MIN"
+                vertical:
+                  hasAutoMarginBottom && hasAutoMarginTop
+                    ? "CENTER"
+                    : hasAutoMarginTop
+                    ? "MAX"
+                    : "MIN"
               };
             }
           } else {

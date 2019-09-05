@@ -14,6 +14,9 @@ interface NodeMetaData {
 export const hasChildren = (node: unknown): node is ChildrenMixin =>
   !!(node && (node as any).children);
 
+export const hasConstraints = (node: unknown): node is ConstraintMixin =>
+  !!(node && (node as any).constraints);
+
 export const isTextNode = (node: unknown): node is TextNode =>
   !!(node && (node as any).type === "TEXT");
 
@@ -79,20 +82,36 @@ const el = (options?: Partial<BuilderElement>): BuilderElement => ({
 });
 
 const isCenteredX = (node: SceneNode, parent: SceneNode) => {
-  if (Math.abs(parent.width - node.width) < parent.width / 10) {
-    // Full width, don't center
-    return false;
+  if (hasConstraints(node)) {
+    if (node.constraints.horizontal === "CENTER") {
+      return true;
+    }
   }
-  const nodeCenterX = node.x + node.width / 2;
-  const parentCenterX = parent.x + parent.width / 2;
-  return Math.abs(nodeCenterX - parentCenterX) < parent.width / 10;
+  return false;
+};
+const isRightJustified = (node: SceneNode, parent: SceneNode) => {
+  if (hasConstraints(node)) {
+    if (node.constraints.horizontal === "MAX") {
+      return true;
+    }
+  }
+  return false;
 };
 const isCenteredY = (node: SceneNode, parent: SceneNode) => {
+  if (hasConstraints(node)) {
+    if (node.constraints.vertical === "CENTER") {
+      return true;
+    }
+  }
   return false;
-  // const nodeCenterY = node.y + node.height / 2;
-  // const parentCenterY = parent.y + parent.height / 2;
-  // //
-  // return Math.abs(nodeCenterY - parentCenterY) < parent.height / 5;
+};
+const isBottomJustified = (node: SceneNode, parent: SceneNode) => {
+  if (hasConstraints(node)) {
+    if (node.constraints.vertical === "MAX") {
+      return true;
+    }
+  }
+  return false;
 };
 
 const isImageNode = (node: SceneNode) => {
@@ -142,14 +161,16 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
     const index = sortedChildren.indexOf(node);
     const priorSibling = index > 0 && sortedChildren[index - 1];
     if (parentLayout === "stack") {
-      if (isCenteredX(node, parent) && node.x) {
+      if (isCenteredX(node, parent)) {
         styles.marginLeft = "auto";
         styles.marginRight = "auto";
+      } else if (isRightJustified(node, parent)) {
+        styles.marginLeft = "auto";
       } else {
         styles.marginLeft = node.x + "px";
       }
 
-      if (isCenteredY(node, parent) && node.y) {
+      if (isCenteredY(node, parent) && sortedChildren.length === 1) {
         styles.marginTop = "auto";
         styles.marginBottom = "auto";
       } else if (priorSibling) {
@@ -162,22 +183,24 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
       }
     }
 
-    if (parentLayout === "row" || parentLayout === "grid") {
-      if (isCenteredY(node, parent) && node.y) {
+    if (
+      parentLayout === "row" ||
+      parentLayout === "grid" ||
+      parentLayout === "columns"
+    ) {
+      if (isCenteredY(node, parent)) {
         styles.marginTop = "auto";
         styles.marginBottom = "auto";
       } else {
         styles.marginTop = node.y + "px";
       }
 
-      if (isCenteredX(node, parent) && node.x) {
+      if (isCenteredX(node, parent) && sortedChildren.length === 1) {
         styles.marginLeft = "auto";
         styles.marginRight = "auto";
+      } else if (isRightJustified(node, parent)) {
+        styles.marginLeft = "auto";
       } else if (priorSibling) {
-        // console.log(
-        //   "row prior siling",
-        //   node.x - (priorSibling.x + priorSibling.width)
-        // );
         styles.marginLeft = `${Math.max(
           node.x - (priorSibling.x + priorSibling.width),
           0
@@ -190,14 +213,14 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
 
   if (hasChildren(node)) {
     if (layout === "stack") {
-      const lastChild = last(node.children);
+      const lastChild = last(sortBy(node.children, child => child.x + child.y));
       if (lastChild && !isCenteredY(lastChild, node) && !isImageNode(node)) {
         styles.paddingBottom =
           Math.max(node.height - (lastChild.y + lastChild.height), 0) + "px";
       }
     }
     if (layout === "row") {
-      const lastChild = last(node.children);
+      const lastChild = last(sortBy(node.children, child => child.x + child.y));
       if (lastChild && !isCenteredX(lastChild, node)) {
         styles.paddingRight =
           Math.max(node.width - (lastChild.x + lastChild.width), 0) + "px";
@@ -217,8 +240,9 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
         }
         if (fill.type === "SOLID") {
           const { color } = fill;
-          const colorString = `rgba(${color.r * 255}, ${color.g *
-            255}, ${color.b * 255}, ${fill.opacity})`;
+          const colorString = `rgba(${Math.round(color.r * 255)}, ${Math.round(
+            color.g * 255
+          )}, ${Math.round(color.b * 255)}, ${fill.opacity})`;
           if (node.type === "TEXT") {
             styles.color = colorString;
           } else {
@@ -274,6 +298,14 @@ export function sortChildren(nodes: SceneNode[]) {
   return sortBy(nodes, node => node.x + node.y);
 }
 
+function omit<T extends object>(obj: T, ...values: (keyof T)[]): Partial<T> {
+  const newObject = Object.assign({}, obj);
+  for (const key of values) {
+    delete (newObject as any)[key];
+  }
+  return newObject;
+}
+
 export function processBackgroundLayer(node: SceneNode) {
   if (hasChildren(node) && node.children.length) {
     const lastChild = node.children[0];
@@ -284,11 +316,8 @@ export function processBackgroundLayer(node: SceneNode) {
       lastChild.width === node.width &&
       lastChild.height === node.height
     ) {
-      const last = (node.children as SceneNode[]).shift();
-      Object.assign(node, last, {
-        type: node.type,
-        children: node.children.concat(hasChildren(last) ? last.children : [])
-      });
+      const last = (node.children as SceneNode[]).shift()!;
+      Object.assign(node, omit(last as any, "type", "children", "constraints"));
     }
   }
 }
@@ -344,7 +373,11 @@ export function figmaToBuilder(
       large: getCss(node, parent || null)
     },
     // TODO: maybe put original layer ID in metadata
-    layerName: node.name,
+    layerName: ["Frame", "Rectangle"].includes(
+      node.name.length > 30 ? node.name.substr(0, 30) + "..." : ""
+    )
+      ? undefined
+      : node.name,
     ...({
       meta: {
         figmaLayerId: node.id
@@ -407,15 +440,19 @@ export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
     return data.component;
   }
 
+  if (isImage(node)) {
+    return "stack";
+  }
+
   if (hasChildren(node)) {
     let children = node.children;
     const firstChild = children[0];
     if (firstChild) {
       if (
-        firstChild.x === 0 &&
-        firstChild.y === 0 &&
-        firstChild.width === node.width &&
-        firstChild.height === node.height
+        Math.round(firstChild.x) === 0 &&
+        Math.round(firstChild.y) === 0 &&
+        Math.round(firstChild.width) === Math.round(node.width) &&
+        Math.round(firstChild.height) === Math.round(node.height)
       ) {
         children = children.slice(1);
       }

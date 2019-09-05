@@ -237,7 +237,7 @@ class App extends SafeComponent {
   @observable urlValue = "https://builder.io";
   @observable width = lsGet(WIDTH_LS_KEY) || "1200";
   @observable online = navigator.onLine;
-  @observable useFrames = lsGet(FRAMES_LS_KEY) || false;
+  @observable useFrames = lsGet(FRAMES_LS_KEY) || process.env.NODE_ENV === "development" || false;
   @observable showExperimental =
     lsGet(EXPERIMENTS_LS_KEY) ||
     process.env.NODE_ENV === "development" ||
@@ -782,7 +782,7 @@ class App extends SafeComponent {
                   // fontStyle: "italic"
                 }}
               >
-                Analyzing code... <br />
+                Processing code... <br />
                 This can take a couple minutes...
               </Typography>
             </>
@@ -1147,7 +1147,7 @@ class App extends SafeComponent {
                       </Button>
                     )}
 
-                    <Button
+                    {/* <Button
                       style={{
                         marginTop: 15,
                         fontWeight: 400
@@ -1192,11 +1192,6 @@ class App extends SafeComponent {
                             blocks: [block]
                           }
                         });
-                        // console.log('ref?', this.editorRef, previewData)
-                        // ;(window as any).ref = this.editorRef
-                        // if (this.editorRef) {
-                        //   this.editorRef.data = previewData
-                        // }
                         if (this.editorRef && this.editorRef.contentWindow) {
                           this.editorRef.contentWindow.postMessage(
                             {
@@ -1209,27 +1204,11 @@ class App extends SafeComponent {
                             "*"
                           );
                         }
-                        // const frame = document.querySelector(
-                        //   "builder-editor iframe"
-                        // );
-                        // if (frame instanceof HTMLIFrameElement) {
-                        //   if (frame.contentWindow) {
-                        //     frame.contentWindow.postMessage(
-                        //       {
-                        //         type: "builder.updateEditorData",
-                        //         data: {
-                        //           data: previewData
-                        //         }
-                        //       },
-                        //       "*"
-                        //     );
-                        //   }
-                        // }
                         this.selectionWithImages = null;
                       }}
                     >
                       Live preview
-                    </Button>
+                    </Button> */}
                     {this.showBuilderPreview && (
                       <div style={{ width: "100%", marginTop: 15 }}>
                         <div
@@ -1243,6 +1222,7 @@ class App extends SafeComponent {
                           }}
                         >
                           <iframe
+                            sandbox="allow-scripts allow-pointer-lock allow-same-origin"
                             ref={ref => (this.editorRef = ref)}
                             style={{
                               width: "100%",

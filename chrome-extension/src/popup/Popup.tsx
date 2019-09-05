@@ -128,7 +128,7 @@ export default class Popup extends React.Component<AppProps, AppState> {
             color="primary"
             onClick={() => this.htmlToFigma()}
           >
-            Capture current page
+            Capture page
           </Button>
         )}
 
@@ -144,7 +144,7 @@ export default class Popup extends React.Component<AppProps, AppState> {
           by{" "}
           <a
             style={{ color: theme.colors.primary }}
-            href="https://builder.io?ref=figma"
+            href="https://builder.io?ref=figma-chrome-extension"
             target="_blank"
           >
             Builder.io
