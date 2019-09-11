@@ -1,6 +1,6 @@
 import { htmlToFigma } from "@builder.io/html-to-figma";
 
-const layers = htmlToFigma();
+const layers = htmlToFigma('body', location.hash.includes('useFrames=true'));
 var json = JSON.stringify({ layers });
 var blob = new Blob([json], {
   type: "application/json"

@@ -8,6 +8,90 @@ export function htmlToFigma(
   useFrames = false,
   time = false
 ) {
+  function getDirectionMostOfElements(
+    direction: "left" | "right" | "top" | "bottom",
+    elements: Element[]
+  ) {
+    if (elements.length === 1) {
+      return elements[0];
+    }
+    return elements.reduce(
+      (memo, value: Element) => {
+        if (!memo) {
+          return value;
+        }
+
+        if (direction === "left" || direction === "top") {
+          if (
+            getBoundingClientRect(value)[direction] <
+            getBoundingClientRect(memo)[direction]
+          ) {
+            return value;
+          }
+        } else {
+          if (
+            getBoundingClientRect(value)[direction] >
+            getBoundingClientRect(memo)[direction]
+          ) {
+            return value;
+          }
+        }
+        return memo;
+      },
+      null as Element | null
+    );
+  }
+  function getAggregateRectOfElements(elements: Element[]) {
+    if (!elements.length) {
+      return null;
+    }
+
+    const top = getBoundingClientRect(
+      getDirectionMostOfElements("top", elements)!
+    ).top;
+    const left = getBoundingClientRect(
+      getDirectionMostOfElements("left", elements)!
+    ).left;
+    const bottom = getBoundingClientRect(
+      getDirectionMostOfElements("bottom", elements)!
+    ).bottom;
+    const right = getBoundingClientRect(
+      getDirectionMostOfElements("right", elements)!
+    ).right;
+    const width = right - left;
+    const height = bottom - top;
+    return {
+      top,
+      left,
+      bottom,
+      right,
+      width,
+      height
+    };
+  }
+  function getBoundingClientRect(el: Element): ClientRect {
+    const computed = getComputedStyle(el);
+    const display = computed.display;
+    if (display && display.includes("inline") && el.children.length) {
+      const elRect = el.getBoundingClientRect();
+      const aggregateRect = getAggregateRectOfElements(
+        Array.from(el.children)
+      )!;
+
+      if (elRect.width > aggregateRect.width) {
+        return {
+          ...aggregateRect,
+          width: elRect.width,
+          left: elRect.left,
+          right: elRect.right
+        };
+      }
+      return aggregateRect;
+    }
+
+    return el.getBoundingClientRect();
+  }
+
   if (time) {
     console.time("Parse dom");
   }
@@ -146,6 +230,13 @@ export function htmlToFigma(
       ) {
         return true;
       }
+      // Some sites hide things by having overflow: hidden and height: 0, e.g. dropdown menus that animate height in
+      if (
+        computed.overflow !== "visible" &&
+        el.getBoundingClientRect().height < 1
+      ) {
+        return true;
+      }
     } while ((el = el.parentElement));
     return false;
   }
@@ -211,7 +302,7 @@ export function htmlToFigma(
             el instanceof HTMLVideoElement) &&
           computedStyle.display !== "none"
         ) {
-          const rect = el.getBoundingClientRect();
+          const rect = getBoundingClientRect(el);
 
           if (rect.width >= 1 && rect.height >= 1) {
             const fills: Paint[] = [];
@@ -835,7 +926,9 @@ export function htmlToFigma(
               );
 
               if (newChildren.length !== layer.children.length) {
-                const lcdRect = (lowestCommonDenominator as Element).getBoundingClientRect();
+                const lcdRect = getBoundingClientRect(
+                  lowestCommonDenominator as Element
+                );
 
                 const overflowHidden =
                   lowestCommonDenominator instanceof Element &&
@@ -925,6 +1018,13 @@ export function htmlToFigma(
               let hasAutoMarginBottom = computed.marginBottom === "auto";
 
               computed = getComputedStyle(el);
+
+              if (["absolute", "fixed"].includes(computed.position!)) {
+                if (!(child as any).data) {
+                  (child as any).data = {};
+                }
+                (child as any).data.position = computed.position;
+              }
 
               const isInline =
                 computed.display && computed.display.includes("inline");

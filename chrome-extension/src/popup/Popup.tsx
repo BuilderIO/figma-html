@@ -196,6 +196,28 @@ export default class Popup extends React.Component<AppProps, AppState> {
           >
             Source
           </a>
+          <span
+            style={{
+              display: "inline-block",
+              height: 10,
+              width: 1,
+              background: "#999",
+              marginTop: 1,
+              opacity: 0.8,
+              marginLeft: 5
+            }}
+          />
+          <a
+            style={{
+              color: "#999",
+              textDecoration: "none",
+              marginLeft: 5
+            }}
+            href="https://github.com/BuilderIO/html-to-figma"
+            target="_blank"
+          >
+            Help
+          </a>
         </div>
       </div>
     );

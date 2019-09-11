@@ -11,7 +11,8 @@ import {
   Switch,
   TextField,
   Tooltip,
-  Typography
+  Typography,
+  CircularProgress
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
 import { SvgIconProps } from "@material-ui/core/SvgIcon";
@@ -228,6 +229,7 @@ class App extends SafeComponent {
   editorRef: HTMLIFrameElement | null = null;
 
   @observable loading = false;
+  @observable loadingPush = false;
   @observable apiRoot =
     process.env.API_ROOT && process.env.NODE_ENV !== "production"
       ? process.env.API_ROOT
@@ -237,7 +239,8 @@ class App extends SafeComponent {
   @observable urlValue = "https://builder.io";
   @observable width = lsGet(WIDTH_LS_KEY) || "1200";
   @observable online = navigator.onLine;
-  @observable useFrames = lsGet(FRAMES_LS_KEY) || process.env.NODE_ENV === "development" || false;
+  @observable useFrames =
+    lsGet(FRAMES_LS_KEY) || process.env.NODE_ENV !== "production" || false;
   @observable showExperimental =
     lsGet(EXPERIMENTS_LS_KEY) ||
     process.env.NODE_ENV === "development" ||
@@ -254,7 +257,6 @@ class App extends SafeComponent {
   @observable shiftKeyDown = false;
   @observable altKeyDown = false;
   @observable ctrlKeyDown = false;
-  @observable showBuilderPreview = false;
   @observable.ref previewData: any;
   editorScriptAdded = false;
 
@@ -334,18 +336,6 @@ class App extends SafeComponent {
   componentDidMount() {
     // TODO: destroy on component unmount
     this.safeReaction(() => this.urlValue, () => (this.errorMessage = ""));
-    this.safeReaction(
-      () => this.showBuilderPreview,
-      showBuilderPreview => {
-        if (showBuilderPreview && !this.editorScriptAdded) {
-          const script = document.createElement("script");
-          script.src = "https://cdn.builder.io/js/editor@1.0.38-1";
-          script.async = true;
-          document.body.appendChild(script);
-          this.editorScriptAdded = true;
-        }
-      }
-    );
     this.selectAllUrlInputText();
 
     this.safeListenToEvent(window, "offline", () => (this.online = false));
@@ -377,8 +367,7 @@ class App extends SafeComponent {
     });
 
     this.safeReaction(
-      () =>
-        `${this.showMoreOptions}:${this.showExperimental}:${this.showBuilderPreview}"`,
+      () => `${this.showMoreOptions}:${this.showExperimental}"`,
       () => {
         let height = settings.ui.baseHeight;
         if (this.showMoreOptions) {
@@ -391,8 +380,7 @@ class App extends SafeComponent {
           {
             pluginMessage: {
               type: "resize",
-              width:
-                settings.ui.baseWidth + (this.showBuilderPreview ? 300 : 0),
+              width: settings.ui.baseWidth,
               height
             }
           },
@@ -826,34 +814,37 @@ class App extends SafeComponent {
                 to capture a page in your browser and
                 <a
                   onClick={() => {
-                    this.loading = true;
                     const input = document.createElement("input");
 
                     input.type = "file";
                     document.body.appendChild(input);
+                    input.style.visibility = "hidden";
                     input.click();
 
                     const onFocus = () => {
-                      if (
-                        input.parentElement &&
-                        (!input.files || input.files.length === 0)
-                      ) {
-                        done();
-                      }
+                      setTimeout(() => {
+                        if (
+                          input.parentElement &&
+                          (!input.files || input.files.length === 0)
+                        ) {
+                          done();
+                        }
+                      }, 200);
                     };
 
                     const done = () => {
                       input.remove();
                       this.loading = false;
-                      document.body.removeEventListener("focus", onFocus);
+                      window.removeEventListener("focus", onFocus);
                     };
 
-                    document.body.addEventListener("focus", onFocus);
+                    window.addEventListener("focus", onFocus);
 
                     // TODO: parse and upload images!
                     input.addEventListener("change", event => {
                       const file = (event.target as HTMLInputElement).files![0];
                       if (file) {
+                        this.loading = true;
                         var reader = new FileReader();
 
                         // Closure to capture the file information.
@@ -885,6 +876,9 @@ class App extends SafeComponent {
                                   },
                                   "*"
                                 );
+                                setTimeout(() => {
+                                  done();
+                                }, 1000);
                               })
                               .catch(err => {
                                 done();
@@ -1147,103 +1141,76 @@ class App extends SafeComponent {
                       </Button>
                     )}
 
-                    {/* <Button
-                      style={{
-                        marginTop: 15,
-                        fontWeight: 400
-                        // marginLeft: 15
-                      }}
-                      fullWidth
-                      disabled={this.generatingCode}
-                      color="primary"
-                      variant="contained"
-                      onClick={async () => {
-                        this.showBuilderPreview = true; // !this.showBuilderPreview;
-                        this.selectionWithImages = null;
-                        parent.postMessage(
-                          {
-                            pluginMessage: {
-                              type: "getSelectionWithImages"
-                            }
-                          },
-                          "*"
-                        );
-
-                        await when(() => !!this.selectionWithImages);
-
-                        if (
-                          !(
-                            this.selectionWithImages &&
-                            this.selectionWithImages[0]
-                          )
-                        ) {
-                          console.warn("No selection with images");
-                          return;
-                        }
-
-                        // TODO: analyze if page is properly nested and annotated, if not
-                        // suggest in the UI what needs grouping
-                        const block = figmaToBuilder(this
-                          .selectionWithImages[0] as any);
-
-                        const previewData = fastClone({
-                          modelId: "dummy",
-                          data: {
-                            blocks: [block]
-                          }
-                        });
-                        if (this.editorRef && this.editorRef.contentWindow) {
-                          this.editorRef.contentWindow.postMessage(
-                            {
-                              type: "builder.contentUpdate",
-                              data: {
-                                key: "page",
-                                data: previewData
-                              }
-                            },
-                            "*"
-                          );
-                        }
-                        this.selectionWithImages = null;
-                      }}
-                    >
-                      Live preview
-                    </Button> */}
-                    {this.showBuilderPreview && (
-                      <div style={{ width: "100%", marginTop: 15 }}>
-                        <div
-                          style={{
-                            // width: "300%",
-                            height: 600,
-                            // transform: "scale(0.33) translateZ(0)",
-                            // transformOrigin: "top left",
-                            display: "flex",
-                            flexDirection: "column"
-                          }}
-                        >
-                          <iframe
-                            sandbox="allow-scripts allow-pointer-lock allow-same-origin"
-                            ref={ref => (this.editorRef = ref)}
-                            style={{
-                              width: "100%",
-                              border: 0,
-                              height: "100%"
-                            }}
-                            src="https://preview.builder.live?model=page&amp;apiKey=123&amp;builder.cachebust=true&amp;builder.preview=page&amp;builder.noCache=true&amp;builder.frameEditing=page"
-                          ></iframe>
-                          {/* <EDITOR_TAG
-                            // data={this.previewData}
-                            host="https://6648e9ad.ngrok.io"
-                            style={{
-                              width: "100%",
-                              height: "100%"
-                            }}
-                            env="qa"
-                            ref={(ref: any) => (this.editorRef = ref)}
-                            api-key="builder"
-                          /> */}
-                        </div>
+                    {this.loadingPush ? (
+                      <div style={{ display: "flex" }}>
+                        <CircularProgress
+                          size={26}
+                          style={{ margin: "10px auto" }}
+                        />
                       </div>
+                    ) : (
+                      <Button
+                        style={{
+                          fontWeight: 400,
+                          fontSize: 12,
+                          marginTop: 5
+                        }}
+                        fullWidth
+                        disabled={this.generatingCode}
+                        color="primary"
+                        // variant="contained"
+                        onClick={async () => {
+                          // this.selectionWithImages = null;
+                          // parent.postMessage(
+                          //   {
+                          //     pluginMessage: {
+                          //       type: "getSelectionWithImages"
+                          //     }
+                          //   },
+                          //   "*"
+                          // );
+
+                          // await when(() => !!this.selectionWithImages);
+
+                          // if (
+                          //   !(
+                          //     this.selectionWithImages &&
+                          //     this.selectionWithImages[0]
+                          //   )
+                          // ) {
+                          //   console.warn("No selection with images");
+                          //   return;
+                          // }
+
+                          // // TODO: analyze if page is properly nested and annotated, if not
+                          // // suggest in the UI what needs grouping
+                          // const block = figmaToBuilder(this
+                          //   .selectionWithImages[0] as any);
+
+                          // TODO: handle images
+                          const block = figmaToBuilder(this
+                            .selection[0] as any);
+
+                          const pushData = {
+                            modelId: "38834b40eced4c24947a3909cb42be3e",
+                            ownerId: "YJIGb4i01jvw0SRdL5Bt",
+                            id: "a9ca9fa3835243afaba67e79f3dc3537",
+                            data: {
+                              blocks: [block]
+                            }
+                          };
+                          this.loadingPush = true;
+                          await fetch(this.apiRoot + "/api/v1/push", {
+                            method: "PATCH",
+                            body: JSON.stringify(pushData)
+                          });
+                          this.loadingPush = false;
+
+                          this.selectionWithImages = null;
+                        }}
+                      >
+                        Live preview
+                      </Button>
                     )}
                   </div>
                 )}
@@ -1304,7 +1271,6 @@ class App extends SafeComponent {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            opacity: 0.8,
             fontWeight: 400,
             fontSize: 9
           }}
@@ -1340,6 +1306,28 @@ class App extends SafeComponent {
             target="_blank"
           >
             Source
+          </a>
+          <span
+            style={{
+              display: "inline-block",
+              height: 10,
+              width: 1,
+              background: "#999",
+              marginTop: 1,
+              opacity: 0.8,
+              marginLeft: 5
+            }}
+          />
+          <a
+            style={{
+              color: "#999",
+              textDecoration: "none",
+              marginLeft: 5
+            }}
+            href="https://github.com/BuilderIO/html-to-figma"
+            target="_blank"
+          >
+            Help
           </a>
           {this.showExperimentalLink && (
             <>

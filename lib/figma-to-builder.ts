@@ -170,10 +170,12 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
         styles.marginLeft = node.x + "px";
       }
 
-      if (isCenteredY(node, parent) && sortedChildren.length === 1) {
-        styles.marginTop = "auto";
-        styles.marginBottom = "auto";
-      } else if (priorSibling) {
+      // if (isCenteredY(node, parent) && sortedChildren.length === 1) {
+      //   console.log(2.1, node);
+      //   styles.marginTop = "auto";
+      //   styles.marginBottom = "auto";
+      // } else
+      if (priorSibling) {
         styles.marginTop = `${Math.max(
           node.y - (priorSibling.y + priorSibling.height),
           0
@@ -214,7 +216,7 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
   if (hasChildren(node)) {
     if (layout === "stack") {
       const lastChild = last(sortBy(node.children, child => child.x + child.y));
-      if (lastChild && !isCenteredY(lastChild, node) && !isImageNode(node)) {
+      if (lastChild /* && !isCenteredY(lastChild, node) */ && !isImageNode(node)) {
         styles.paddingBottom =
           Math.max(node.height - (lastChild.y + lastChild.height), 0) + "px";
       }
@@ -242,7 +244,9 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
           const { color } = fill;
           const colorString = `rgba(${Math.round(color.r * 255)}, ${Math.round(
             color.g * 255
-          )}, ${Math.round(color.b * 255)}, ${fill.opacity})`;
+          )}, ${Math.round(color.b * 255)}, ${
+            typeof fill.opacity === "number" ? fill.opacity : 1
+          })`;
           if (node.type === "TEXT") {
             styles.color = colorString;
           } else {
@@ -339,7 +343,8 @@ export function processFillImages(node: SceneNode) {
               console.warn("Could not set background image", node, fill, err);
             }
           } else {
-            console.log("no intarr", fill, node);
+            (fill as any).url =
+              "https://cdn.builder.io/api/v1/image/assets%2Fpwgjf0RoYWbdnJSbpBAjXNRMe9F2%2Ffb27a7c790324294af8be1c35fe30f4d";
           }
         }
       });
@@ -367,17 +372,20 @@ export function figmaToBuilder(
 
   const image = getImage(node);
 
+  const widths = children && children.map(item => item.width);
+  const allChildWidths = widths && widths.reduce((memo, num) => memo + num, 0);
+
   return el({
     // id: "builder-" + node.id,
     responsiveStyles: {
       large: getCss(node, parent || null)
     },
     // TODO: maybe put original layer ID in metadata
-    layerName: ["Frame", "Rectangle"].includes(
-      node.name.length > 30 ? node.name.substr(0, 30) + "..." : ""
-    )
+    layerName: ["Frame", "Rectangle"].includes(node.name)
       ? undefined
-      : node.name,
+      : node.name.length > 30
+      ? node.name.substr(0, 30) + "..."
+      : "",
     ...({
       meta: {
         figmaLayerId: node.id
@@ -400,7 +408,11 @@ export function figmaToBuilder(
               children &&
               children.map((child: SceneNode) => ({
                 // width: 100 / children.length,
-                blocks: [figmaToBuilder(child)]
+                blocks: [figmaToBuilder(child)],
+                width:
+                  Math.fround(
+                    (child.width / (allChildWidths || node.width)) * 10000
+                  ) / 100
               }))
           }
         }
@@ -500,19 +512,26 @@ export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
       return "stack";
     }
 
+    const allWidths = node.children.reduce(
+      (memo, item) => item.width + memo,
+      0
+    );
+    if (xOverlap > allWidths / 10) {
+      return "stack";
+    }
+
     const widths = children.map(item => item.width);
     // If each width is alost the same
     const minWidth = Math.min(...widths);
     const maxWidth = Math.max(...widths);
+    if (node.width > 800) {
+      const allChildWidths = widths.reduce((memo, num) => memo + num, 0);
+      if (allChildWidths > node.width * 0.8) {
+        return "columns";
+      }
+    }
     if (maxWidth - minWidth < maxWidth / 5) {
       // TODO: take parent arg
-      const allWidths = node.children.reduce(
-        (memo, item) => item.width + memo,
-        0
-      );
-      if (xOverlap > allWidths / 10) {
-        return "stack";
-      }
       return "columns";
     }
     return "row";
