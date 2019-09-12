@@ -12,7 +12,8 @@ import {
   Switch,
   TextField,
   Tooltip,
-  Typography
+  Typography,
+  ListItemText
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
 import { SvgIconProps } from "@material-ui/core/SvgIcon";
@@ -39,7 +40,8 @@ import {
   getAssumeLayoutTypeForNode,
   isTextNode,
   traverseNode,
-  getAssumeSizeTypeForNode
+  getAssumeSizeTypeForNode,
+  isGeometryNode
 } from "../lib/figma-to-builder";
 import { SafeComponent } from "./classes/safe-component";
 import { settings } from "./constants/settings";
@@ -48,6 +50,32 @@ import { fastClone } from "./functions/fast-clone";
 import { generateLipsum } from "./functions/generate-lipsum";
 import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
+import { arrayBufferToBase64 } from "../lib/functions/buffer-to-base64";
+
+const apiKey = process.env.API_KEY || null;
+const apiRoot =
+  process.env.API_ROOT && process.env.NODE_ENV !== "production"
+    ? process.env.API_ROOT
+    : "https://builder.io";
+
+async function getImageUrl(intArr: Uint8Array): Promise<string | null> {
+  if (!apiKey) {
+    console.warn("Tried to upload image without API key");
+    return null;
+  }
+
+  return fetch(`${apiRoot}/api/v1/upload?apiKey=${apiKey}`, {
+    method: "POST",
+    body: JSON.stringify({
+      image: arrayBufferToBase64(intArr)
+    }),
+    headers: {
+      'content-type': 'application/json'
+    }
+  })
+    .then(res => res.json())
+    .then(data => data.url);
+}
 
 const WIDTH_LS_KEY = "builder.widthSetting";
 const FRAMES_LS_KEY = "builder.useFramesSetting";
@@ -258,12 +286,9 @@ class App extends SafeComponent {
 
   @observable loading = false;
   // TODO: lsget/set?
-  @observable lipsum = process.env.NODE_ENV !== "production";
+  @observable lipsum = false; //  process.env.NODE_ENV !== "production";
   @observable loadingPush = false;
-  @observable apiRoot =
-    process.env.API_ROOT && process.env.NODE_ENV !== "production"
-      ? process.env.API_ROOT
-      : "https://builder.io";
+  @observable apiRoot = apiRoot;
 
   @observable generatingCode = false;
   @observable urlValue = "https://builder.io";
@@ -426,7 +451,6 @@ class App extends SafeComponent {
         this.selection = data.elements;
       }
       if (data.type === "selectionWithImages") {
-        console.log("selection with images", data);
         this.selectionWithImages = data.elements;
       }
       if (data.type === "doneLoading") {
@@ -1057,155 +1081,173 @@ class App extends SafeComponent {
                               }}
                               value={item}
                             >
-                              <Tooltip
-                                enterDelay={500}
-                                title={text}
-                                key={item}
-                                open={text ? undefined : false}
-                              >
-                                <>
-                                  <ListItemIcon>
-                                    {Icon ? <Icon /> : <></>}
-                                  </ListItemIcon>
-                                  {item}
-                                </>
-                              </Tooltip>
+                              <ListItemIcon style={{ minWidth: 38 }}>
+                                {Icon ? <Icon /> : <></>}
+                              </ListItemIcon>
+                              <ListItemText
+                                primaryTypographyProps={{
+                                  style: {
+                                    fontSize: 14
+                                  }
+                                }}
+                                secondaryTypographyProps={{
+                                  style: {
+                                    fontSize: 9,
+                                    whiteSpace: "normal",
+                                    textTransform: "none"
+                                  }
+                                }}
+                                primary={item}
+                                secondary={text}
+                              />
                             </MenuItem>
                           );
                         })}
                     </TextField>
 
-                    <div style={{display: 'flex', marginTop: 15}}>
-                    <TextField
-                      SelectProps={{
-                        renderValue: (val: any) => (
-                          <span
-                            style={{
-                              textTransform: "capitalize",
-                              fontSize: 12,
-                              opacity: this.getDataForSelection("heightType")
-                                ? 1
-                                : 0.5
-                            }}
-                          >
-                            {val}
-                          </span>
-                        )
-                      }}
-                      label="Height type"
-                      // style={{ marginTop: 15 }}
-                      select
-                      fullWidth
-                      value={this.getSelectionSizeType("height")}
-                      onChange={e => {
-                        let value = e.target.value;
-                        if (value === invalidOptionString) {
-                          value = null as any;
-                        }
-
-                        this.setDataForSelection("heightType", value);
-                      }}
-                    >
-                      {(sizeTypes as string[])
-                        .concat([invalidOptionString])
-                        .map(item => {
-                          const Icon = sizeIcons[item as SizeType];
-                          const text = sizeDescriptions[item as SizeType] || "";
-                          return (
-                            <MenuItem
-                              key={item}
+                    <div style={{ display: "flex", marginTop: 15 }}>
+                      <TextField
+                        SelectProps={{
+                          renderValue: (val: any) => (
+                            <span
                               style={{
-                                fontSize: 12,
                                 textTransform: "capitalize",
-                                opacity: item === invalidOptionString ? 0.5 : 1
+                                fontSize: 12,
+                                opacity: this.getDataForSelection("heightType")
+                                  ? 1
+                                  : 0.5
                               }}
-                              value={item}
                             >
-                              <Tooltip
-                                enterDelay={500}
-                                title={text}
+                              {val}
+                            </span>
+                          )
+                        }}
+                        label="Height sizing"
+                        // style={{ marginTop: 15 }}
+                        select
+                        fullWidth
+                        value={this.getSelectionSizeType("height")}
+                        onChange={e => {
+                          let value = e.target.value;
+                          if (value === invalidOptionString) {
+                            value = null as any;
+                          }
+
+                          this.setDataForSelection("heightType", value);
+                        }}
+                      >
+                        {(sizeTypes as string[])
+                          .concat([invalidOptionString])
+                          .map(item => {
+                            const Icon = sizeIcons[item as SizeType];
+                            const text =
+                              sizeDescriptions[item as SizeType] || "";
+                            return (
+                              <MenuItem
                                 key={item}
-                                open={text ? undefined : false}
+                                style={{
+                                  fontSize: 12,
+                                  textTransform: "capitalize",
+                                  opacity:
+                                    item === invalidOptionString ? 0.5 : 1
+                                }}
+                                value={item}
                               >
-                                <>
-                                  <ListItemIcon>
-                                    {Icon ? <Icon /> : <></>}
-                                  </ListItemIcon>
-                                  {item}
-                                </>
-                              </Tooltip>
-                            </MenuItem>
-                          );
-                        })}
-                    </TextField>
+                                <ListItemIcon style={{ minWidth: 38 }}>
+                                  {Icon ? <Icon /> : <></>}
+                                </ListItemIcon>
+                                <ListItemText
+                                  primaryTypographyProps={{
+                                    style: {
+                                      fontSize: 14
+                                    }
+                                  }}
+                                  secondaryTypographyProps={{
+                                    style: {
+                                      fontSize: 9,
+                                      whiteSpace: "normal",
+                                      textTransform: "none"
+                                    }
+                                  }}
+                                  primary={item}
+                                  secondary={text}
+                                />
+                              </MenuItem>
+                            );
+                          })}
+                      </TextField>
 
-                    <TextField
-                      SelectProps={{
-                        renderValue: (val: any) => (
-                          <span
-                            style={{
-                              textTransform: "capitalize",
-                              fontSize: 12,
-                              opacity: this.getDataForSelection("widthType")
-                                ? 1
-                                : 0.5
-                            }}
-                          >
-                            {val}
-                          </span>
-                        )
-                      }}
-                      // style={{ marginTop: 15 }}
-                      style={{ marginLeft: 5 }}
-                      label="Width type"
-                      select
-                      fullWidth
-                      value={this.getSelectionSizeType("width")}
-                      onChange={e => {
-                        let value = e.target.value;
-                        if (value === invalidOptionString) {
-                          value = null as any;
-                        }
-
-                        this.setDataForSelection("widthType", value);
-                      }}
-                    >
-                      {(sizeTypes as string[])
-                        .concat([invalidOptionString])
-                        .map(item => {
-                          const Icon = sizeIcons[item as SizeType];
-                          const text = sizeDescriptions[item as SizeType] || "";
-                          return (
-                            <MenuItem
-                              key={item}
+                      <TextField
+                        SelectProps={{
+                          renderValue: (val: any) => (
+                            <span
                               style={{
-                                fontSize: 12,
                                 textTransform: "capitalize",
-                                opacity: item === invalidOptionString ? 0.5 : 1
+                                fontSize: 12,
+                                opacity: this.getDataForSelection("widthType")
+                                  ? 1
+                                  : 0.5
                               }}
-                              value={item}
                             >
-                              <Tooltip
-                                enterDelay={500}
-                                title={text}
+                              {val}
+                            </span>
+                          )
+                        }}
+                        // style={{ marginTop: 15 }}
+                        style={{ marginLeft: 10 }}
+                        label="Width sizing"
+                        select
+                        fullWidth
+                        value={this.getSelectionSizeType("width")}
+                        onChange={e => {
+                          let value = e.target.value;
+                          if (value === invalidOptionString) {
+                            value = null as any;
+                          }
+
+                          this.setDataForSelection("widthType", value);
+                        }}
+                      >
+                        {(sizeTypes as string[])
+                          .concat([invalidOptionString])
+                          .map(item => {
+                            const Icon = sizeIcons[item as SizeType];
+                            const text =
+                              sizeDescriptions[item as SizeType] || "";
+                            return (
+                              <MenuItem
                                 key={item}
-                                open={text ? undefined : false}
+                                style={{
+                                  fontSize: 12,
+                                  textTransform: "capitalize",
+                                  opacity:
+                                    item === invalidOptionString ? 0.5 : 1
+                                }}
+                                value={item}
                               >
-                                <>
-                                  <ListItemIcon>
-                                    <span
-                                      style={{ transform: "rotateZ(90deg)" }}
-                                    >
-                                      {Icon ? <Icon /> : <></>}
-                                    </span>
-                                  </ListItemIcon>
-                                  {item}
-                                </>
-                              </Tooltip>
-                            </MenuItem>
-                          );
-                        })}
-                    </TextField>
+                                <ListItemIcon style={{ minWidth: 38 }}>
+                                  {Icon ? <Icon /> : <></>}
+                                </ListItemIcon>
+                                <ListItemText
+                                  primaryTypographyProps={{
+                                    style: {
+                                      fontSize: 14
+                                    }
+                                  }}
+                                  secondaryTypographyProps={{
+                                    style: {
+                                      fontSize: 9,
+                                      whiteSpace: "normal",
+                                      textTransform: "none"
+                                    }
+                                  }}
+                                  primary={item}
+                                  secondary={text}
+                                />
+                              </MenuItem>
+                            );
+                          })}
+                      </TextField>
                     </div>
 
                     {this.generatingCode && (
@@ -1345,14 +1387,15 @@ class App extends SafeComponent {
                       </Button>
                     )}
 
-                    {this.loadingPush ? (
+                    {/* {this.loadingPush ? (
                       <div style={{ display: "flex" }}>
                         <CircularProgress
                           size={26}
                           style={{ margin: "10px auto" }}
                         />
                       </div>
-                    ) : (
+                    ) : ( */
+                    !this.generatingCode && (
                       <Button
                         style={{
                           fontWeight: 400,
@@ -1364,9 +1407,13 @@ class App extends SafeComponent {
                         color="primary"
                         // variant="contained"
                         onClick={async () => {
-                          const node = fastClone(this.selection[0]);
+                          let node: SceneNode;
+
+                          this.generatingCode = true;
+                          this.loadingPush = true;
 
                           if (this.lipsum) {
+                            node = fastClone(this.selection[0] as any);
                             traverseNode(node as any, child => {
                               if (isTextNode(child)) {
                                 child.characters = generateLipsum(
@@ -1374,6 +1421,42 @@ class App extends SafeComponent {
                                 );
                               }
                             });
+                          } else {
+                            this.selectionWithImages = null;
+                            parent.postMessage(
+                              {
+                                pluginMessage: {
+                                  type: "getSelectionWithImages"
+                                }
+                              },
+                              "*"
+                            );
+
+                            await when(() => !!this.selectionWithImages);
+                            node = this.selectionWithImages![0] as any;
+                            const promises: Promise<any>[] = [];
+                            traverseNode(node as any, child => {
+                              const image =
+                                isGeometryNode(child) &&
+                                typeof child.fills !== "symbol" &&
+                                child.fills.find(item => item.type === "IMAGE");
+
+                              // TODO: hash so don't upload image multiple times...
+                              if (image && (image as any).intArr) {
+                                promises.push(
+                                  (async () => {
+                                    (image as any).url = await getImageUrl(
+                                      (image as any).intArr
+                                    ).catch(err => {
+                                      console.warn("Could not make image", err);
+                                      return null;
+                                    });
+                                  })()
+                                );
+                              }
+                            });
+
+                            await Promise.all(promises);
                           }
                           // TODO: handle images
                           const block = figmaToBuilder(node as any);
@@ -1391,12 +1474,13 @@ class App extends SafeComponent {
                             method: "PATCH",
                             body: JSON.stringify(pushData)
                           });
+                          this.generatingCode = false;
                           this.loadingPush = false;
 
                           this.selectionWithImages = null;
                         }}
                       >
-                        Live preview
+                        Push to Builder
                       </Button>
                     )}
                   </div>

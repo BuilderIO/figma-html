@@ -1,7 +1,7 @@
 import { traverseLayers } from "./functions/traverse-layers";
 import { settings } from "./constants/settings";
 import { fastClone } from "./functions/fast-clone";
-import { isGeometryNode } from "../lib/figma-to-builder";
+import { isGeometryNode, hasChildren } from "../lib/figma-to-builder";
 
 // This shows the HTML page in "ui.html".
 figma.showUI(__html__, {
@@ -79,11 +79,12 @@ async function serialize(
   options: {
     withImages?: boolean;
     withChildren?: boolean;
+    // TODO
+    withVectorsExported?: boolean;
   } = {}
 ): Promise<any> {
-  const fills =
-    (element.fills && (fastClone(element.fills) as Paint[])) || undefined;
-  if (options.withImages && fills) {
+  let fills = (element.fills && (fastClone(element.fills) as Paint[])) || [];
+  if (options.withImages && fills.length) {
     for (const fill of fills) {
       if (fill.type === "IMAGE" && fill.imageHash) {
         const image = figma.getImageByHash(fill.imageHash);
@@ -96,10 +97,34 @@ async function serialize(
       }
     }
   }
+
+  // TODO: May have bg...
+  const isSvg =
+    hasChildren(element) &&
+    element.children.every(item => item.type === "VECTOR");
+
+  if (
+    options.withImages &&
+    // options.withVectorsExported !== false &&
+    isSvg
+  ) {
+    const image = await element.exportAsync({
+      format: "PNG"
+    });
+    fills = [
+      {
+        type: "IMAGE",
+        visible: true,
+        scaleMode: "FIT",
+        ...({ intArr: image } as any)
+      }
+    ];
+  }
+
   // TODO: better way to enumerate everything, including getters, that is not function
   return {
     id: element.id,
-    type: element.type,
+    type: element.type === "VECTOR" ? "RECTANGLE" : element.type,
     x: element.x,
     y: element.y,
     width: element.width,
@@ -109,6 +134,7 @@ async function serialize(
     children:
       (options.withChildren &&
         element.children &&
+        !isSvg &&
         (await Promise.all(
           element.children.map(child => serialize(child as any, options))
         ))) ||

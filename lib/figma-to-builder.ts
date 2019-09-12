@@ -149,6 +149,16 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
     flexShrink: "0",
     flexDirection: "column",
     boxSizing: "border-box",
+    ...(isImage(node) &&
+      (parentLayout === "stack"
+        ? {
+            alignSelf: "stretch"
+          }
+        : parentLayout && "row"
+        ? {
+            flexGrow: "1"
+          }
+        : null)),
     ...(layout === "row" && {
       flexDirection: "row"
     }),
@@ -308,7 +318,7 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
   }
 
   if (isGeometryNode(node)) {
-    if (node.strokes.length) {
+    if (node.strokes && node.strokes.length) {
       const stroke = node.strokes[0];
       if (stroke.type === "SOLID") {
         const color = stroke.color;
@@ -343,8 +353,9 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
         }
         if (fill.type === "IMAGE") {
           if (
-            isTextNode(node) ||
-            getAssumeLayoutTypeForNode(node) === "columns"
+            // isTextNode(node) ||
+            // getAssumeLayoutTypeForNode(node) === "columns"
+            !isImage(node)
           ) {
             const url = (fill as any).url;
             if (url) {
@@ -407,7 +418,8 @@ export function processBackgroundLayer(node: SceneNode) {
       Math.abs(lastChild.x) < 1 &&
       Math.abs(lastChild.y) < 1 &&
       Math.abs(lastChild.width - node.width) < 1 &&
-      Math.abs(lastChild.height - node.height) < 1
+      Math.abs(lastChild.height - node.height) < 1 &&
+      lastChild.type !== "VECTOR"
     ) {
       const last = (node.children as SceneNode[]).shift()!;
       Object.assign(node, omit(last as any, "type", "children", "constraints"));
@@ -418,7 +430,7 @@ export function processFillImages(node: SceneNode) {
   if (isGeometryNode(node)) {
     if (typeof node.fills !== "symbol") {
       node.fills.forEach(fill => {
-        if (!fill.visible) {
+        if (fill.visible === false) {
           return;
         }
         if (fill.type === "IMAGE") {
@@ -447,6 +459,19 @@ export function figmaToBuilder(
 ): BuilderElement {
   // TODO: unsafe - be sure to clone this preserving Uint8Array
   const node = figmaNode;
+
+  if (node.type === "VECTOR") {
+    node.fills = [
+      ...(Array.isArray(node.fills) ? node.fills : []),
+      {
+        type: "IMAGE",
+        ...({
+          url:
+            "https://cdn.builder.io/api/v1/image/assets%2Fpwgjf0RoYWbdnJSbpBAjXNRMe9F2%2Ffb27a7c790324294af8be1c35fe30f4d"
+        } as any)
+      }
+    ];
+  }
 
   processBackgroundLayer(node);
   processFillImages(node);
@@ -493,6 +518,8 @@ export function figmaToBuilder(
           // TODO: gutter var = average distance
           options: {
             // TODO: widths
+            space: 10,
+            stackColumnsAt: 'tablet', // should be 'medium'
             columns:
               children &&
               children.map((child: SceneNode) => ({
