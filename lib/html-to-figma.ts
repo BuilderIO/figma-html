@@ -199,6 +199,22 @@ export function htmlToFigma(
     return a;
   }
 
+  const getUrl = (url: string) => {
+    if (!url) {
+      return "";
+    }
+    let final = url.trim();
+    if (final.startsWith("//")) {
+      final = "https:" + final;
+    }
+
+    if (final.startsWith("/")) {
+      final = "https://" + location.host + final;
+    }
+
+    return final;
+  };
+
   interface Unit {
     unit: "PIXELS";
     value: number;
@@ -293,12 +309,20 @@ export function htmlToFigma(
           return;
         }
 
+        if (
+          el.parentElement &&
+          el.parentElement instanceof HTMLPictureElement
+        ) {
+          return;
+        }
+
         const appliedStyles = getAppliedComputedStyles(el);
         const computedStyle = getComputedStyle(el);
 
         if (
           (size(appliedStyles) ||
             el instanceof HTMLImageElement ||
+            el instanceof HTMLPictureElement ||
             el instanceof HTMLVideoElement) &&
           computedStyle.display !== "none"
         ) {
@@ -454,6 +478,23 @@ export function htmlToFigma(
                     computedStyle.objectFit === "contain" ? "FIT" : "FILL",
                   imageHash: null
                 } as ImagePaint);
+              }
+            }
+            if (el instanceof HTMLPictureElement) {
+              const firstSource = el.querySelector("source");
+              if (firstSource) {
+                const src = getUrl(firstSource.srcset.split(/[,\s]+/g)[0]);
+                // TODO: if not absolute
+                if (src) {
+                  fills.push({
+                    url: src,
+                    type: "IMAGE",
+                    // TODO: object fit, position
+                    scaleMode:
+                      computedStyle.objectFit === "contain" ? "FIT" : "FILL",
+                    imageHash: null
+                  } as ImagePaint);
+                }
               }
             }
             if (el instanceof HTMLVideoElement) {
@@ -1008,8 +1049,10 @@ export function htmlToFigma(
             const parent = el && el.parentElement;
             if (el && parent) {
               const currentDisplay = el.style.display;
-              el.style.display = "none";
+              el.style.setProperty('display', 'none', '!important')
               let computed = getComputedStyle(el);
+              const hasFixedWidth = computed.width && computed.width.trim().endsWith('px')
+              const hasFixedHeight = computed.height && computed.height.trim().endsWith('px')
               el.style.display = currentDisplay;
               const parentStyle = getComputedStyle(parent);
               let hasAutoMarginLeft = computed.marginLeft === "auto";
@@ -1019,11 +1062,22 @@ export function htmlToFigma(
 
               computed = getComputedStyle(el);
 
-              if (["absolute", "fixed"].includes(computed.position!)) {
-                if (!(child as any).data) {
-                  (child as any).data = {};
+              function setData(node: any, key: string, value: string) {
+                if (!(node as any).data) {
+                  (node as any).data = {};
                 }
-                (child as any).data.position = computed.position;
+                (node as any).data[key] = value;
+              }
+
+              if (["absolute", "fixed"].includes(computed.position!)) {
+                setData(child, 'position', computed.position!)
+              }
+
+              if (hasFixedHeight) {
+                setData(child, 'heightType', 'fixed')
+              }
+              if (hasFixedWidth) {
+                setData(child, 'widthType', 'fixed')
               }
 
               const isInline =
@@ -1045,6 +1099,8 @@ export function htmlToFigma(
                   hasAutoMarginTop = true;
                   hasAutoMarginBottom = false;
                 }
+
+                setData(child, 'widthType', 'shrink')
               }
               const parentJustifyContent =
                 parentStyle.display === "flex" &&

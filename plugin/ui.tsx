@@ -1,5 +1,6 @@
 import {
   Button,
+  CircularProgress,
   createMuiTheme,
   CssBaseline,
   Divider,
@@ -11,19 +12,21 @@ import {
   Switch,
   TextField,
   Tooltip,
-  Typography,
-  CircularProgress
+  Typography
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
 import { SvgIconProps } from "@material-ui/core/SvgIcon";
 import Brush from "@material-ui/icons/Brush";
-import HelpOutline from "@material-ui/icons/HelpOutline";
+import Favorite from "@material-ui/icons/Favorite";
 import GridOn from "@material-ui/icons/GridOn";
 import LaptopMac from "@material-ui/icons/LaptopMac";
 import MoreHoriz from "@material-ui/icons/MoreHoriz";
 import PhoneIphone from "@material-ui/icons/PhoneIphone";
 import SettingsEthernet from "@material-ui/icons/SettingsEthernet";
+import SpaceBar from "@material-ui/icons/SpaceBar";
 import TabletMac from "@material-ui/icons/TabletMac";
+import UnfoldLess from "@material-ui/icons/UnfoldLess";
+import UnfoldMore from "@material-ui/icons/UnfoldMore";
 import ViewColumn from "@material-ui/icons/ViewColumn";
 import * as escapeHtml from "escape-html";
 import * as fileType from "file-type";
@@ -33,22 +36,22 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 import {
   figmaToBuilder,
-  getAssumeLayoutTypeForNode
+  getAssumeLayoutTypeForNode,
+  isTextNode,
+  traverseNode,
+  getAssumeSizeTypeForNode
 } from "../lib/figma-to-builder";
 import { SafeComponent } from "./classes/safe-component";
 import { settings } from "./constants/settings";
 import { theme as themeVars } from "./constants/theme";
 import { fastClone } from "./functions/fast-clone";
+import { generateLipsum } from "./functions/generate-lipsum";
 import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
-import { BuilderElement } from "@builder.io/sdk";
 
 const WIDTH_LS_KEY = "builder.widthSetting";
 const FRAMES_LS_KEY = "builder.useFramesSetting";
 const EXPERIMENTS_LS_KEY = "builder.showExperiments";
-const MORE_OPTIONS_LS_KEY = "builder.showMoreOptions";
-
-const EDITOR_TAG: any = "builder-editor";
 
 // TODO: make async and use figma.clientStorage
 function lsGet(key: string) {
@@ -193,6 +196,10 @@ const componentTypes: Component[] = [
   // "scroll"
 ];
 
+export type SizeType = "shrink" | "expand" | "fixed";
+
+export const sizeTypes: SizeType[] = ["expand", "shrink", "fixed"];
+
 const icons: { [key in Component]: React.ComponentType } = {
   row: MoreHoriz,
   // stack: MoreVert,
@@ -212,6 +219,27 @@ const icons: { [key in Component]: React.ComponentType } = {
   absolute: Brush
 };
 
+const sizeIcons: { [key in SizeType]: React.ComponentType } = {
+  shrink: UnfoldLess,
+  // stack: MoreVert,
+  expand: UnfoldMore,
+  fixed: (props: SvgIconProps) => (
+    <SpaceBar
+      {...props}
+      style={{
+        ...props.style,
+        transform: "rotateZ(90deg)"
+      }}
+    />
+  )
+};
+
+const sizeDescriptions: { [key in SizeType]: string } = {
+  shrink: "Automatically shrink to the size of its contents",
+  expand: "Automatically grow to fill any space",
+  fixed: "Fixed size that won't ever grow or shrink"
+};
+
 const componentDescription: { [key in Component]: string } = {
   row: "Children always sit side by side",
   stack: "Stack children vertically",
@@ -221,14 +249,16 @@ const componentDescription: { [key in Component]: string } = {
   absolute: "Children are absolute positioned in place"
 };
 
-const invalidComponentOption = "...";
-type InvalidComponentOption = typeof invalidComponentOption;
+const invalidOptionString = "...";
+type InvalidComponentOption = typeof invalidOptionString;
 
 @observer
 class App extends SafeComponent {
   editorRef: HTMLIFrameElement | null = null;
 
   @observable loading = false;
+  // TODO: lsget/set?
+  @observable lipsum = process.env.NODE_ENV !== "production";
   @observable loadingPush = false;
   @observable apiRoot =
     process.env.API_ROOT && process.env.NODE_ENV !== "production"
@@ -271,22 +301,66 @@ class App extends SafeComponent {
 
   @observable errorMessage = "";
 
+  getDataForSelection(name: string, multipleValuesResponse = null) {
+    if (!this.selection.length) {
+      return multipleValuesResponse;
+    }
+    const firstNode = this.selection[0];
+    let value = firstNode.data && firstNode.data[name];
+    for (const item of this.selection.slice(1)) {
+      const itemValue = item.data && item.data[name];
+      if (itemValue !== value) {
+        return multipleValuesResponse;
+      }
+    }
+    return value;
+  }
+
+  setDataForSelection(name: string, value: any) {
+    for (const node of this.selection) {
+      if (!node.data) {
+        node.data = {
+          [name]: value
+        };
+      } else {
+        node.data[name] = value;
+      }
+    }
+    // TODO: throttleNextTick
+    this.saveUpdates();
+  }
+
   @computed get component() {
     if (!this.selection.length) {
-      return invalidComponentOption;
+      return invalidOptionString;
     }
     const firstNode = this.selection[0];
     let value = getAssumeLayoutTypeForNode(firstNode as any) as any;
     for (const item of this.selection.slice(1)) {
       const itemValue = getAssumeLayoutTypeForNode(item as any) as any;
       if (itemValue !== value) {
-        return invalidComponentOption;
+        return invalidOptionString;
       }
     }
     return value;
   }
 
-  set component(component: Component | typeof invalidComponentOption) {
+  getSelectionSizeType(type: "width" | "height") {
+    if (!this.selection.length) {
+      return invalidOptionString;
+    }
+    const firstNode = this.selection[0];
+    let value = getAssumeSizeTypeForNode(firstNode as any, type) as any;
+    for (const item of this.selection.slice(1)) {
+      const itemValue = getAssumeSizeTypeForNode(item as any, type) as any;
+      if (itemValue !== value) {
+        return invalidOptionString;
+      }
+    }
+    return value;
+  }
+
+  set component(component: Component | typeof invalidOptionString) {
     for (const node of this.selection) {
       if (!node.data) {
         node.data = {
@@ -295,13 +369,7 @@ class App extends SafeComponent {
       } else {
         node.data.component = component;
       }
-      console.log("setting node.data.component");
     }
-    console.log(
-      "set component",
-      component,
-      JSON.stringify(this.selection.map(item => item.data), null, 2)
-    );
     this.saveUpdates();
   }
 
@@ -701,7 +769,7 @@ class App extends SafeComponent {
                           size="small"
                           // style={{ marginLeft: 20 }}
                           color="primary"
-                          value={this.useFrames}
+                          checked={this.useFrames}
                           onChange={e => (this.useFrames = e.target.checked)}
                         />
                       }
@@ -966,7 +1034,7 @@ class App extends SafeComponent {
                       value={this.component}
                       onChange={e => {
                         let value = e.target.value;
-                        if (value === invalidComponentOption) {
+                        if (value === invalidOptionString) {
                           value = undefined as any;
                         }
 
@@ -974,7 +1042,7 @@ class App extends SafeComponent {
                       }}
                     >
                       {(componentTypes as string[])
-                        .concat([invalidComponentOption])
+                        .concat([invalidOptionString])
                         .map(item => {
                           const Icon = icons[item as Component];
                           const text =
@@ -985,8 +1053,7 @@ class App extends SafeComponent {
                               style={{
                                 fontSize: 12,
                                 textTransform: "capitalize",
-                                opacity:
-                                  item === invalidComponentOption ? 0.5 : 1
+                                opacity: item === invalidOptionString ? 0.5 : 1
                               }}
                               value={item}
                             >
@@ -1007,6 +1074,139 @@ class App extends SafeComponent {
                           );
                         })}
                     </TextField>
+
+                    <div style={{display: 'flex', marginTop: 15}}>
+                    <TextField
+                      SelectProps={{
+                        renderValue: (val: any) => (
+                          <span
+                            style={{
+                              textTransform: "capitalize",
+                              fontSize: 12,
+                              opacity: this.getDataForSelection("heightType")
+                                ? 1
+                                : 0.5
+                            }}
+                          >
+                            {val}
+                          </span>
+                        )
+                      }}
+                      label="Height type"
+                      // style={{ marginTop: 15 }}
+                      select
+                      fullWidth
+                      value={this.getSelectionSizeType("height")}
+                      onChange={e => {
+                        let value = e.target.value;
+                        if (value === invalidOptionString) {
+                          value = null as any;
+                        }
+
+                        this.setDataForSelection("heightType", value);
+                      }}
+                    >
+                      {(sizeTypes as string[])
+                        .concat([invalidOptionString])
+                        .map(item => {
+                          const Icon = sizeIcons[item as SizeType];
+                          const text = sizeDescriptions[item as SizeType] || "";
+                          return (
+                            <MenuItem
+                              key={item}
+                              style={{
+                                fontSize: 12,
+                                textTransform: "capitalize",
+                                opacity: item === invalidOptionString ? 0.5 : 1
+                              }}
+                              value={item}
+                            >
+                              <Tooltip
+                                enterDelay={500}
+                                title={text}
+                                key={item}
+                                open={text ? undefined : false}
+                              >
+                                <>
+                                  <ListItemIcon>
+                                    {Icon ? <Icon /> : <></>}
+                                  </ListItemIcon>
+                                  {item}
+                                </>
+                              </Tooltip>
+                            </MenuItem>
+                          );
+                        })}
+                    </TextField>
+
+                    <TextField
+                      SelectProps={{
+                        renderValue: (val: any) => (
+                          <span
+                            style={{
+                              textTransform: "capitalize",
+                              fontSize: 12,
+                              opacity: this.getDataForSelection("widthType")
+                                ? 1
+                                : 0.5
+                            }}
+                          >
+                            {val}
+                          </span>
+                        )
+                      }}
+                      // style={{ marginTop: 15 }}
+                      style={{ marginLeft: 5 }}
+                      label="Width type"
+                      select
+                      fullWidth
+                      value={this.getSelectionSizeType("width")}
+                      onChange={e => {
+                        let value = e.target.value;
+                        if (value === invalidOptionString) {
+                          value = null as any;
+                        }
+
+                        this.setDataForSelection("widthType", value);
+                      }}
+                    >
+                      {(sizeTypes as string[])
+                        .concat([invalidOptionString])
+                        .map(item => {
+                          const Icon = sizeIcons[item as SizeType];
+                          const text = sizeDescriptions[item as SizeType] || "";
+                          return (
+                            <MenuItem
+                              key={item}
+                              style={{
+                                fontSize: 12,
+                                textTransform: "capitalize",
+                                opacity: item === invalidOptionString ? 0.5 : 1
+                              }}
+                              value={item}
+                            >
+                              <Tooltip
+                                enterDelay={500}
+                                title={text}
+                                key={item}
+                                open={text ? undefined : false}
+                              >
+                                <>
+                                  <ListItemIcon>
+                                    <span
+                                      style={{ transform: "rotateZ(90deg)" }}
+                                    >
+                                      {Icon ? <Icon /> : <></>}
+                                    </span>
+                                  </ListItemIcon>
+                                  {item}
+                                </>
+                              </Tooltip>
+                            </MenuItem>
+                          );
+                        })}
+                    </TextField>
+                    </div>
 
                     {this.generatingCode && (
                       <div style={{ display: "flex", flexDirection: "column" }}>
@@ -1059,19 +1259,23 @@ class App extends SafeComponent {
                         color="primary"
                         variant="contained"
                         onClick={async () => {
-                          this.selectionWithImages = null;
-                          parent.postMessage(
-                            {
-                              pluginMessage: {
-                                type: "getSelectionWithImages"
-                              }
-                            },
-                            "*"
-                          );
+                          if (!this.lipsum) {
+                            this.selectionWithImages = null;
+                            parent.postMessage(
+                              {
+                                pluginMessage: {
+                                  type: "getSelectionWithImages"
+                                }
+                              },
+                              "*"
+                            );
 
-                          this.generatingCode = true;
+                            this.generatingCode = true;
 
-                          await when(() => !!this.selectionWithImages);
+                            await when(() => !!this.selectionWithImages);
+                          } else {
+                            this.selectionWithImages = this.selection;
+                          }
 
                           if (
                             !(
@@ -1160,36 +1364,19 @@ class App extends SafeComponent {
                         color="primary"
                         // variant="contained"
                         onClick={async () => {
-                          // this.selectionWithImages = null;
-                          // parent.postMessage(
-                          //   {
-                          //     pluginMessage: {
-                          //       type: "getSelectionWithImages"
-                          //     }
-                          //   },
-                          //   "*"
-                          // );
+                          const node = fastClone(this.selection[0]);
 
-                          // await when(() => !!this.selectionWithImages);
-
-                          // if (
-                          //   !(
-                          //     this.selectionWithImages &&
-                          //     this.selectionWithImages[0]
-                          //   )
-                          // ) {
-                          //   console.warn("No selection with images");
-                          //   return;
-                          // }
-
-                          // // TODO: analyze if page is properly nested and annotated, if not
-                          // // suggest in the UI what needs grouping
-                          // const block = figmaToBuilder(this
-                          //   .selectionWithImages[0] as any);
-
+                          if (this.lipsum) {
+                            traverseNode(node as any, child => {
+                              if (isTextNode(child)) {
+                                child.characters = generateLipsum(
+                                  child.characters.length
+                                );
+                              }
+                            });
+                          }
                           // TODO: handle images
-                          const block = figmaToBuilder(this
-                            .selection[0] as any);
+                          const block = figmaToBuilder(node as any);
 
                           const pushData = {
                             modelId: "38834b40eced4c24947a3909cb42be3e",
@@ -1246,6 +1433,36 @@ class App extends SafeComponent {
                     this.apiRoot = e.target.value;
                   }}
                 />
+
+                <FormControlLabel
+                  value="Use Frames"
+                  disabled={this.loading}
+                  style={{ marginTop: 20, marginLeft: 0 }}
+                  control={
+                    <Switch
+                      // disabled={this.loading}
+                      size="small"
+                      // style={{ marginLeft: 20 }}
+                      color="primary"
+                      checked={this.lipsum}
+                      onChange={e => (this.lipsum = e.target.checked)}
+                    />
+                  }
+                  label={
+                    <span
+                      style={{
+                        fontSize: 12,
+                        opacity: 0.6,
+                        marginLeft: 5
+                        // position: "relative",
+                        // top: -5
+                      }}
+                    >
+                      Placeholder content
+                    </span>
+                  }
+                  labelPlacement="end"
+                />
               </div>
             </div>
             <Divider style={{ margin: "0 -15px" }} />
@@ -1253,7 +1470,16 @@ class App extends SafeComponent {
         )}
 
         <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
-          Made with ❤️ by{" "}
+          Made with{" "}
+          <Favorite
+            style={{
+              color: "rgb(236, 55, 88)",
+              fontSize: 16,
+              marginTop: -2,
+              verticalAlign: "middle"
+            }}
+          />{" "}
+          by{" "}
           <a
             style={{ color: themeVars.colors.primary }}
             href="https://builder.io?ref=figma"

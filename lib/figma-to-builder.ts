@@ -1,14 +1,19 @@
 import { BuilderElement } from "@builder.io/sdk";
 import { arrayBufferToBase64 } from "./functions/buffer-to-base64";
-type ComponentType =
+import { SizeType } from "../plugin/ui";
+
+export type ComponentType =
   | "row"
   | "stack"
   | "columns"
   | "grid"
   | "canvas"
   | "unknown";
-interface NodeMetaData {
+
+export interface NodeMetaData {
   component?: ComponentType;
+  widthType?: SizeType;
+  heightType?: SizeType;
 }
 
 export const hasChildren = (node: unknown): node is ChildrenMixin =>
@@ -36,7 +41,8 @@ export const isImage = (node: unknown): node is GeometryMixin =>
   Boolean(
     isGeometryNode(node) &&
       typeof node.fills !== "symbol" &&
-      node.fills.find(item => item.type === "IMAGE")
+      node.fills.find(item => item.type === "IMAGE") &&
+      getAssumeSizeTypeForNode(node as any, "height") !== "fixed"
   );
 
 export const getImage = (node: unknown) =>
@@ -66,7 +72,7 @@ export function traverseNode(
   cb(node, _parent);
   if (hasChildren(node)) {
     for (const child of node.children) {
-      cb(child, node);
+      traverseNode(child, cb, node);
     }
   }
 }
@@ -120,10 +126,15 @@ const isImageNode = (node: SceneNode) => {
   return image && !isTextNode(node) && assumedLayout !== "columns";
 };
 
+const isAbsolute = (node: any) =>
+  Boolean(
+    node && node.data && ["absolute", "fixed"].includes(node.data.position)
+  );
+
 export function getCss(node: SceneNode, parent: SceneNode | null) {
   const layout = getAssumeLayoutTypeForNode(node);
   const parentLayout = parent && getAssumeLayoutTypeForNode(parent);
-  const useAbsolute = parentLayout === "unknown";
+  const useAbsolute = isAbsolute(node); //  parentLayout === "unknown";
 
   // parentLayout && ["canvas", "unknown"].includes(parentLayout);
 
@@ -154,8 +165,38 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
     })
   };
 
+  if (
+    (hasChildren(node) &&
+      node.children.length === 1 &&
+      isCenteredY(node.children[0], node)) ||
+    getAssumeSizeTypeForNode(node, "height") === "fixed"
+  ) {
+    styles.height = node.height + "px";
+  }
+
+  if (getAssumeSizeTypeForNode(node, "width") === "shrink") {
+    if (hasConstraints(node)) {
+      if (node.constraints.horizontal === "MIN") {
+        styles.alignSelf = "flex-start";
+      } else if (node.constraints.horizontal === "MAX") {
+        styles.alignSelf = "flex-end";
+      } else {
+        styles.alignSelf = "center";
+      }
+    } else {
+      styles.alignSelf = "center";
+    }
+  }
+
+  if (getAssumeSizeTypeForNode(node, "width") === "fixed") {
+    styles.width = node.width + "px";
+  }
+
   if (parent && hasChildren(parent)) {
-    const sortedChildren = sortBy(parent.children, child => child.x + child.y);
+    const sortedChildren = sortBy(
+      parent.children,
+      child => child.x + child.y
+    ).filter(item => !isAbsolute(item));
 
     // TODO grid
     const index = sortedChildren.indexOf(node);
@@ -170,12 +211,10 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
         styles.marginLeft = node.x + "px";
       }
 
-      // if (isCenteredY(node, parent) && sortedChildren.length === 1) {
-      //   console.log(2.1, node);
-      //   styles.marginTop = "auto";
-      //   styles.marginBottom = "auto";
-      // } else
-      if (priorSibling) {
+      if (isCenteredY(node, parent) && sortedChildren.length === 1) {
+        styles.marginTop = "auto";
+        styles.marginBottom = "auto";
+      } else if (priorSibling) {
         styles.marginTop = `${Math.max(
           node.y - (priorSibling.y + priorSibling.height),
           0
@@ -215,17 +254,51 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
 
   if (hasChildren(node)) {
     if (layout === "stack") {
-      const lastChild = last(sortBy(node.children, child => child.x + child.y));
-      if (lastChild /* && !isCenteredY(lastChild, node) */ && !isImageNode(node)) {
+      const lastChild = last(
+        sortBy(
+          node.children.filter(item => !isAbsolute(item)),
+          child => child.y + child.height
+        )
+      );
+      if (lastChild && !isCenteredY(lastChild, node) && !isImageNode(node)) {
         styles.paddingBottom =
           Math.max(node.height - (lastChild.y + lastChild.height), 0) + "px";
       }
+
+      const maxRight = last(
+        sortBy(
+          node.children.filter(item => !isAbsolute(item)),
+          child => child.x + child.width
+        )
+      );
+      if (
+        maxRight &&
+        !(node.children.length === 1 && isCenteredX(node.children[0], node))
+      ) {
+        styles.paddingRight =
+          Math.max(node.width - (maxRight.x + maxRight.width), 0) + "px";
+      }
     }
     if (layout === "row") {
-      const lastChild = last(sortBy(node.children, child => child.x + child.y));
+      const lastChild = last(
+        sortBy(
+          node.children.filter(item => !isAbsolute(item)),
+          child => child.x + child.width
+        )
+      );
       if (lastChild && !isCenteredX(lastChild, node)) {
         styles.paddingRight =
           Math.max(node.width - (lastChild.x + lastChild.width), 0) + "px";
+      }
+      const maxBottom = last(
+        sortBy(
+          node.children.filter(item => !isAbsolute(item)),
+          child => child.y + child.height
+        )
+      );
+      if (maxBottom) {
+        styles.paddingBottom =
+          Math.max(node.height - (maxBottom.y + maxBottom.height), 0) + "px";
       }
     }
   }
@@ -235,6 +308,21 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
   }
 
   if (isGeometryNode(node)) {
+    if (node.strokes.length) {
+      const stroke = node.strokes[0];
+      if (stroke.type === "SOLID") {
+        const color = stroke.color;
+        const colorString = `rgba(${Math.round(color.r * 255)}, ${Math.round(
+          color.g * 255
+        )}, ${Math.round(color.b * 255)}, ${
+          typeof stroke.opacity === "number" ? stroke.opacity : 1
+        })`;
+        styles.borderColor = colorString;
+      }
+      styles.borderWidth = node.strokeWeight + "px";
+      styles.borderStyle = "solid";
+    }
+
     if (Array.isArray(node.fills)) {
       (node.fills as Paint[]).forEach(fill => {
         if (!fill.visible) {
@@ -315,10 +403,11 @@ export function processBackgroundLayer(node: SceneNode) {
     const lastChild = node.children[0];
     if (
       !hasChildren(lastChild) &&
-      lastChild.x === 0 &&
-      lastChild.y === 0 &&
-      lastChild.width === node.width &&
-      lastChild.height === node.height
+      // OR round these
+      Math.abs(lastChild.x) < 1 &&
+      Math.abs(lastChild.y) < 1 &&
+      Math.abs(lastChild.width - node.width) < 1 &&
+      Math.abs(lastChild.height - node.height) < 1
     ) {
       const last = (node.children as SceneNode[]).shift()!;
       Object.assign(node, omit(last as any, "type", "children", "constraints"));
@@ -446,6 +535,45 @@ export const collidesVertically = (a: SceneNode, b: SceneNode, margin = 0) =>
 export const collidesHorizontally = (a: SceneNode, b: SceneNode) =>
   a.x + a.width > b.x && a.x < b.x + b.width;
 
+export function getAssumeSizeTypeForNode(
+  node: SceneNode,
+  direction: "width" | "height"
+): SizeType {
+  const data = getMetadata(node);
+  const setType =
+    data && data[(direction + "Type") as ("heightType" | "widthType")];
+
+  if (setType) {
+    return setType;
+  }
+
+  if (direction === "width") {
+    if (hasConstraints(node)) {
+      if (
+        // Hm... maybe not this one
+        node.constraints.horizontal === "MIN" ||
+        node.constraints.horizontal === "MAX" ||
+        node.constraints.horizontal === "CENTER"
+      ) {
+        return "fixed";
+      }
+    }
+    // Default for horizontal
+    return "expand";
+  } else {
+    if (hasConstraints(node)) {
+      if (
+        node.constraints.vertical === "MAX" ||
+        node.constraints.vertical === "CENTER"
+      ) {
+        return "fixed";
+      }
+    }
+    // Default for vertical
+    return "shrink";
+  }
+}
+
 export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
   const data = getMetadata(node);
   if (data && data.component) {
@@ -477,8 +605,10 @@ export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
     let xOverlap = 0;
     let yOverlap = 0;
     for (const child of children) {
-      const siblings = children.filter(item => item !== child);
-      for (const sibling of siblings) {
+      const layoutSiblings = children.filter(
+        item => item !== child && !isAbsolute(item)
+      );
+      for (const sibling of layoutSiblings) {
         const childLeft = child.x;
         const childRight = child.x + child.width;
         const siblingLeft = sibling.x;
