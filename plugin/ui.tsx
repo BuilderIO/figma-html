@@ -51,6 +51,11 @@ import { generateLipsum } from "./functions/generate-lipsum";
 import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
 import { arrayBufferToBase64 } from "../lib/functions/buffer-to-base64";
+import * as md5 from "spark-md5";
+
+interface ClientStorage {
+  imageUrlsByHash: { [hash: string]: string | null } | undefined;
+}
 
 const apiKey = process.env.API_KEY || null;
 const apiRoot =
@@ -58,35 +63,29 @@ const apiRoot =
     ? process.env.API_ROOT
     : "https://builder.io";
 
-async function getImageUrl(intArr: Uint8Array): Promise<string | null> {
-  if (!apiKey) {
-    console.warn("Tried to upload image without API key");
-    return null;
-  }
-
-  return fetch(`${apiRoot}/api/v1/upload?apiKey=${apiKey}`, {
-    method: "POST",
-    body: JSON.stringify({
-      image: arrayBufferToBase64(intArr)
-    }),
-    headers: {
-      'content-type': 'application/json'
-    }
-  })
-    .then(res => res.json())
-    .then(data => data.url);
-}
-
 const WIDTH_LS_KEY = "builder.widthSetting";
 const FRAMES_LS_KEY = "builder.useFramesSetting";
 const EXPERIMENTS_LS_KEY = "builder.showExperiments";
+
+function padStart(str: string, targetLength: number, padString: string) {
+  targetLength = targetLength >> 0;
+  padString = String(typeof padString !== "undefined" ? padString : " ");
+  if (str.length >= targetLength) {
+    return String(str);
+  } else {
+    targetLength = targetLength - str.length;
+    if (targetLength > padString.length) {
+      padString += padString.repeat(targetLength / padString.length); //append to original to ensure we are longer than needed
+    }
+    return padString.slice(0, targetLength) + String(str);
+  }
+}
 
 // TODO: make async and use figma.clientStorage
 function lsGet(key: string) {
   try {
     return JSON.parse(localStorage.getItem(key)!);
   } catch (err) {
-    console.debug("Could not get from local storage", err);
     return undefined;
   }
 }
@@ -94,7 +93,6 @@ function lsSet(key: string, value: any) {
   try {
     return localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
-    console.debug("Could not set to local storage", err);
     return undefined;
   }
 }
@@ -289,6 +287,8 @@ class App extends SafeComponent {
   @observable lipsum = false; //  process.env.NODE_ENV !== "production";
   @observable loadingPush = false;
   @observable apiRoot = apiRoot;
+  @observable clientStorage: ClientStorage | null = null;
+  @observable errorMessage = "";
 
   @observable generatingCode = false;
   @observable urlValue = "https://builder.io";
@@ -324,7 +324,89 @@ class App extends SafeComponent {
     );
   }
 
-  @observable errorMessage = "";
+  constructor(p: any, s: any) {
+    super(p, s);
+
+    this.safeListenToEvent(window, "message", e => {
+      const { data: rawData, source } = e as MessageEvent;
+
+      const data = rawData.pluginMessage;
+      if (!data) {
+        return;
+      }
+      if (data.type === "selectionChange") {
+        this.selection = data.elements;
+      }
+      if (data.type === "selectionWithImages") {
+        this.selectionWithImages = data.elements;
+      }
+      if (data.type === "doneLoading") {
+        this.loading = false;
+      }
+      if (data.type === "storage") {
+        console.log("got storage", data);
+        this.clientStorage = data.data || {};
+      }
+    });
+
+    parent.postMessage(
+      {
+        pluginMessage: {
+          type: "getStorage"
+        }
+      },
+      "*"
+    );
+  }
+
+  async getImageUrl(
+    intArr: Uint8Array,
+    imageHash?: string
+  ): Promise<string | null> {
+    let hash = imageHash;
+    if (!hash) {
+      hash = md5.ArrayBuffer.hash(intArr);
+    }
+    const fromCache =
+      hash &&
+      this.clientStorage &&
+      this.clientStorage.imageUrlsByHash &&
+      this.clientStorage.imageUrlsByHash[hash];
+
+    if (fromCache) {
+      console.debug("Used URL from cache", fromCache);
+      return fromCache;
+    }
+    if (!apiKey) {
+      console.warn("Tried to upload image without API key");
+      return null;
+    }
+
+    return fetch(`${apiRoot}/api/v1/upload?apiKey=${apiKey}`, {
+      method: "POST",
+      body: JSON.stringify({
+        image: arrayBufferToBase64(intArr)
+      }),
+      headers: {
+        "content-type": "application/json"
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        const { url } = data;
+        if (typeof url !== 'string') {
+          return null;
+        }
+        if (this.clientStorage && hash) {
+          if (!this.clientStorage.imageUrlsByHash) {
+            this.clientStorage.imageUrlsByHash = {};
+          }
+          this.clientStorage.imageUrlsByHash[hash] = url;
+        }
+
+        return url;
+      });
+  }
 
   getDataForSelection(name: string, multipleValuesResponse = null) {
     if (!this.selection.length) {
@@ -339,6 +421,19 @@ class App extends SafeComponent {
       }
     }
     return value;
+  }
+
+  async updateStorage() {
+    await when(() => !!this.clientStorage);
+    parent.postMessage(
+      {
+        pluginMessage: {
+          type: "setStorage",
+          data: fastClone(this.clientStorage)
+        }
+      },
+      "*"
+    );
   }
 
   setDataForSelection(name: string, value: any) {
@@ -440,23 +535,14 @@ class App extends SafeComponent {
     });
     this.safeListenToEvent(window, "online", () => (this.online = true));
 
-    this.safeListenToEvent(window, "message", e => {
-      const { data: rawData, source } = e as MessageEvent;
-
-      const data = rawData.pluginMessage;
-      if (!data) {
-        return;
+    this.safeReaction(
+      () => this.clientStorage && fastClone(this.clientStorage),
+      () => {
+        if (this.clientStorage) {
+          this.updateStorage();
+        }
       }
-      if (data.type === "selectionChange") {
-        this.selection = data.elements;
-      }
-      if (data.type === "selectionWithImages") {
-        this.selectionWithImages = data.elements;
-      }
-      if (data.type === "doneLoading") {
-        this.loading = false;
-      }
-    });
+    );
 
     this.safeReaction(
       () => `${this.showMoreOptions}:${this.showExperimental}"`,
@@ -1226,7 +1312,9 @@ class App extends SafeComponent {
                                 value={item}
                               >
                                 <ListItemIcon style={{ minWidth: 38 }}>
-                                  {Icon ? <Icon /> : <></>}
+                                  <span style={{ transform: "rotateZ(90deg)" }}>
+                                    {Icon ? <Icon /> : <></>}
+                                  </span>
                                 </ListItemIcon>
                                 <ListItemText
                                   primaryTypographyProps={{
@@ -1445,8 +1533,9 @@ class App extends SafeComponent {
                               if (image && (image as any).intArr) {
                                 promises.push(
                                   (async () => {
-                                    (image as any).url = await getImageUrl(
-                                      (image as any).intArr
+                                    (image as any).url = await this.getImageUrl(
+                                      (image as any).intArr,
+                                      (image as ImagePaint).imageHash!
                                     ).catch(err => {
                                       console.warn("Could not make image", err);
                                       return null;
@@ -1470,10 +1559,24 @@ class App extends SafeComponent {
                             }
                           };
                           this.loadingPush = true;
-                          await fetch(this.apiRoot + "/api/v1/push", {
-                            method: "PATCH",
-                            body: JSON.stringify(pushData)
+                          const response = await fetch(
+                            this.apiRoot + "/api/v1/push",
+                            {
+                              method: "PATCH",
+                              body: JSON.stringify(pushData)
+                            }
+                          ).catch(err => {
+                            console.error("Push error:", err);
                           });
+                          if (response && !response.ok) {
+                            console.log(
+                              "pushData",
+                              await response
+                                .json()
+                                .catch(err => response.text()),
+                              pushData,
+                            );
+                          }
                           this.generatingCode = false;
                           this.loadingPush = false;
 

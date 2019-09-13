@@ -100,8 +100,9 @@ async function serialize(
 
   // TODO: May have bg...
   const isSvg =
-    hasChildren(element) &&
-    element.children.every(item => item.type === "VECTOR");
+    (hasChildren(element) &&
+      element.children.every(item => item.type === "VECTOR")) ||
+    element.type === "VECTOR";
 
   if (
     options.withImages &&
@@ -109,7 +110,11 @@ async function serialize(
     isSvg
   ) {
     const image = await element.exportAsync({
-      format: "PNG"
+      format: "PNG",
+      constraint: {
+        type: "SCALE",
+        value: 2
+      },
     });
     fills = [
       {
@@ -226,6 +231,18 @@ figma.ui.onmessage = async msg => {
   }
   if (msg.type === "resize") {
     figma.ui.resize(msg.width, msg.height);
+  }
+
+  if (msg.type === "getStorage") {
+    const data = await figma.clientStorage.getAsync("data");
+    figma.ui.postMessage({
+      type: "storage",
+      data
+    });
+  }
+  if (msg.type === "setStorage") {
+    const data = msg.data;
+    figma.clientStorage.setAsync("data", data);
   }
 
   if (msg.type === "getSelectionWithImages") {

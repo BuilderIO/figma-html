@@ -139,7 +139,11 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
   // parentLayout && ["canvas", "unknown"].includes(parentLayout);
 
   const numberValue = <T>(thing: T, property: keyof T) =>
-    typeof thing[property] === "number" ? thing[property] + "px" : undefined;
+    typeof thing[property] === "number"
+      ? thing[property] + "px"
+      : thing[property] && typeof (thing[property] as any).value === "number"
+      ? (thing[property] as any).value + "px"
+      : undefined;
 
   // TODO: top and left margin distances
 
@@ -433,29 +437,36 @@ export function processFillImages(node: SceneNode) {
         if (fill.visible === false) {
           return;
         }
-        if (fill.type === "IMAGE") {
-          const intArr = (fill as any).intArr as Uint8Array | undefined;
-          if (intArr) {
-            try {
-              const url =
-                "data:image/png;base64," + arrayBufferToBase64(intArr);
-              (fill as any).url = url;
-            } catch (err) {
-              console.warn("Could not set background image", node, fill, err);
-            }
-          } else {
-            (fill as any).url =
-              "https://cdn.builder.io/api/v1/image/assets%2Fpwgjf0RoYWbdnJSbpBAjXNRMe9F2%2Ffb27a7c790324294af8be1c35fe30f4d";
-          }
+        if (fill.type === "IMAGE" && !(fill as any).url) {
+          // const intArr = (fill as any).intArr as Uint8Array | undefined;
+          // if (intArr) {
+          //   console.log('intArr and no url', fill)
+          //   try {
+          //     const url =
+          //       "data:image/png;base64," + arrayBufferToBase64(intArr);
+          //     (fill as any).url = url;
+          //   } catch (err) {
+          //     console.warn("Could not set background image", node, fill, err);
+          //   }
+          // } else {
+          console.log("No URL on image fill!", fill);
+          (fill as any).url =
+            "https://cdn.builder.io/api/v1/image/assets%2Fpwgjf0RoYWbdnJSbpBAjXNRMe9F2%2Ffb27a7c790324294af8be1c35fe30f4d";
         }
+        // }
       });
     }
   }
 }
 
+export interface FigmaToBuilderOptions {
+  base64images: boolean;
+}
+
 export function figmaToBuilder(
   figmaNode: SceneNode,
-  parent?: SceneNode | null
+  parent?: SceneNode | null,
+  options?: FigmaToBuilderOptions
 ): BuilderElement {
   // TODO: unsafe - be sure to clone this preserving Uint8Array
   const node = figmaNode;
@@ -519,7 +530,7 @@ export function figmaToBuilder(
           options: {
             // TODO: widths
             space: 10,
-            stackColumnsAt: 'tablet', // should be 'medium'
+            stackColumnsAt: "tablet", // should be 'medium'
             columns:
               children &&
               children.map((child: SceneNode) => ({
