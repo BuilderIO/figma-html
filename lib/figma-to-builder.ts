@@ -1,5 +1,4 @@
 import { BuilderElement } from "@builder.io/sdk";
-import { arrayBufferToBase64 } from "./functions/buffer-to-base64";
 import { SizeType } from "../plugin/ui";
 
 export type ComponentType =

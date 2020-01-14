@@ -762,7 +762,7 @@ class App extends SafeComponent {
                   >
                     <ExpandMore
                       style={{
-                        transition: "transform 0.2s ease-in-out",
+                        transition: "transform 0.2s cubic-bezier(.37,.01,0,.98)",
                         transform: this.showMoreOptions
                           ? "rotateZ(180deg)"
                           : "none"

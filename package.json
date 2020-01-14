@@ -5,7 +5,9 @@
   "main": "dist/main.js",
   "browser": "dist/browser.js",
   "types": "dist/lib/html-to-figma.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "NODE_ENV=development webpack --mode=development --watch",
     "build": "NODE_ENV=production tsc && webpack --mode=production",

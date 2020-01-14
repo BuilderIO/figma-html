@@ -3,15 +3,20 @@ import { reaction, IReactionOptions, action } from "mobx";
 
 type VoidFunction = () => void;
 
+/**
+ * Provides error boundaries for safety (one component errors won't crash the whole app)
+ * and adds some methods for safe handling of subscriptions and reactions (that
+ * unsubscribe when the component is destroyed)
+ */
 export class SafeComponent<
   P extends object = {},
-  S extends object = {}
+  S = any
 > extends React.Component<P, S> {
   private _unMounted = false;
 
   protected unmountDestroyers: VoidFunction[] = [];
 
-  constructor(props: P, state: S) {
+  constructor(props: P, state?: S) {
     super(props, state);
 
     const render = this.render;
@@ -26,7 +31,7 @@ export class SafeComponent<
               padding: 5
             }
           },
-          "Oh no! We had an error :( Try refreshing this page and contact steve@builder.io if this continues"
+          "Oh no! We had an error :( Try refreshing this page and contact help@builder.io if this continues"
         );
       }
       return render.apply(this, args);
