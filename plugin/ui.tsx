@@ -394,7 +394,7 @@ class App extends SafeComponent {
       .then(res => res.json())
       .then(data => {
         const { url } = data;
-        if (typeof url !== 'string') {
+        if (typeof url !== "string") {
           return null;
         }
         if (this.clientStorage && hash) {
@@ -523,7 +523,10 @@ class App extends SafeComponent {
 
   componentDidMount() {
     // TODO: destroy on component unmount
-    this.safeReaction(() => this.urlValue, () => (this.errorMessage = ""));
+    this.safeReaction(
+      () => this.urlValue,
+      () => (this.errorMessage = "")
+    );
     this.selectAllUrlInputText();
 
     this.safeListenToEvent(window, "offline", () => (this.online = false));
@@ -736,42 +739,6 @@ class App extends SafeComponent {
                   this.urlValue = value;
                 }}
               />
-              {/* <div
-                style={{
-                  position: "absolute",
-                  right: -8,
-                  top: 11,
-                  backgroundColor: "rgba(255, 255, 255, 0.7)",
-                  borderRadius: 100
-                }}
-              >
-                <Tooltip
-                  placement="left"
-                  title="More options"
-                  enterDelay={1000}
-                >
-                  <IconButton
-                    style={{
-                      padding: 5,
-                      color: "#bbb"
-                    }}
-                    onClick={() => {
-                      this.showMoreOptions = !this.showMoreOptions;
-                      lsSet(MORE_OPTIONS_LS_KEY, this.showMoreOptions);
-                    }}
-                  >
-                    <ExpandMore
-                      style={{
-                        transition: "transform 0.2s cubic-bezier(.37,.01,0,.98)",
-                        transform: this.showMoreOptions
-                          ? "rotateZ(180deg)"
-                          : "none"
-                      }}
-                      fontSize="small"
-                    />
-                  </IconButton>
-                </Tooltip>
-              </div> */}
             </div>
             {this.showMoreOptions && (
               <div
@@ -1419,8 +1386,9 @@ class App extends SafeComponent {
 
                           // TODO: analyze if page is properly nested and annotated, if not
                           // suggest in the UI what needs grouping
-                          const block = figmaToBuilder(this
-                            .selectionWithImages[0] as any);
+                          const block = figmaToBuilder(
+                            this.selectionWithImages[0] as any
+                          );
 
                           const data = {
                             data: {
@@ -1574,7 +1542,7 @@ class App extends SafeComponent {
                               await response
                                 .json()
                                 .catch(err => response.text()),
-                              pushData,
+                              pushData
                             );
                           }
                           this.generatingCode = false;

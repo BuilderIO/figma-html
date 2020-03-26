@@ -20,7 +20,7 @@ export class SafeComponent<
     super(props, state);
 
     const render = this.render;
-    this.render = (...args) => {
+    this.render = function (...args) {
       if (this.state && (this.state as any).hasError) {
         return React.createElement(
           "div",

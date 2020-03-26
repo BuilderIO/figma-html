@@ -15,31 +15,28 @@ export function htmlToFigma(
     if (elements.length === 1) {
       return elements[0];
     }
-    return elements.reduce(
-      (memo, value: Element) => {
-        if (!memo) {
+    return elements.reduce((memo, value: Element) => {
+      if (!memo) {
+        return value;
+      }
+
+      if (direction === "left" || direction === "top") {
+        if (
+          getBoundingClientRect(value)[direction] <
+          getBoundingClientRect(memo)[direction]
+        ) {
           return value;
         }
-
-        if (direction === "left" || direction === "top") {
-          if (
-            getBoundingClientRect(value)[direction] <
-            getBoundingClientRect(memo)[direction]
-          ) {
-            return value;
-          }
-        } else {
-          if (
-            getBoundingClientRect(value)[direction] >
-            getBoundingClientRect(memo)[direction]
-          ) {
-            return value;
-          }
+      } else {
+        if (
+          getBoundingClientRect(value)[direction] >
+          getBoundingClientRect(memo)[direction]
+        ) {
+          return value;
         }
-        return memo;
-      },
-      null as Element | null
-    );
+      }
+      return memo;
+    }, null as Element | null);
   }
   function getAggregateRectOfElements(elements: Element[]) {
     if (!elements.length) {
@@ -273,17 +270,22 @@ export function htmlToFigma(
       }
     }
 
-    const els = Array.from(el.querySelectorAll("*"));
+    const getShadowEls = (el: Element): Element[] =>
+      Array.from(
+        el.shadowRoot?.querySelectorAll("*") || ([] as Element[])
+      ).reduce((memo, el) => {
+        memo.push(el);
+        memo.push(...getShadowEls(el));
+        return memo;
+      }, [] as Element[]);
+
+    const els = Array.from(el.querySelectorAll("*")).reduce((memo, el) => {
+      memo.push(el);
+      memo.push(...getShadowEls(el));
+      return memo;
+    }, [] as Element[]);
 
     if (els) {
-      // Include shadow dom
-      // for (const el of els) {
-      //   if (el.shadowRoot) {
-      //     const shadowEls = Array.from(el.shadowRoot.querySelectorAll('*'));
-      //     els.push(...shadowEls);
-      //   }
-      // }
-
       Array.from(els).forEach(el => {
         if (isHidden(el)) {
           return;
@@ -1049,10 +1051,12 @@ export function htmlToFigma(
             const parent = el && el.parentElement;
             if (el && parent) {
               const currentDisplay = el.style.display;
-              el.style.setProperty('display', 'none', '!important')
+              el.style.setProperty("display", "none", "!important");
               let computed = getComputedStyle(el);
-              const hasFixedWidth = computed.width && computed.width.trim().endsWith('px')
-              const hasFixedHeight = computed.height && computed.height.trim().endsWith('px')
+              const hasFixedWidth =
+                computed.width && computed.width.trim().endsWith("px");
+              const hasFixedHeight =
+                computed.height && computed.height.trim().endsWith("px");
               el.style.display = currentDisplay;
               const parentStyle = getComputedStyle(parent);
               let hasAutoMarginLeft = computed.marginLeft === "auto";
@@ -1070,14 +1074,14 @@ export function htmlToFigma(
               }
 
               if (["absolute", "fixed"].includes(computed.position!)) {
-                setData(child, 'position', computed.position!)
+                setData(child, "position", computed.position!);
               }
 
               if (hasFixedHeight) {
-                setData(child, 'heightType', 'fixed')
+                setData(child, "heightType", "fixed");
               }
               if (hasFixedWidth) {
-                setData(child, 'widthType', 'fixed')
+                setData(child, "widthType", "fixed");
               }
 
               const isInline =
@@ -1100,7 +1104,7 @@ export function htmlToFigma(
                   hasAutoMarginBottom = false;
                 }
 
-                setData(child, 'widthType', 'shrink')
+                setData(child, "widthType", "shrink");
               }
               const parentJustifyContent =
                 parentStyle.display === "flex" &&

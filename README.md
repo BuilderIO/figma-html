@@ -33,7 +33,7 @@ Want to capture a page behind an auth wall, or in a specific state you need to n
 ## Using the library
 
 ```js
-// npm install --save @builder.io/html-to-figma
+// npm install @builder.io/html-to-figma
 import { htmlToFigma } from '@builder.io/html-to-figma';
 const layers = htmlToFigma(document.body)
 // E.g. send these to the REST API, or generate a .figma.json file that can be uploaded through the Figma plugin
