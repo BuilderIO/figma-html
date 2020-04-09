@@ -13,7 +13,7 @@ import {
   TextField,
   Tooltip,
   Typography,
-  ListItemText
+  ListItemText,
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
 import { SvgIconProps } from "@material-ui/core/SvgIcon";
@@ -41,7 +41,7 @@ import {
   isTextNode,
   traverseNode,
   getAssumeSizeTypeForNode,
-  isGeometryNode
+  isGeometryNode,
 } from "../lib/figma-to-builder";
 import { SafeComponent } from "./classes/safe-component";
 import { settings } from "./constants/settings";
@@ -53,9 +53,13 @@ import "./ui.css";
 import { arrayBufferToBase64 } from "../lib/functions/buffer-to-base64";
 import * as md5 from "spark-md5";
 
+
 interface ClientStorage {
   imageUrlsByHash: { [hash: string]: string | null } | undefined;
 }
+
+const iframeOffset = 0;
+const newExperimentsUi = true;
 
 const apiKey = process.env.API_KEY || null;
 const apiRoot =
@@ -106,8 +110,8 @@ const theme = createMuiTheme({
   typography: themeVars.typography,
   palette: {
     primary: { main: themeVars.colors.primary },
-    secondary: green
-  }
+    secondary: green,
+  },
 });
 
 const BASE64_MARKER = ";base64,";
@@ -127,7 +131,7 @@ function convertDataURIToBinary(dataURI: string) {
 function getImageFills(layer: Node) {
   const images =
     Array.isArray(layer.fills) &&
-    layer.fills.filter(item => item.type === "IMAGE");
+    layer.fills.filter((item) => item.type === "IMAGE");
   return images;
 }
 
@@ -140,12 +144,12 @@ async function processImages(layer: Node) {
     (layer as any).type = "SVG";
     (layer as any).svg = value;
     if (typeof layer.fills !== "symbol") {
-      layer.fills = layer.fills.filter(item => item.type !== "IMAGE");
+      layer.fills = layer.fills.filter((item) => item.type !== "IMAGE");
     }
   };
   return images
     ? Promise.all(
-        images.map(async image => {
+        images.map(async (image) => {
           try {
             if (image) {
               const url = image.url;
@@ -217,7 +221,7 @@ const componentTypes: Component[] = [
   "stack",
   "columns",
   "grid",
-  "row" // TODO: treat this as grid
+  "row", // TODO: treat this as grid
   // "absolute",
   // "scroll"
 ];
@@ -234,7 +238,7 @@ const icons: { [key in Component]: React.ComponentType } = {
       {...props}
       style={{
         ...props.style,
-        transform: "rotateZ(90deg)"
+        transform: "rotateZ(90deg)",
       }}
     />
   ),
@@ -242,7 +246,7 @@ const icons: { [key in Component]: React.ComponentType } = {
   // grid: MoreHoriz,
   scroll: SettingsEthernet,
   columns: ViewColumn,
-  absolute: Brush
+  absolute: Brush,
 };
 
 const sizeIcons: { [key in SizeType]: React.ComponentType } = {
@@ -254,16 +258,16 @@ const sizeIcons: { [key in SizeType]: React.ComponentType } = {
       {...props}
       style={{
         ...props.style,
-        transform: "rotateZ(90deg)"
+        transform: "rotateZ(90deg)",
       }}
     />
-  )
+  ),
 };
 
 const sizeDescriptions: { [key in SizeType]: string } = {
   shrink: "Automatically shrink to the size of its contents",
   expand: "Automatically grow to fill any space",
-  fixed: "Fixed size that won't ever grow or shrink"
+  fixed: "Fixed size that won't ever grow or shrink",
 };
 
 const componentDescription: { [key in Component]: string } = {
@@ -272,7 +276,7 @@ const componentDescription: { [key in Component]: string } = {
   grid: "Children go horizontally and wrap to new lines",
   scroll: "Children scroll left/right on overflow",
   columns: "Children sit side by side and stack vertically for smaller devices",
-  absolute: "Children are absolute positioned in place"
+  absolute: "Children are absolute positioned in place",
 };
 
 const invalidOptionString = "...";
@@ -327,7 +331,7 @@ class App extends SafeComponent {
   constructor(p: any, s: any) {
     super(p, s);
 
-    this.safeListenToEvent(window, "message", e => {
+    this.safeListenToEvent(window, "message", (e) => {
       const { data: rawData, source } = e as MessageEvent;
 
       const data = rawData.pluginMessage;
@@ -352,8 +356,8 @@ class App extends SafeComponent {
     parent.postMessage(
       {
         pluginMessage: {
-          type: "getStorage"
-        }
+          type: "getStorage",
+        },
       },
       "*"
     );
@@ -385,14 +389,14 @@ class App extends SafeComponent {
     return fetch(`${apiRoot}/api/v1/upload?apiKey=${apiKey}`, {
       method: "POST",
       body: JSON.stringify({
-        image: arrayBufferToBase64(intArr)
+        image: arrayBufferToBase64(intArr),
       }),
       headers: {
-        "content-type": "application/json"
-      }
+        "content-type": "application/json",
+      },
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         const { url } = data;
         if (typeof url !== "string") {
           return null;
@@ -429,8 +433,8 @@ class App extends SafeComponent {
       {
         pluginMessage: {
           type: "setStorage",
-          data: fastClone(this.clientStorage)
-        }
+          data: fastClone(this.clientStorage),
+        },
       },
       "*"
     );
@@ -440,7 +444,7 @@ class App extends SafeComponent {
     for (const node of this.selection) {
       if (!node.data) {
         node.data = {
-          [name]: value
+          [name]: value,
         };
       } else {
         node.data[name] = value;
@@ -484,7 +488,7 @@ class App extends SafeComponent {
     for (const node of this.selection) {
       if (!node.data) {
         node.data = {
-          component
+          component,
         };
       } else {
         node.data.component = component;
@@ -530,10 +534,10 @@ class App extends SafeComponent {
     this.selectAllUrlInputText();
 
     this.safeListenToEvent(window, "offline", () => (this.online = false));
-    this.safeListenToEvent(window, "keydown", e => {
+    this.safeListenToEvent(window, "keydown", (e) => {
       this.updateKeyPositions(e as KeyboardEvent);
     });
-    this.safeListenToEvent(window, "keyup", e => {
+    this.safeListenToEvent(window, "keyup", (e) => {
       this.updateKeyPositions(e as KeyboardEvent);
     });
     this.safeListenToEvent(window, "online", () => (this.online = true));
@@ -555,15 +559,15 @@ class App extends SafeComponent {
           height += 50;
         }
         if (this.showExperimental) {
-          height += 300;
+          height += 600;
         }
         parent.postMessage(
           {
             pluginMessage: {
               type: "resize",
-              width: settings.ui.baseWidth,
-              height
-            }
+              width: this.showExperimental ? 1300 : settings.ui.baseWidth,
+              height,
+            },
           },
           "*"
         );
@@ -577,8 +581,8 @@ class App extends SafeComponent {
         {
           pluginMessage: {
             type: "updateElements",
-            elements: fastClone(this.selection)
-          }
+            elements: fastClone(this.selection),
+          },
         },
         "*"
       );
@@ -613,16 +617,16 @@ class App extends SafeComponent {
       fetch(
         `${apiRoot}/api/v1/url-to-figma?url=${encocedUrl}&width=${width}&useFrames=${this.useFrames}`
       )
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           console.log("data", data);
           const layers = data.layers;
           return Promise.all(
             [data].concat(
               layers.map(async (rootLayer: Node) => {
-                await traverseLayers(rootLayer, layer => {
+                await traverseLayers(rootLayer, (layer) => {
                   if (getImageFills(layer)) {
-                    return processImages(layer).catch(err => {
+                    return processImages(layer).catch((err) => {
                       console.warn("Could not process image", err);
                     });
                   }
@@ -631,13 +635,13 @@ class App extends SafeComponent {
             )
           );
         })
-        .then(data => {
+        .then((data) => {
           parent.postMessage(
             { pluginMessage: { type: "import", data: data[0] } },
             "*"
           );
         })
-        .catch(err => {
+        .catch((err) => {
           this.loading = false;
           console.error(err);
           alert(err);
@@ -668,497 +672,444 @@ class App extends SafeComponent {
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
-          padding: 15,
-          fontWeight: 400
+          alignItems: "stretch",
+          height: "100%",
         }}
       >
-        {/* <Typography style={{ textAlign: "center", marginTop: 0 }} variant="h6">
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            position: 'relative',
+            zIndex: 3,
+            padding: 15,
+            background: 'white',
+            borderRight: '1px solid #eee',
+            maxWidth: settings.ui.baseWidth,
+            fontWeight: 400,
+          }}
+        >
+          {/* <Typography style={{ textAlign: "center", marginTop: 0 }} variant="h6">
           Import from URL
         </Typography> */}
 
-        <form
-          ref={ref => (this.form = ref)}
-          // {...{ validate: 'true' }}
-          style={{
-            display: "flex",
-            flexDirection: "column"
-            // marginTop: 20
-          }}
-          onSubmit={e => {
-            e.preventDefault();
-            this.onCreate();
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {this.showExperimental && (
-              <div
-                style={{
-                  fontWeight: "bold",
-                  fontSize: 11,
-                  marginBottom: 10
-                }}
-              >
-                Import from code
-              </div>
-            )}
-            <div style={{ display: "flex", position: "relative" }}>
-              <TextField
-                inputProps={{
-                  style: {
-                    fontSize: 13
-                  }
-                }}
-                label="URL to import"
-                autoFocus
-                fullWidth
-                inputRef={ref => (this.urlInputRef = ref)}
-                disabled={this.loading}
-                required
-                onKeyDown={e => {
-                  // Default cmd + a functionality as weird
-                  if ((e.metaKey || e.ctrlKey) && e.which === 65) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    if (e.shiftKey) {
-                      const input = this.urlInputRef!;
-                      input.setSelectionRange(0, 0);
-                    } else {
-                      this.selectAllUrlInputText();
-                    }
-                  }
-                }}
-                placeholder="e.g. https://builder.io"
-                type="url"
-                value={this.urlValue}
-                onChange={e => {
-                  let value = e.target.value.trim();
-                  if (!value.match(/^https?:\/\//)) {
-                    value = "http://" + value;
-                  }
-                  this.urlValue = value;
-                }}
-              />
-            </div>
-            {this.showMoreOptions && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-end",
-                  marginTop: 15
-                }}
-              >
-                <div style={{ position: "relative", flexGrow: 1 }}>
-                  <TextField
-                    label="Width"
-                    required
-                    inputProps={{
-                      min: "200",
-                      max: "3000",
-                      step: "10",
-                      style: {
-                        fontSize: 13
-                      }
-                    }}
-                    disabled={this.loading}
-                    onKeyDown={e => {
-                      // Default cmd + a functionality as weird
-                      if ((e.metaKey || e.ctrlKey) && e.which === 65) {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        if (e.shiftKey) {
-                          const input = this.urlInputRef!;
-                          input.setSelectionRange(0, 0);
-                        } else {
-                          const input = this.urlInputRef!;
-                          input.setSelectionRange(0, input.value.length - 1);
-                        }
-                      }
-                    }}
-                    placeholder="1200"
-                    // style={{ marginLeft: 20 , width: 100  }}
-                    fullWidth
-                    type="number"
-                    value={this.width}
-                    onChange={e => {
-                      this.width = String(parseInt(e.target.value) || 1200);
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: -4,
-                      top: 18,
-                      backgroundColor: "white",
-                      borderRadius: 100,
-                      display: "flex",
-                      ...(this.loading && {
-                        pointerEvents: "none",
-                        opacity: 0.5
-                      })
-                    }}
-                  >
-                    <IconButton
-                      style={{
-                        padding: 5,
-                        color: this.width === "1200" ? "#888" : "#ddd"
-                      }}
-                      onClick={() => (this.width = "1200")}
-                    >
-                      <LaptopMac style={{ fontSize: 14 }} />
-                    </IconButton>
-                    <IconButton
-                      style={{
-                        padding: 5,
-                        color: this.width === "900" ? "#888" : "#ddd"
-                      }}
-                      onClick={() => (this.width = "900")}
-                    >
-                      <TabletMac style={{ fontSize: 14 }} />
-                    </IconButton>
-                    <IconButton
-                      style={{
-                        padding: 5,
-                        color: this.width === "400" ? "#888" : "#ddd"
-                      }}
-                      onClick={() => (this.width = "400")}
-                    >
-                      <PhoneIphone style={{ fontSize: 14 }} />
-                    </IconButton>
-                  </div>
-                </div>
-                {this.showExperimental && (
-                  <Tooltip
-                    PopperProps={{
-                      modifiers: { flip: { behavior: ["top"] } }
-                    }}
-                    enterDelay={300}
-                    placement="top"
-                    title="Nest layers in frames"
-                  >
-                    <FormControlLabel
-                      value="Use Frames"
-                      disabled={this.loading}
-                      style={{ marginLeft: 20 }}
-                      control={
-                        <Switch
-                          // disabled={this.loading}
-                          size="small"
-                          // style={{ marginLeft: 20 }}
-                          color="primary"
-                          checked={this.useFrames}
-                          onChange={e => (this.useFrames = e.target.checked)}
-                        />
-                      }
-                      label={
-                        <span
-                          style={{
-                            fontSize: 12,
-                            opacity: 0.6,
-                            position: "relative",
-                            top: -5
-                          }}
-                        >
-                          Frames
-                        </span>
-                      }
-                      labelPlacement="top"
-                    />
-                  </Tooltip>
-                )}
-              </div>
-            )}
-          </div>
-          {this.errorMessage && (
-            <div
-              style={{
-                color: "#721c24",
-                backgroundColor: "#f8d7da",
-                border: "1px solid #f5c6cb",
-                borderRadius: 4,
-                padding: ".75rem 1.25rem",
-                marginTop: 20
-              }}
-            >
-              {this.errorMessage}
-            </div>
-          )}
-          {!this.online && (
-            <div
-              style={{
-                color: "#721c24",
-                backgroundColor: "#f8d7da",
-                border: "1px solid #f5c6cb",
-                borderRadius: 4,
-                padding: ".75rem 1.25rem",
-                marginTop: 20
-              }}
-            >
-              You need to be online to use this plugin
-            </div>
-          )}
-          {this.loading ? (
-            <>
-              <div style={{ margin: "0 auto" }} className="lds-ellipsis">
-                <div style={{ background: themeVars.colors.primaryLight }} />
-                <div style={{ background: themeVars.colors.primaryLight }} />
-                <div style={{ background: themeVars.colors.primaryLight }} />
-                <div style={{ background: themeVars.colors.primaryLight }} />
-              </div>
-              <Typography
-                variant="caption"
-                style={{
-                  textAlign: "center",
-                  // marginTop: 10,
-                  color: themeVars.colors.primaryLight,
-                  marginBottom: -10
-                  // fontStyle: "italic"
-                }}
-              >
-                Processing code... <br />
-                This can take a couple minutes...
-              </Typography>
-            </>
-          ) : (
-            <>
-              <Button
-                type="submit"
-                disabled={Boolean(
-                  this.errorMessage || this.loading || !this.online
-                )}
-                style={{ marginTop: 20 }}
-                fullWidth
-                color="primary"
-                variant="contained"
-                onClick={this.onCreate}
-              >
-                Import
-              </Button>
-              <div
-                style={{
-                  color: "#888",
-                  fontSize: 12,
-                  textAlign: "center",
-                  marginTop: 15,
-                  userSelect: "none",
-                  marginBottom: -10
-                }}
-              >
-                Or try our{" "}
-                <a
+          <form
+            ref={(ref) => (this.form = ref)}
+            // {...{ validate: 'true' }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              // marginTop: 20
+            }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              this.onCreate();
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {this.showExperimental && (
+                <div
                   style={{
-                    color: themeVars.colors.primary,
-                    cursor: "pointer",
-                    textDecoration: "none"
+                    fontWeight: "bold",
+                    fontSize: 11,
+                    marginBottom: 10,
                   }}
-                  href="https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim"
-                  target="_blank"
                 >
-                  chrome extension
-                </a>{" "}
-                to capture a page in your browser and
-                <a
-                  onClick={() => {
-                    const input = document.createElement("input");
-
-                    input.type = "file";
-                    document.body.appendChild(input);
-                    input.style.visibility = "hidden";
-                    input.click();
-
-                    const onFocus = () => {
-                      setTimeout(() => {
-                        if (
-                          input.parentElement &&
-                          (!input.files || input.files.length === 0)
-                        ) {
-                          done();
+                  Import from code
+                </div>
+              )}
+              <div style={{ display: "flex", position: "relative" }}>
+                <TextField
+                  inputProps={{
+                    style: {
+                      fontSize: 13,
+                    },
+                  }}
+                  label="URL to import"
+                  autoFocus
+                  fullWidth
+                  inputRef={(ref) => (this.urlInputRef = ref)}
+                  disabled={this.loading}
+                  required
+                  onKeyDown={(e) => {
+                    // Default cmd + a functionality as weird
+                    if ((e.metaKey || e.ctrlKey) && e.which === 65) {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      if (e.shiftKey) {
+                        const input = this.urlInputRef!;
+                        input.setSelectionRange(0, 0);
+                      } else {
+                        this.selectAllUrlInputText();
+                      }
+                    }
+                  }}
+                  placeholder="e.g. https://builder.io"
+                  type="url"
+                  value={this.urlValue}
+                  onChange={(e) => {
+                    let value = e.target.value.trim();
+                    if (!value.match(/^https?:\/\//)) {
+                      value = "http://" + value;
+                    }
+                    this.urlValue = value;
+                  }}
+                />
+              </div>
+              {this.showMoreOptions && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-end",
+                    marginTop: 15,
+                  }}
+                >
+                  <div style={{ position: "relative", flexGrow: 1 }}>
+                    <TextField
+                      label="Width"
+                      required
+                      inputProps={{
+                        min: "200",
+                        max: "3000",
+                        step: "10",
+                        style: {
+                          fontSize: 13,
+                        },
+                      }}
+                      disabled={this.loading}
+                      onKeyDown={(e) => {
+                        // Default cmd + a functionality as weird
+                        if ((e.metaKey || e.ctrlKey) && e.which === 65) {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          if (e.shiftKey) {
+                            const input = this.urlInputRef!;
+                            input.setSelectionRange(0, 0);
+                          } else {
+                            const input = this.urlInputRef!;
+                            input.setSelectionRange(0, input.value.length - 1);
+                          }
                         }
-                      }, 200);
-                    };
+                      }}
+                      placeholder="1200"
+                      // style={{ marginLeft: 20 , width: 100  }}
+                      fullWidth
+                      type="number"
+                      value={this.width}
+                      onChange={(e) => {
+                        this.width = String(parseInt(e.target.value) || 1200);
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: -4,
+                        top: 18,
+                        backgroundColor: "white",
+                        borderRadius: 100,
+                        display: "flex",
+                        ...(this.loading && {
+                          pointerEvents: "none",
+                          opacity: 0.5,
+                        }),
+                      }}
+                    >
+                      <IconButton
+                        style={{
+                          padding: 5,
+                          color: this.width === "1200" ? "#888" : "#ddd",
+                        }}
+                        onClick={() => (this.width = "1200")}
+                      >
+                        <LaptopMac style={{ fontSize: 14 }} />
+                      </IconButton>
+                      <IconButton
+                        style={{
+                          padding: 5,
+                          color: this.width === "900" ? "#888" : "#ddd",
+                        }}
+                        onClick={() => (this.width = "900")}
+                      >
+                        <TabletMac style={{ fontSize: 14 }} />
+                      </IconButton>
+                      <IconButton
+                        style={{
+                          padding: 5,
+                          color: this.width === "400" ? "#888" : "#ddd",
+                        }}
+                        onClick={() => (this.width = "400")}
+                      >
+                        <PhoneIphone style={{ fontSize: 14 }} />
+                      </IconButton>
+                    </div>
+                  </div>
+                  {this.showExperimental && (
+                    <Tooltip
+                      PopperProps={{
+                        modifiers: { flip: { behavior: ["top"] } },
+                      }}
+                      enterDelay={300}
+                      placement="top"
+                      title="Nest layers in frames"
+                    >
+                      <FormControlLabel
+                        value="Use Frames"
+                        disabled={this.loading}
+                        style={{ marginLeft: 20 }}
+                        control={
+                          <Switch
+                            // disabled={this.loading}
+                            size="small"
+                            // style={{ marginLeft: 20 }}
+                            color="primary"
+                            checked={this.useFrames}
+                            onChange={(e) =>
+                              (this.useFrames = e.target.checked)
+                            }
+                          />
+                        }
+                        label={
+                          <span
+                            style={{
+                              fontSize: 12,
+                              opacity: 0.6,
+                              position: "relative",
+                              top: -5,
+                            }}
+                          >
+                            Frames
+                          </span>
+                        }
+                        labelPlacement="top"
+                      />
+                    </Tooltip>
+                  )}
+                </div>
+              )}
+            </div>
+            {this.errorMessage && (
+              <div
+                style={{
+                  color: "#721c24",
+                  backgroundColor: "#f8d7da",
+                  border: "1px solid #f5c6cb",
+                  borderRadius: 4,
+                  padding: ".75rem 1.25rem",
+                  marginTop: 20,
+                }}
+              >
+                {this.errorMessage}
+              </div>
+            )}
+            {!this.online && (
+              <div
+                style={{
+                  color: "#721c24",
+                  backgroundColor: "#f8d7da",
+                  border: "1px solid #f5c6cb",
+                  borderRadius: 4,
+                  padding: ".75rem 1.25rem",
+                  marginTop: 20,
+                }}
+              >
+                You need to be online to use this plugin
+              </div>
+            )}
+            {this.loading ? (
+              <>
+                <div style={{ margin: "0 auto" }} className="lds-ellipsis">
+                  <div style={{ background: themeVars.colors.primaryLight }} />
+                  <div style={{ background: themeVars.colors.primaryLight }} />
+                  <div style={{ background: themeVars.colors.primaryLight }} />
+                  <div style={{ background: themeVars.colors.primaryLight }} />
+                </div>
+                <Typography
+                  variant="caption"
+                  style={{
+                    textAlign: "center",
+                    // marginTop: 10,
+                    color: themeVars.colors.primaryLight,
+                    marginBottom: -10,
+                    // fontStyle: "italic"
+                  }}
+                >
+                  Processing code... <br />
+                  This can take a couple minutes...
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="submit"
+                  disabled={Boolean(
+                    this.errorMessage || this.loading || !this.online
+                  )}
+                  style={{ marginTop: 20 }}
+                  fullWidth
+                  color="primary"
+                  variant="contained"
+                  onClick={this.onCreate}
+                >
+                  Import
+                </Button>
+                <div
+                  style={{
+                    color: "#888",
+                    fontSize: 12,
+                    textAlign: "center",
+                    marginTop: 15,
+                    userSelect: "none",
+                    marginBottom: -10,
+                  }}
+                >
+                  Or try our{" "}
+                  <a
+                    style={{
+                      color: themeVars.colors.primary,
+                      cursor: "pointer",
+                      textDecoration: "none",
+                    }}
+                    href="https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim"
+                    target="_blank"
+                  >
+                    chrome extension
+                  </a>{" "}
+                  to capture a page in your browser and
+                  <a
+                    onClick={() => {
+                      const input = document.createElement("input");
 
-                    const done = () => {
-                      input.remove();
-                      this.loading = false;
-                      window.removeEventListener("focus", onFocus);
-                    };
+                      input.type = "file";
+                      document.body.appendChild(input);
+                      input.style.visibility = "hidden";
+                      input.click();
 
-                    window.addEventListener("focus", onFocus);
-
-                    // TODO: parse and upload images!
-                    input.addEventListener("change", event => {
-                      const file = (event.target as HTMLInputElement).files![0];
-                      if (file) {
-                        this.loading = true;
-                        var reader = new FileReader();
-
-                        // Closure to capture the file information.
-                        reader.onload = e => {
-                          const text = (e.target as any).result;
-                          try {
-                            const json = JSON.parse(text);
-                            Promise.all(
-                              json.layers.map(async (rootLayer: Node) => {
-                                await traverseLayers(rootLayer, layer => {
-                                  if (getImageFills(layer)) {
-                                    return processImages(layer).catch(err => {
-                                      console.warn(
-                                        "Could not process image",
-                                        err
-                                      );
-                                    });
-                                  }
-                                });
-                              })
-                            )
-                              .then(() => {
-                                parent.postMessage(
-                                  {
-                                    pluginMessage: {
-                                      type: "import",
-                                      data: json
-                                    }
-                                  },
-                                  "*"
-                                );
-                                setTimeout(() => {
-                                  done();
-                                }, 1000);
-                              })
-                              .catch(err => {
-                                done();
-                                console.error(err);
-                                alert(err);
-                              });
-                          } catch (err) {
-                            alert("File read error: " + err);
+                      const onFocus = () => {
+                        setTimeout(() => {
+                          if (
+                            input.parentElement &&
+                            (!input.files || input.files.length === 0)
+                          ) {
                             done();
                           }
-                        };
+                        }, 200);
+                      };
 
-                        reader.readAsText(file);
-                      } else {
-                        done();
-                      }
-                    });
-                  }}
-                  style={{ color: themeVars.colors.primary, cursor: "pointer" }}
-                >
-                  {" "}
-                  upload here{" "}
-                </a>
-                {/* <HelpOutline
+                      const done = () => {
+                        input.remove();
+                        this.loading = false;
+                        window.removeEventListener("focus", onFocus);
+                      };
+
+                      window.addEventListener("focus", onFocus);
+
+                      // TODO: parse and upload images!
+                      input.addEventListener("change", (event) => {
+                        const file = (event.target as HTMLInputElement)
+                          .files![0];
+                        if (file) {
+                          this.loading = true;
+                          var reader = new FileReader();
+
+                          // Closure to capture the file information.
+                          reader.onload = (e) => {
+                            const text = (e.target as any).result;
+                            try {
+                              const json = JSON.parse(text);
+                              Promise.all(
+                                json.layers.map(async (rootLayer: Node) => {
+                                  await traverseLayers(rootLayer, (layer) => {
+                                    if (getImageFills(layer)) {
+                                      return processImages(layer).catch(
+                                        (err) => {
+                                          console.warn(
+                                            "Could not process image",
+                                            err
+                                          );
+                                        }
+                                      );
+                                    }
+                                  });
+                                })
+                              )
+                                .then(() => {
+                                  parent.postMessage(
+                                    {
+                                      pluginMessage: {
+                                        type: "import",
+                                        data: json,
+                                      },
+                                    },
+                                    "*"
+                                  );
+                                  setTimeout(() => {
+                                    done();
+                                  }, 1000);
+                                })
+                                .catch((err) => {
+                                  done();
+                                  console.error(err);
+                                  alert(err);
+                                });
+                            } catch (err) {
+                              alert("File read error: " + err);
+                              done();
+                            }
+                          };
+
+                          reader.readAsText(file);
+                        } else {
+                          done();
+                        }
+                      });
+                    }}
+                    style={{
+                      color: themeVars.colors.primary,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {" "}
+                    upload here{" "}
+                  </a>
+                  {/* <HelpOutline
                   style={{
                     cursor: "pointer",
                     fontSize: 14,
                     verticalAlign: "middle"
                   }}
                 /> */}
-              </div>
-            </>
-          )}
-        </form>
-        {this.showExperimental && (
-          <>
-            <div
-              style={{
-                marginTop: 15,
-                marginBottom: 15
-              }}
-            >
-              <Divider style={{ margin: "0 -15px" }} />
-              <div style={{ fontSize: 11 }}>
-                <div
-                  style={{
-                    fontWeight: "bold",
-                    fontSize: 11,
-                    marginTop: 15
-                  }}
-                >
-                  Export to code
                 </div>
-
-                {!this.selection.length && (
-                  <div style={{ marginTop: 15, color: "#888" }}>
-                    {this.selection.length} elements selected
+              </>
+            )}
+          </form>
+          {this.showExperimental && (
+            <>
+              <div
+                style={{
+                  marginTop: 15,
+                  marginBottom: 15,
+                }}
+              >
+                <Divider style={{ margin: "0 -15px" }} />
+                <div style={{ fontSize: 11 }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: 11,
+                      marginTop: 15,
+                    }}
+                  >
+                    Export to code
                   </div>
-                )}
-                {!!this.selection.length && (
-                  <div style={{ marginTop: 15, color: "#888" }}>
-                    {/* Hello */}
-                    <TextField
-                      SelectProps={{
-                        renderValue: (val: any) => (
-                          <span
-                            style={{
-                              textTransform: "capitalize",
-                              fontSize: 12,
-                              opacity:
-                                this.selection[0] &&
-                                this.selection[0].data &&
-                                this.selection[0].data.component
-                                  ? 1
-                                  : 0.5
-                            }}
-                          >
-                            {val}
-                          </span>
-                        )
-                      }}
-                      label="Component type"
-                      select
-                      fullWidth
-                      value={this.component}
-                      onChange={e => {
-                        let value = e.target.value;
-                        if (value === invalidOptionString) {
-                          value = undefined as any;
-                        }
 
-                        this.component = value as Component;
-                      }}
-                    >
-                      {(componentTypes as string[])
-                        .concat([invalidOptionString])
-                        .map(item => {
-                          const Icon = icons[item as Component];
-                          const text =
-                            componentDescription[item as Component] || "";
-                          return (
-                            <MenuItem
-                              key={item}
-                              style={{
-                                fontSize: 12,
-                                textTransform: "capitalize",
-                                opacity: item === invalidOptionString ? 0.5 : 1
-                              }}
-                              value={item}
-                            >
-                              <ListItemIcon style={{ minWidth: 38 }}>
-                                {Icon ? <Icon /> : <></>}
-                              </ListItemIcon>
-                              <ListItemText
-                                primaryTypographyProps={{
-                                  style: {
-                                    fontSize: 14
-                                  }
-                                }}
-                                secondaryTypographyProps={{
-                                  style: {
-                                    fontSize: 9,
-                                    whiteSpace: "normal",
-                                    textTransform: "none"
-                                  }
-                                }}
-                                primary={item}
-                                secondary={text}
-                              />
-                            </MenuItem>
-                          );
-                        })}
-                    </TextField>
-
-                    <div style={{ display: "flex", marginTop: 15 }}>
+                  {!this.selection.length && (
+                    <div style={{ marginTop: 15, color: "#888" }}>
+                      {this.selection.length} elements selected
+                    </div>
+                  )}
+                  {!!this.selection.length && (
+                    <div style={{ marginTop: 15, color: "#888" }}>
+                      {/* Hello */}
                       <TextField
                         SelectProps={{
                           renderValue: (val: any) => (
@@ -1166,35 +1117,37 @@ class App extends SafeComponent {
                               style={{
                                 textTransform: "capitalize",
                                 fontSize: 12,
-                                opacity: this.getDataForSelection("heightType")
-                                  ? 1
-                                  : 0.5
+                                opacity:
+                                  this.selection[0] &&
+                                  this.selection[0].data &&
+                                  this.selection[0].data.component
+                                    ? 1
+                                    : 0.5,
                               }}
                             >
                               {val}
                             </span>
-                          )
+                          ),
                         }}
-                        label="Height sizing"
-                        // style={{ marginTop: 15 }}
+                        label="Component type"
                         select
                         fullWidth
-                        value={this.getSelectionSizeType("height")}
-                        onChange={e => {
+                        value={this.component}
+                        onChange={(e) => {
                           let value = e.target.value;
                           if (value === invalidOptionString) {
-                            value = null as any;
+                            value = undefined as any;
                           }
 
-                          this.setDataForSelection("heightType", value);
+                          this.component = value as Component;
                         }}
                       >
-                        {(sizeTypes as string[])
+                        {(componentTypes as string[])
                           .concat([invalidOptionString])
-                          .map(item => {
-                            const Icon = sizeIcons[item as SizeType];
+                          .map((item) => {
+                            const Icon = icons[item as Component];
                             const text =
-                              sizeDescriptions[item as SizeType] || "";
+                              componentDescription[item as Component] || "";
                             return (
                               <MenuItem
                                 key={item}
@@ -1202,7 +1155,7 @@ class App extends SafeComponent {
                                   fontSize: 12,
                                   textTransform: "capitalize",
                                   opacity:
-                                    item === invalidOptionString ? 0.5 : 1
+                                    item === invalidOptionString ? 0.5 : 1,
                                 }}
                                 value={item}
                               >
@@ -1212,15 +1165,15 @@ class App extends SafeComponent {
                                 <ListItemText
                                   primaryTypographyProps={{
                                     style: {
-                                      fontSize: 14
-                                    }
+                                      fontSize: 14,
+                                    },
                                   }}
                                   secondaryTypographyProps={{
                                     style: {
                                       fontSize: 9,
                                       whiteSpace: "normal",
-                                      textTransform: "none"
-                                    }
+                                      textTransform: "none",
+                                    },
                                   }}
                                   primary={item}
                                   secondary={text}
@@ -1230,177 +1183,255 @@ class App extends SafeComponent {
                           })}
                       </TextField>
 
-                      <TextField
-                        SelectProps={{
-                          renderValue: (val: any) => (
-                            <span
-                              style={{
-                                textTransform: "capitalize",
-                                fontSize: 12,
-                                opacity: this.getDataForSelection("widthType")
-                                  ? 1
-                                  : 0.5
-                              }}
-                            >
-                              {val}
-                            </span>
-                          )
-                        }}
-                        // style={{ marginTop: 15 }}
-                        style={{ marginLeft: 10 }}
-                        label="Width sizing"
-                        select
-                        fullWidth
-                        value={this.getSelectionSizeType("width")}
-                        onChange={e => {
-                          let value = e.target.value;
-                          if (value === invalidOptionString) {
-                            value = null as any;
-                          }
-
-                          this.setDataForSelection("widthType", value);
-                        }}
-                      >
-                        {(sizeTypes as string[])
-                          .concat([invalidOptionString])
-                          .map(item => {
-                            const Icon = sizeIcons[item as SizeType];
-                            const text =
-                              sizeDescriptions[item as SizeType] || "";
-                            return (
-                              <MenuItem
-                                key={item}
+                      <div style={{ display: "flex", marginTop: 15 }}>
+                        <TextField
+                          SelectProps={{
+                            renderValue: (val: any) => (
+                              <span
                                 style={{
-                                  fontSize: 12,
                                   textTransform: "capitalize",
-                                  opacity:
-                                    item === invalidOptionString ? 0.5 : 1
+                                  fontSize: 12,
+                                  opacity: this.getDataForSelection(
+                                    "heightType"
+                                  )
+                                    ? 1
+                                    : 0.5,
                                 }}
-                                value={item}
                               >
-                                <ListItemIcon style={{ minWidth: 38 }}>
-                                  <span style={{ transform: "rotateZ(90deg)" }}>
-                                    {Icon ? <Icon /> : <></>}
-                                  </span>
-                                </ListItemIcon>
-                                <ListItemText
-                                  primaryTypographyProps={{
-                                    style: {
-                                      fontSize: 14
-                                    }
-                                  }}
-                                  secondaryTypographyProps={{
-                                    style: {
-                                      fontSize: 9,
-                                      whiteSpace: "normal",
-                                      textTransform: "none"
-                                    }
-                                  }}
-                                  primary={item}
-                                  secondary={text}
-                                />
-                              </MenuItem>
-                            );
-                          })}
-                      </TextField>
-                    </div>
+                                {val}
+                              </span>
+                            ),
+                          }}
+                          label="Height sizing"
+                          // style={{ marginTop: 15 }}
+                          select
+                          fullWidth
+                          value={this.getSelectionSizeType("height")}
+                          onChange={(e) => {
+                            let value = e.target.value;
+                            if (value === invalidOptionString) {
+                              value = null as any;
+                            }
 
-                    {this.generatingCode && (
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <div
-                          style={{ margin: "10px auto 0" }}
-                          className="lds-ellipsis"
-                        >
-                          <div
-                            style={{
-                              background: themeVars.colors.primaryLight
-                            }}
-                          />
-                          <div
-                            style={{
-                              background: themeVars.colors.primaryLight
-                            }}
-                          />
-                          <div
-                            style={{
-                              background: themeVars.colors.primaryLight
-                            }}
-                          />
-                          <div
-                            style={{
-                              background: themeVars.colors.primaryLight
-                            }}
-                          />
-                        </div>
-                        <Typography
-                          variant="caption"
-                          style={{
-                            textAlign: "center",
-                            // marginTop: 10,
-                            color: themeVars.colors.primaryLight,
-                            marginBottom: 10
-                            // fontStyle: "italic"
+                            this.setDataForSelection("heightType", value);
                           }}
                         >
-                          Generating code...
-                        </Typography>
-                      </div>
-                    )}
+                          {(sizeTypes as string[])
+                            .concat([invalidOptionString])
+                            .map((item) => {
+                              const Icon = sizeIcons[item as SizeType];
+                              const text =
+                                sizeDescriptions[item as SizeType] || "";
+                              return (
+                                <MenuItem
+                                  key={item}
+                                  style={{
+                                    fontSize: 12,
+                                    textTransform: "capitalize",
+                                    opacity:
+                                      item === invalidOptionString ? 0.5 : 1,
+                                  }}
+                                  value={item}
+                                >
+                                  <ListItemIcon style={{ minWidth: 38 }}>
+                                    {Icon ? <Icon /> : <></>}
+                                  </ListItemIcon>
+                                  <ListItemText
+                                    primaryTypographyProps={{
+                                      style: {
+                                        fontSize: 14,
+                                      },
+                                    }}
+                                    secondaryTypographyProps={{
+                                      style: {
+                                        fontSize: 9,
+                                        whiteSpace: "normal",
+                                        textTransform: "none",
+                                      },
+                                    }}
+                                    primary={item}
+                                    secondary={text}
+                                  />
+                                </MenuItem>
+                              );
+                            })}
+                        </TextField>
 
-                    {/* TODO: check validitiy and prompt, select all elements not valid */}
-                    {!this.generatingCode && (
-                      <Button
-                        style={{ marginTop: 15, fontWeight: 400 }}
-                        fullWidth
-                        disabled={this.generatingCode}
-                        color="primary"
-                        variant="contained"
-                        onClick={async () => {
-                          if (!this.lipsum) {
-                            this.selectionWithImages = null;
-                            parent.postMessage(
-                              {
-                                pluginMessage: {
-                                  type: "getSelectionWithImages"
-                                }
-                              },
-                              "*"
+                        <TextField
+                          SelectProps={{
+                            renderValue: (val: any) => (
+                              <span
+                                style={{
+                                  textTransform: "capitalize",
+                                  fontSize: 12,
+                                  opacity: this.getDataForSelection("widthType")
+                                    ? 1
+                                    : 0.5,
+                                }}
+                              >
+                                {val}
+                              </span>
+                            ),
+                          }}
+                          // style={{ marginTop: 15 }}
+                          style={{ marginLeft: 10 }}
+                          label="Width sizing"
+                          select
+                          fullWidth
+                          value={this.getSelectionSizeType("width")}
+                          onChange={(e) => {
+                            let value = e.target.value;
+                            if (value === invalidOptionString) {
+                              value = null as any;
+                            }
+
+                            this.setDataForSelection("widthType", value);
+                          }}
+                        >
+                          {(sizeTypes as string[])
+                            .concat([invalidOptionString])
+                            .map((item) => {
+                              const Icon = sizeIcons[item as SizeType];
+                              const text =
+                                sizeDescriptions[item as SizeType] || "";
+                              return (
+                                <MenuItem
+                                  key={item}
+                                  style={{
+                                    fontSize: 12,
+                                    textTransform: "capitalize",
+                                    opacity:
+                                      item === invalidOptionString ? 0.5 : 1,
+                                  }}
+                                  value={item}
+                                >
+                                  <ListItemIcon style={{ minWidth: 38 }}>
+                                    <span
+                                      style={{ transform: "rotateZ(90deg)" }}
+                                    >
+                                      {Icon ? <Icon /> : <></>}
+                                    </span>
+                                  </ListItemIcon>
+                                  <ListItemText
+                                    primaryTypographyProps={{
+                                      style: {
+                                        fontSize: 14,
+                                      },
+                                    }}
+                                    secondaryTypographyProps={{
+                                      style: {
+                                        fontSize: 9,
+                                        whiteSpace: "normal",
+                                        textTransform: "none",
+                                      },
+                                    }}
+                                    primary={item}
+                                    secondary={text}
+                                  />
+                                </MenuItem>
+                              );
+                            })}
+                        </TextField>
+                      </div>
+
+                      {this.generatingCode && (
+                        <div
+                          style={{ display: "flex", flexDirection: "column" }}
+                        >
+                          <div
+                            style={{ margin: "10px auto 0" }}
+                            className="lds-ellipsis"
+                          >
+                            <div
+                              style={{
+                                background: themeVars.colors.primaryLight,
+                              }}
+                            />
+                            <div
+                              style={{
+                                background: themeVars.colors.primaryLight,
+                              }}
+                            />
+                            <div
+                              style={{
+                                background: themeVars.colors.primaryLight,
+                              }}
+                            />
+                            <div
+                              style={{
+                                background: themeVars.colors.primaryLight,
+                              }}
+                            />
+                          </div>
+                          <Typography
+                            variant="caption"
+                            style={{
+                              textAlign: "center",
+                              // marginTop: 10,
+                              color: themeVars.colors.primaryLight,
+                              marginBottom: 10,
+                              // fontStyle: "italic"
+                            }}
+                          >
+                            Generating code...
+                          </Typography>
+                        </div>
+                      )}
+
+                      {/* TODO: check validitiy and prompt, select all elements not valid */}
+                      {!this.generatingCode && (
+                        <Button
+                          style={{ marginTop: 15, fontWeight: 400 }}
+                          fullWidth
+                          disabled={this.generatingCode}
+                          color="primary"
+                          variant="contained"
+                          onClick={async () => {
+                            if (!this.lipsum) {
+                              this.selectionWithImages = null;
+                              parent.postMessage(
+                                {
+                                  pluginMessage: {
+                                    type: "getSelectionWithImages",
+                                  },
+                                },
+                                "*"
+                              );
+
+                              this.generatingCode = true;
+
+                              await when(() => !!this.selectionWithImages);
+                            } else {
+                              this.selectionWithImages = this.selection;
+                            }
+
+                            if (
+                              !(
+                                this.selectionWithImages &&
+                                this.selectionWithImages[0]
+                              )
+                            ) {
+                              console.warn("No selection with images");
+                              return;
+                            }
+
+                            // TODO: analyze if page is properly nested and annotated, if not
+                            // suggest in the UI what needs grouping
+                            const block = figmaToBuilder(
+                              this.selectionWithImages[0] as any
                             );
 
-                            this.generatingCode = true;
+                            const data = {
+                              data: {
+                                blocks: [block],
+                              },
+                            };
 
-                            await when(() => !!this.selectionWithImages);
-                          } else {
-                            this.selectionWithImages = this.selection;
-                          }
-
-                          if (
-                            !(
-                              this.selectionWithImages &&
-                              this.selectionWithImages[0]
-                            )
-                          ) {
-                            console.warn("No selection with images");
-                            return;
-                          }
-
-                          // TODO: analyze if page is properly nested and annotated, if not
-                          // suggest in the UI what needs grouping
-                          const block = figmaToBuilder(
-                            this.selectionWithImages[0] as any
-                          );
-
-                          const data = {
-                            data: {
-                              blocks: [block]
-                            }
-                          };
-
-                          const USE_FORM = false;
-                          if (USE_FORM) {
-                            const json = JSON.stringify(data);
-                            const div = document.createElement("div");
-                            div.innerHTML = `
+                            const USE_FORM = false;
+                            if (USE_FORM) {
+                              const json = JSON.stringify(data);
+                              const div = document.createElement("div");
+                              div.innerHTML = `
                                 <form method='POST' enctype='text/plain' target="_blank" action="http://localhost:5000/import-doc?url=http://localhost:1234">
                                 <input name='{"doc": ${escapeHtml(
                                   json
@@ -1409,41 +1440,45 @@ class App extends SafeComponent {
                                 </form>
                             `;
 
-                            document.body.appendChild(div);
-                            const button = div.querySelector(
-                              "button[type=submit]"
-                            );
-                            if (button instanceof HTMLElement) {
-                              button.click();
+                              document.body.appendChild(div);
+                              const button = div.querySelector(
+                                "button[type=submit]"
+                              );
+                              if (button instanceof HTMLElement) {
+                                button.click();
+                              }
+                              div.remove();
+                              this.generatingCode = false;
+                              this.selectionWithImages = null;
+                              return;
                             }
-                            div.remove();
+
+                            var json = JSON.stringify(data);
+                            var blob = new Blob([json], {
+                              type: "application/json",
+                            });
+
+                            const link = document.createElement("a");
+                            link.setAttribute(
+                              "href",
+                              URL.createObjectURL(blob)
+                            );
+                            link.setAttribute("download", "page.builder.json");
+                            document.body.appendChild(link); // Required for FF
+
+                            link.click();
+                            document.body.removeChild(link);
+
                             this.generatingCode = false;
                             this.selectionWithImages = null;
-                            return;
-                          }
+                          }}
+                        >
+                          Export to code
+                        </Button>
+                      )}
 
-                          var json = JSON.stringify(data);
-                          var blob = new Blob([json], {
-                            type: "application/json"
-                          });
-
-                          const link = document.createElement("a");
-                          link.setAttribute("href", URL.createObjectURL(blob));
-                          link.setAttribute("download", "page.builder.json");
-                          document.body.appendChild(link); // Required for FF
-
-                          link.click();
-                          document.body.removeChild(link);
-
-                          this.generatingCode = false;
-                          this.selectionWithImages = null;
-                        }}
-                      >
-                        Export to code
-                      </Button>
-                    )}
-
-                    {/* {this.loadingPush ? (
+                      {
+                        /* {this.loadingPush ? (
                       <div style={{ display: "flex" }}>
                         <CircularProgress
                           size={26}
@@ -1451,298 +1486,324 @@ class App extends SafeComponent {
                         />
                       </div>
                     ) : ( */
-                    !this.generatingCode && (
-                      <Button
-                        style={{
-                          fontWeight: 400,
-                          fontSize: 12,
-                          marginTop: 5
-                        }}
-                        fullWidth
-                        disabled={this.generatingCode}
-                        color="primary"
-                        // variant="contained"
-                        onClick={async () => {
-                          let node: SceneNode;
+                        !this.generatingCode && (
+                          <Button
+                            style={{
+                              fontWeight: 400,
+                              fontSize: 12,
+                              marginTop: 5,
+                            }}
+                            fullWidth
+                            disabled={this.generatingCode}
+                            color="primary"
+                            // variant="contained"
+                            onClick={async () => {
+                              let node: SceneNode;
 
-                          this.generatingCode = true;
-                          this.loadingPush = true;
+                              this.generatingCode = true;
+                              this.loadingPush = true;
 
-                          if (this.lipsum) {
-                            node = fastClone(this.selection[0] as any);
-                            traverseNode(node as any, child => {
-                              if (isTextNode(child)) {
-                                child.characters = generateLipsum(
-                                  child.characters.length
+                              if (this.lipsum) {
+                                node = fastClone(this.selection[0] as any);
+                                traverseNode(node as any, (child) => {
+                                  if (isTextNode(child)) {
+                                    child.characters = generateLipsum(
+                                      child.characters.length
+                                    );
+                                  }
+                                });
+                              } else {
+                                this.selectionWithImages = null;
+                                parent.postMessage(
+                                  {
+                                    pluginMessage: {
+                                      type: "getSelectionWithImages",
+                                    },
+                                  },
+                                  "*"
                                 );
+
+                                await when(() => !!this.selectionWithImages);
+                                node = this.selectionWithImages![0] as any;
+                                const promises: Promise<any>[] = [];
+                                traverseNode(node as any, (child) => {
+                                  const image =
+                                    isGeometryNode(child) &&
+                                    typeof child.fills !== "symbol" &&
+                                    child.fills.find(
+                                      (item) => item.type === "IMAGE"
+                                    );
+
+                                  // TODO: hash so don't upload image multiple times...
+                                  if (image && (image as any).intArr) {
+                                    promises.push(
+                                      (async () => {
+                                        (image as any).url = await this.getImageUrl(
+                                          (image as any).intArr,
+                                          (image as ImagePaint).imageHash!
+                                        ).catch((err) => {
+                                          console.warn(
+                                            "Could not make image",
+                                            err
+                                          );
+                                          return null;
+                                        });
+                                      })()
+                                    );
+                                  }
+                                });
+
+                                await Promise.all(promises);
                               }
-                            });
-                          } else {
-                            this.selectionWithImages = null;
-                            parent.postMessage(
-                              {
-                                pluginMessage: {
-                                  type: "getSelectionWithImages"
+                              // TODO: handle images
+                              const block = figmaToBuilder(node as any);
+
+                              const pushData = {
+                                modelId: "38834b40eced4c24947a3909cb42be3e",
+                                ownerId: "YJIGb4i01jvw0SRdL5Bt",
+                                id: "a9ca9fa3835243afaba67e79f3dc3537",
+                                data: {
+                                  blocks: [block],
+                                },
+                              };
+                              this.loadingPush = true;
+                              const response = await fetch(
+                                this.apiRoot + "/api/v1/push",
+                                {
+                                  method: "PATCH",
+                                  body: JSON.stringify(pushData),
                                 }
-                              },
-                              "*"
-                            );
-
-                            await when(() => !!this.selectionWithImages);
-                            node = this.selectionWithImages![0] as any;
-                            const promises: Promise<any>[] = [];
-                            traverseNode(node as any, child => {
-                              const image =
-                                isGeometryNode(child) &&
-                                typeof child.fills !== "symbol" &&
-                                child.fills.find(item => item.type === "IMAGE");
-
-                              // TODO: hash so don't upload image multiple times...
-                              if (image && (image as any).intArr) {
-                                promises.push(
-                                  (async () => {
-                                    (image as any).url = await this.getImageUrl(
-                                      (image as any).intArr,
-                                      (image as ImagePaint).imageHash!
-                                    ).catch(err => {
-                                      console.warn("Could not make image", err);
-                                      return null;
-                                    });
-                                  })()
+                              ).catch((err) => {
+                                console.error("Push error:", err);
+                              });
+                              if (response && !response.ok) {
+                                console.log(
+                                  "pushData",
+                                  await response
+                                    .json()
+                                    .catch((err) => response.text()),
+                                  pushData
                                 );
                               }
-                            });
+                              this.generatingCode = false;
+                              this.loadingPush = false;
 
-                            await Promise.all(promises);
-                          }
-                          // TODO: handle images
-                          const block = figmaToBuilder(node as any);
+                              this.selectionWithImages = null;
+                            }}
+                          >
+                            Push to Builder
+                          </Button>
+                        )
+                      }
+                    </div>
+                  )}
+                </div>
+                <Divider style={{ margin: "0 -15px", marginTop: 15 }} />
+              </div>
+              <div
+                style={{
+                  marginBottom: 10,
+                }}
+              >
+                <div style={{ fontSize: 11 }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: 11,
+                    }}
+                  >
+                    Dev options
+                  </div>
+                  <TextField
+                    label="API Root"
+                    fullWidth
+                    style={{ marginTop: 15 }}
+                    inputProps={{
+                      style: {
+                        fontSize: 13,
+                      },
+                    }}
+                    value={this.apiRoot}
+                    placeholder="https://builder.io"
+                    onChange={(e) => {
+                      this.apiRoot = e.target.value;
+                    }}
+                  />
 
-                          const pushData = {
-                            modelId: "38834b40eced4c24947a3909cb42be3e",
-                            ownerId: "YJIGb4i01jvw0SRdL5Bt",
-                            id: "a9ca9fa3835243afaba67e79f3dc3537",
-                            data: {
-                              blocks: [block]
-                            }
-                          };
-                          this.loadingPush = true;
-                          const response = await fetch(
-                            this.apiRoot + "/api/v1/push",
-                            {
-                              method: "PATCH",
-                              body: JSON.stringify(pushData)
-                            }
-                          ).catch(err => {
-                            console.error("Push error:", err);
-                          });
-                          if (response && !response.ok) {
-                            console.log(
-                              "pushData",
-                              await response
-                                .json()
-                                .catch(err => response.text()),
-                              pushData
-                            );
-                          }
-                          this.generatingCode = false;
-                          this.loadingPush = false;
-
-                          this.selectionWithImages = null;
+                  <FormControlLabel
+                    value="Use Frames"
+                    disabled={this.loading}
+                    style={{ marginTop: 20, marginLeft: 0 }}
+                    control={
+                      <Switch
+                        // disabled={this.loading}
+                        size="small"
+                        // style={{ marginLeft: 20 }}
+                        color="primary"
+                        checked={this.lipsum}
+                        onChange={(e) => (this.lipsum = e.target.checked)}
+                      />
+                    }
+                    label={
+                      <span
+                        style={{
+                          fontSize: 12,
+                          opacity: 0.6,
+                          marginLeft: 5,
+                          // position: "relative",
+                          // top: -5
                         }}
                       >
-                        Push to Builder
-                      </Button>
-                    )}
-                  </div>
-                )}
+                        Placeholder content
+                      </span>
+                    }
+                    labelPlacement="end"
+                  />
+                </div>
               </div>
-              <Divider style={{ margin: "0 -15px", marginTop: 15 }} />
-            </div>
-            <div
+              <Divider style={{ margin: "0 -15px" }} />
+            </>
+          )}
+
+          <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
+            Made with{" "}
+            <Favorite
               style={{
-                marginBottom: 10
+                color: "rgb(236, 55, 88)",
+                fontSize: 16,
+                marginTop: -2,
+                verticalAlign: "middle",
               }}
+            />{" "}
+            by{" "}
+            <a
+              style={{ color: themeVars.colors.primary }}
+              href="https://builder.io?ref=figma"
+              target="_blank"
             >
-              <div style={{ fontSize: 11 }}>
-                <div
+              Builder.io
+            </a>
+          </div>
+
+          <div
+            style={{
+              marginTop: 25,
+              textAlign: "center",
+              color: "#999",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 400,
+              fontSize: 9,
+            }}
+          >
+            <a
+              style={{
+                color: "#999",
+                textDecoration: "none",
+              }}
+              href="https://github.com/BuilderIO/html-to-figma/issues"
+              target="_blank"
+            >
+              Feedback
+            </a>
+            <span
+              style={{
+                display: "inline-block",
+                height: 10,
+                width: 1,
+                background: "#999",
+                marginTop: 1,
+                opacity: 0.8,
+                marginLeft: 5,
+              }}
+            />
+            <a
+              style={{
+                color: "#999",
+                textDecoration: "none",
+                marginLeft: 5,
+              }}
+              href="https://github.com/BuilderIO/html-to-figma"
+              target="_blank"
+            >
+              Source
+            </a>
+            <span
+              style={{
+                display: "inline-block",
+                height: 10,
+                width: 1,
+                background: "#999",
+                marginTop: 1,
+                opacity: 0.8,
+                marginLeft: 5,
+              }}
+            />
+            <a
+              style={{
+                color: "#999",
+                textDecoration: "none",
+                marginLeft: 5,
+              }}
+              href="https://github.com/BuilderIO/html-to-figma"
+              target="_blank"
+            >
+              Help
+            </a>
+            {this.showExperimentalLink && (
+              <>
+                <span
                   style={{
-                    fontWeight: "bold",
-                    fontSize: 11
+                    display: "inline-block",
+                    height: 10,
+                    width: 1,
+                    background: "#999",
+                    marginTop: 1,
+                    opacity: 0.8,
+                    marginLeft: 5,
+                  }}
+                />
+                <a
+                  style={{
+                    color: this.showExperimental
+                      ? themeVars.colors.primary
+                      : "#999",
+                    textDecoration: "none",
+                    marginLeft: 5,
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    this.showExperimental = !this.showExperimental;
+                    lsSet(EXPERIMENTS_LS_KEY, this.showExperimental);
                   }}
                 >
-                  Dev options
-                </div>
-                <TextField
-                  label="API Root"
-                  fullWidth
-                  style={{ marginTop: 15 }}
-                  inputProps={{
-                    style: {
-                      fontSize: 13
-                    }
-                  }}
-                  value={this.apiRoot}
-                  placeholder="https://builder.io"
-                  onChange={e => {
-                    this.apiRoot = e.target.value;
-                  }}
-                />
-
-                <FormControlLabel
-                  value="Use Frames"
-                  disabled={this.loading}
-                  style={{ marginTop: 20, marginLeft: 0 }}
-                  control={
-                    <Switch
-                      // disabled={this.loading}
-                      size="small"
-                      // style={{ marginLeft: 20 }}
-                      color="primary"
-                      checked={this.lipsum}
-                      onChange={e => (this.lipsum = e.target.checked)}
-                    />
-                  }
-                  label={
-                    <span
-                      style={{
-                        fontSize: 12,
-                        opacity: 0.6,
-                        marginLeft: 5
-                        // position: "relative",
-                        // top: -5
-                      }}
-                    >
-                      Placeholder content
-                    </span>
-                  }
-                  labelPlacement="end"
-                />
-              </div>
-            </div>
-            <Divider style={{ margin: "0 -15px" }} />
-          </>
-        )}
-
-        <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
-          Made with{" "}
-          <Favorite
-            style={{
-              color: "rgb(236, 55, 88)",
-              fontSize: 16,
-              marginTop: -2,
-              verticalAlign: "middle"
-            }}
-          />{" "}
-          by{" "}
-          <a
-            style={{ color: themeVars.colors.primary }}
-            href="https://builder.io?ref=figma"
-            target="_blank"
-          >
-            Builder.io
-          </a>
+                  Experiments
+                </a>
+              </>
+            )}
+          </div>
         </div>
 
         <div
           style={{
-            marginTop: 25,
-            textAlign: "center",
-            color: "#999",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 400,
-            fontSize: 9
+            flexGrow: 1,
+            position: "relative",
           }}
         >
-          <a
+          <iframe
             style={{
-              color: "#999",
-              textDecoration: "none"
+              border: 0,
+              position: "absolute",
+              top: 0,
+              left: -iframeOffset,
+              width: `calc(100% + ${iframeOffset}px)`,
+              height: "100%",
             }}
-            href="https://github.com/BuilderIO/html-to-figma/issues"
-            target="_blank"
-          >
-            Feedback
-          </a>
-          <span
-            style={{
-              display: "inline-block",
-              height: 10,
-              width: 1,
-              background: "#999",
-              marginTop: 1,
-              opacity: 0.8,
-              marginLeft: 5
-            }}
-          />
-          <a
-            style={{
-              color: "#999",
-              textDecoration: "none",
-              marginLeft: 5
-            }}
-            href="https://github.com/BuilderIO/html-to-figma"
-            target="_blank"
-          >
-            Source
-          </a>
-          <span
-            style={{
-              display: "inline-block",
-              height: 10,
-              width: 1,
-              background: "#999",
-              marginTop: 1,
-              opacity: 0.8,
-              marginLeft: 5
-            }}
-          />
-          <a
-            style={{
-              color: "#999",
-              textDecoration: "none",
-              marginLeft: 5
-            }}
-            href="https://github.com/BuilderIO/html-to-figma"
-            target="_blank"
-          >
-            Help
-          </a>
-          {this.showExperimentalLink && (
-            <>
-              <span
-                style={{
-                  display: "inline-block",
-                  height: 10,
-                  width: 1,
-                  background: "#999",
-                  marginTop: 1,
-                  opacity: 0.8,
-                  marginLeft: 5
-                }}
-              />
-              <a
-                style={{
-                  color: this.showExperimental
-                    ? themeVars.colors.primary
-                    : "#999",
-                  textDecoration: "none",
-                  marginLeft: 5,
-                  cursor: "pointer",
-                  userSelect: "none"
-                }}
-                onClick={e => {
-                  e.preventDefault();
-                  this.showExperimental = !this.showExperimental;
-                  lsSet(EXPERIMENTS_LS_KEY, this.showExperimental);
-                }}
-              >
-                Experiments
-              </a>
-            </>
-          )}
+            src="https://local.builder.io/fiddle"
+          ></iframe>
         </div>
       </div>
     );
