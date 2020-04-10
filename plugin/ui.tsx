@@ -53,7 +53,6 @@ import "./ui.css";
 import { arrayBufferToBase64 } from "../lib/functions/buffer-to-base64";
 import * as md5 from "spark-md5";
 
-
 interface ClientStorage {
   imageUrlsByHash: { [hash: string]: string | null } | undefined;
 }
@@ -499,6 +498,7 @@ class App extends SafeComponent {
 
   form: HTMLFormElement | null = null;
   urlInputRef: HTMLInputElement | null = null;
+  iframeRef: HTMLIFrameElement | null = null;
 
   @computed get urlValid() {
     function validURL(str: string) {
@@ -680,11 +680,11 @@ class App extends SafeComponent {
           style={{
             display: "flex",
             flexDirection: "column",
-            position: 'relative',
+            position: "relative",
             zIndex: 3,
             padding: 15,
-            background: 'white',
-            borderRight: '1px solid #eee',
+            background: "white",
+            borderRight: "1px solid #eee",
             maxWidth: settings.ui.baseWidth,
             fontWeight: 400,
           }}
@@ -1109,231 +1109,6 @@ class App extends SafeComponent {
                   )}
                   {!!this.selection.length && (
                     <div style={{ marginTop: 15, color: "#888" }}>
-                      {/* Hello */}
-                      <TextField
-                        SelectProps={{
-                          renderValue: (val: any) => (
-                            <span
-                              style={{
-                                textTransform: "capitalize",
-                                fontSize: 12,
-                                opacity:
-                                  this.selection[0] &&
-                                  this.selection[0].data &&
-                                  this.selection[0].data.component
-                                    ? 1
-                                    : 0.5,
-                              }}
-                            >
-                              {val}
-                            </span>
-                          ),
-                        }}
-                        label="Component type"
-                        select
-                        fullWidth
-                        value={this.component}
-                        onChange={(e) => {
-                          let value = e.target.value;
-                          if (value === invalidOptionString) {
-                            value = undefined as any;
-                          }
-
-                          this.component = value as Component;
-                        }}
-                      >
-                        {(componentTypes as string[])
-                          .concat([invalidOptionString])
-                          .map((item) => {
-                            const Icon = icons[item as Component];
-                            const text =
-                              componentDescription[item as Component] || "";
-                            return (
-                              <MenuItem
-                                key={item}
-                                style={{
-                                  fontSize: 12,
-                                  textTransform: "capitalize",
-                                  opacity:
-                                    item === invalidOptionString ? 0.5 : 1,
-                                }}
-                                value={item}
-                              >
-                                <ListItemIcon style={{ minWidth: 38 }}>
-                                  {Icon ? <Icon /> : <></>}
-                                </ListItemIcon>
-                                <ListItemText
-                                  primaryTypographyProps={{
-                                    style: {
-                                      fontSize: 14,
-                                    },
-                                  }}
-                                  secondaryTypographyProps={{
-                                    style: {
-                                      fontSize: 9,
-                                      whiteSpace: "normal",
-                                      textTransform: "none",
-                                    },
-                                  }}
-                                  primary={item}
-                                  secondary={text}
-                                />
-                              </MenuItem>
-                            );
-                          })}
-                      </TextField>
-
-                      <div style={{ display: "flex", marginTop: 15 }}>
-                        <TextField
-                          SelectProps={{
-                            renderValue: (val: any) => (
-                              <span
-                                style={{
-                                  textTransform: "capitalize",
-                                  fontSize: 12,
-                                  opacity: this.getDataForSelection(
-                                    "heightType"
-                                  )
-                                    ? 1
-                                    : 0.5,
-                                }}
-                              >
-                                {val}
-                              </span>
-                            ),
-                          }}
-                          label="Height sizing"
-                          // style={{ marginTop: 15 }}
-                          select
-                          fullWidth
-                          value={this.getSelectionSizeType("height")}
-                          onChange={(e) => {
-                            let value = e.target.value;
-                            if (value === invalidOptionString) {
-                              value = null as any;
-                            }
-
-                            this.setDataForSelection("heightType", value);
-                          }}
-                        >
-                          {(sizeTypes as string[])
-                            .concat([invalidOptionString])
-                            .map((item) => {
-                              const Icon = sizeIcons[item as SizeType];
-                              const text =
-                                sizeDescriptions[item as SizeType] || "";
-                              return (
-                                <MenuItem
-                                  key={item}
-                                  style={{
-                                    fontSize: 12,
-                                    textTransform: "capitalize",
-                                    opacity:
-                                      item === invalidOptionString ? 0.5 : 1,
-                                  }}
-                                  value={item}
-                                >
-                                  <ListItemIcon style={{ minWidth: 38 }}>
-                                    {Icon ? <Icon /> : <></>}
-                                  </ListItemIcon>
-                                  <ListItemText
-                                    primaryTypographyProps={{
-                                      style: {
-                                        fontSize: 14,
-                                      },
-                                    }}
-                                    secondaryTypographyProps={{
-                                      style: {
-                                        fontSize: 9,
-                                        whiteSpace: "normal",
-                                        textTransform: "none",
-                                      },
-                                    }}
-                                    primary={item}
-                                    secondary={text}
-                                  />
-                                </MenuItem>
-                              );
-                            })}
-                        </TextField>
-
-                        <TextField
-                          SelectProps={{
-                            renderValue: (val: any) => (
-                              <span
-                                style={{
-                                  textTransform: "capitalize",
-                                  fontSize: 12,
-                                  opacity: this.getDataForSelection("widthType")
-                                    ? 1
-                                    : 0.5,
-                                }}
-                              >
-                                {val}
-                              </span>
-                            ),
-                          }}
-                          // style={{ marginTop: 15 }}
-                          style={{ marginLeft: 10 }}
-                          label="Width sizing"
-                          select
-                          fullWidth
-                          value={this.getSelectionSizeType("width")}
-                          onChange={(e) => {
-                            let value = e.target.value;
-                            if (value === invalidOptionString) {
-                              value = null as any;
-                            }
-
-                            this.setDataForSelection("widthType", value);
-                          }}
-                        >
-                          {(sizeTypes as string[])
-                            .concat([invalidOptionString])
-                            .map((item) => {
-                              const Icon = sizeIcons[item as SizeType];
-                              const text =
-                                sizeDescriptions[item as SizeType] || "";
-                              return (
-                                <MenuItem
-                                  key={item}
-                                  style={{
-                                    fontSize: 12,
-                                    textTransform: "capitalize",
-                                    opacity:
-                                      item === invalidOptionString ? 0.5 : 1,
-                                  }}
-                                  value={item}
-                                >
-                                  <ListItemIcon style={{ minWidth: 38 }}>
-                                    <span
-                                      style={{ transform: "rotateZ(90deg)" }}
-                                    >
-                                      {Icon ? <Icon /> : <></>}
-                                    </span>
-                                  </ListItemIcon>
-                                  <ListItemText
-                                    primaryTypographyProps={{
-                                      style: {
-                                        fontSize: 14,
-                                      },
-                                    }}
-                                    secondaryTypographyProps={{
-                                      style: {
-                                        fontSize: 9,
-                                        whiteSpace: "normal",
-                                        textTransform: "none",
-                                      },
-                                    }}
-                                    primary={item}
-                                    secondary={text}
-                                  />
-                                </MenuItem>
-                              );
-                            })}
-                        </TextField>
-                      </div>
-
                       {this.generatingCode && (
                         <div
                           style={{ display: "flex", flexDirection: "column" }}
@@ -1453,148 +1228,42 @@ class App extends SafeComponent {
                               return;
                             }
 
-                            var json = JSON.stringify(data);
-                            var blob = new Blob([json], {
-                              type: "application/json",
-                            });
+                            if (newExperimentsUi) {
+                              this.iframeRef?.contentWindow?.postMessage({
+                                type: "builder.draggingInItem",
+                                data: {
+                                  item: block,
+                                },
+                              }, '*');
+                              this.generatingCode = false;
+                            } else {
+                              var json = JSON.stringify(data);
+                              var blob = new Blob([json], {
+                                type: "application/json",
+                              });
 
-                            const link = document.createElement("a");
-                            link.setAttribute(
-                              "href",
-                              URL.createObjectURL(blob)
-                            );
-                            link.setAttribute("download", "page.builder.json");
-                            document.body.appendChild(link); // Required for FF
+                              const link = document.createElement("a");
+                              link.setAttribute(
+                                "href",
+                                URL.createObjectURL(blob)
+                              );
+                              link.setAttribute(
+                                "download",
+                                "page.builder.json"
+                              );
+                              document.body.appendChild(link); // Required for FF
 
-                            link.click();
-                            document.body.removeChild(link);
+                              link.click();
+                              document.body.removeChild(link);
 
-                            this.generatingCode = false;
-                            this.selectionWithImages = null;
+                              this.generatingCode = false;
+                              this.selectionWithImages = null;
+                            }
                           }}
                         >
-                          Export to code
+                          Grab code
                         </Button>
                       )}
-
-                      {
-                        /* {this.loadingPush ? (
-                      <div style={{ display: "flex" }}>
-                        <CircularProgress
-                          size={26}
-                          style={{ margin: "10px auto" }}
-                        />
-                      </div>
-                    ) : ( */
-                        !this.generatingCode && (
-                          <Button
-                            style={{
-                              fontWeight: 400,
-                              fontSize: 12,
-                              marginTop: 5,
-                            }}
-                            fullWidth
-                            disabled={this.generatingCode}
-                            color="primary"
-                            // variant="contained"
-                            onClick={async () => {
-                              let node: SceneNode;
-
-                              this.generatingCode = true;
-                              this.loadingPush = true;
-
-                              if (this.lipsum) {
-                                node = fastClone(this.selection[0] as any);
-                                traverseNode(node as any, (child) => {
-                                  if (isTextNode(child)) {
-                                    child.characters = generateLipsum(
-                                      child.characters.length
-                                    );
-                                  }
-                                });
-                              } else {
-                                this.selectionWithImages = null;
-                                parent.postMessage(
-                                  {
-                                    pluginMessage: {
-                                      type: "getSelectionWithImages",
-                                    },
-                                  },
-                                  "*"
-                                );
-
-                                await when(() => !!this.selectionWithImages);
-                                node = this.selectionWithImages![0] as any;
-                                const promises: Promise<any>[] = [];
-                                traverseNode(node as any, (child) => {
-                                  const image =
-                                    isGeometryNode(child) &&
-                                    typeof child.fills !== "symbol" &&
-                                    child.fills.find(
-                                      (item) => item.type === "IMAGE"
-                                    );
-
-                                  // TODO: hash so don't upload image multiple times...
-                                  if (image && (image as any).intArr) {
-                                    promises.push(
-                                      (async () => {
-                                        (image as any).url = await this.getImageUrl(
-                                          (image as any).intArr,
-                                          (image as ImagePaint).imageHash!
-                                        ).catch((err) => {
-                                          console.warn(
-                                            "Could not make image",
-                                            err
-                                          );
-                                          return null;
-                                        });
-                                      })()
-                                    );
-                                  }
-                                });
-
-                                await Promise.all(promises);
-                              }
-                              // TODO: handle images
-                              const block = figmaToBuilder(node as any);
-
-                              const pushData = {
-                                modelId: "38834b40eced4c24947a3909cb42be3e",
-                                ownerId: "YJIGb4i01jvw0SRdL5Bt",
-                                id: "a9ca9fa3835243afaba67e79f3dc3537",
-                                data: {
-                                  blocks: [block],
-                                },
-                              };
-                              this.loadingPush = true;
-                              const response = await fetch(
-                                this.apiRoot + "/api/v1/push",
-                                {
-                                  method: "PATCH",
-                                  body: JSON.stringify(pushData),
-                                }
-                              ).catch((err) => {
-                                console.error("Push error:", err);
-                              });
-                              if (response && !response.ok) {
-                                console.log(
-                                  "pushData",
-                                  await response
-                                    .json()
-                                    .catch((err) => response.text()),
-                                  pushData
-                                );
-                              }
-                              this.generatingCode = false;
-                              this.loadingPush = false;
-
-                              this.selectionWithImages = null;
-                            }}
-                          >
-                            Push to Builder
-                          </Button>
-                        )
-                      }
                     </div>
                   )}
                 </div>
@@ -1794,6 +1463,7 @@ class App extends SafeComponent {
           }}
         >
           <iframe
+            ref={(ref) => (this.iframeRef = ref)}
             style={{
               border: 0,
               position: "absolute",

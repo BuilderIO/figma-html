@@ -1,5 +1,7 @@
+// TODO: make private package and import this from the public plugin repo
 import { BuilderElement } from "@builder.io/sdk";
-import { SizeType } from "../plugin/ui";
+
+export type SizeType = "shrink" | "expand" | "fixed";
 
 export type ComponentType =
   | "row"
@@ -40,14 +42,14 @@ export const isImage = (node: unknown): node is GeometryMixin =>
   Boolean(
     isGeometryNode(node) &&
       typeof node.fills !== "symbol" &&
-      node.fills.find(item => item.type === "IMAGE") &&
+      node.fills.find((item) => item.type === "IMAGE") &&
       getAssumeSizeTypeForNode(node as any, "height") !== "fixed"
   );
 
 export const getImage = (node: unknown) =>
   (isGeometryNode(node) &&
     typeof node.fills !== "symbol" &&
-    (node.fills.find(item => item.type === "IMAGE") as ImagePaint)) ||
+    (node.fills.find((item) => item.type === "IMAGE") as ImagePaint)) ||
   null;
 
 export const getMetadata = (node: SceneNode): NodeMetaData | null => {
@@ -78,12 +80,8 @@ export function traverseNode(
 
 const el = (options?: Partial<BuilderElement>): BuilderElement => ({
   "@type": "@builder.io/sdk:Element",
-  id:
-    "builder-" +
-    Math.random()
-      .toString()
-      .split(".")[1],
-  ...options
+  id: "builder-" + Math.random().toString().split(".")[1],
+  ...options,
 });
 
 const isCenteredX = (node: SceneNode, parent: SceneNode) => {
@@ -125,24 +123,33 @@ const isImageNode = (node: SceneNode) => {
   return image && !isTextNode(node) && assumedLayout !== "columns";
 };
 
-const isAbsolute = (node: any) =>
-  Boolean(
-    node && node.data && ["absolute", "fixed"].includes(node.data.position)
-  );
+const isAbsolute = (node: any) => false;
+// Boolean(
+//   node && node.data && ["absolute", "fixed"].includes(node.data.position)
+// );
 
 export function getCss(node: SceneNode, parent: SceneNode | null) {
   const layout = getAssumeLayoutTypeForNode(node);
   const parentLayout = parent && getAssumeLayoutTypeForNode(parent);
   const useAbsolute = isAbsolute(node); //  parentLayout === "unknown";
 
+  console.log("ya?");
+
   // parentLayout && ["canvas", "unknown"].includes(parentLayout);
 
-  const numberValue = <T>(thing: T, property: keyof T) =>
-    typeof thing[property] === "number"
-      ? thing[property] + "px"
-      : thing[property] && typeof (thing[property] as any).value === "number"
-      ? (thing[property] as any).value + "px"
+  const numberValue = <T>(thing: T, property: keyof T) => {
+    const value = thing[property];
+    if (property === "lineHeight") {
+      console.log("value", value);
+    }
+    return typeof value === "string" && value.trim().endsWith("%")
+      ? value
+      : typeof value === "number"
+      ? value + "px"
+      : value && typeof (value as any).value === "number"
+      ? (value as any).value + ((value as any).unit === "PERCENT" ? "%" : "px")
       : undefined;
+  };
 
   // TODO: top and left margin distances
 
@@ -155,27 +162,27 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
     ...(isImage(node) &&
       (parentLayout === "stack"
         ? {
-            alignSelf: "stretch"
+            alignSelf: "stretch",
           }
         : parentLayout && "row"
         ? {
-            flexGrow: "1"
+            flexGrow: "1",
           }
         : null)),
     ...(layout === "row" && {
-      flexDirection: "row"
+      flexDirection: "row",
     }),
     ...(layout === "grid" && {
       flexDirection: "row",
-      flexWrap: "wrap"
+      flexWrap: "wrap",
     }),
     ...(useAbsolute && {
       position: "absolute",
       top: node.y + "px",
       left: node.x + "px",
       width: node.width + "px",
-      height: node.height + "px"
-    })
+      height: node.height + "px",
+    }),
   };
 
   if (
@@ -205,117 +212,6 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
     styles.width = node.width + "px";
   }
 
-  if (parent && hasChildren(parent)) {
-    const sortedChildren = sortBy(
-      parent.children,
-      child => child.x + child.y
-    ).filter(item => !isAbsolute(item));
-
-    // TODO grid
-    const index = sortedChildren.indexOf(node);
-    const priorSibling = index > 0 && sortedChildren[index - 1];
-    if (parentLayout === "stack") {
-      if (isCenteredX(node, parent)) {
-        styles.marginLeft = "auto";
-        styles.marginRight = "auto";
-      } else if (isRightJustified(node, parent)) {
-        styles.marginLeft = "auto";
-      } else {
-        styles.marginLeft = node.x + "px";
-      }
-
-      if (isCenteredY(node, parent) && sortedChildren.length === 1) {
-        styles.marginTop = "auto";
-        styles.marginBottom = "auto";
-      } else if (priorSibling) {
-        styles.marginTop = `${Math.max(
-          node.y - (priorSibling.y + priorSibling.height),
-          0
-        )}px`;
-      } else {
-        styles.marginTop = node.y + "px";
-      }
-    }
-
-    if (
-      parentLayout === "row" ||
-      parentLayout === "grid" ||
-      parentLayout === "columns"
-    ) {
-      if (isCenteredY(node, parent)) {
-        styles.marginTop = "auto";
-        styles.marginBottom = "auto";
-      } else {
-        styles.marginTop = node.y + "px";
-      }
-
-      if (isCenteredX(node, parent) && sortedChildren.length === 1) {
-        styles.marginLeft = "auto";
-        styles.marginRight = "auto";
-      } else if (isRightJustified(node, parent)) {
-        styles.marginLeft = "auto";
-      } else if (priorSibling) {
-        styles.marginLeft = `${Math.max(
-          node.x - (priorSibling.x + priorSibling.width),
-          0
-        )}px`;
-      } else {
-        styles.marginLeft = node.x + "px";
-      }
-    }
-  }
-
-  if (hasChildren(node)) {
-    if (layout === "stack") {
-      const lastChild = last(
-        sortBy(
-          node.children.filter(item => !isAbsolute(item)),
-          child => child.y + child.height
-        )
-      );
-      if (lastChild && !isCenteredY(lastChild, node) && !isImageNode(node)) {
-        styles.paddingBottom =
-          Math.max(node.height - (lastChild.y + lastChild.height), 0) + "px";
-      }
-
-      const maxRight = last(
-        sortBy(
-          node.children.filter(item => !isAbsolute(item)),
-          child => child.x + child.width
-        )
-      );
-      if (
-        maxRight &&
-        !(node.children.length === 1 && isCenteredX(node.children[0], node))
-      ) {
-        styles.paddingRight =
-          Math.max(node.width - (maxRight.x + maxRight.width), 0) + "px";
-      }
-    }
-    if (layout === "row") {
-      const lastChild = last(
-        sortBy(
-          node.children.filter(item => !isAbsolute(item)),
-          child => child.x + child.width
-        )
-      );
-      if (lastChild && !isCenteredX(lastChild, node)) {
-        styles.paddingRight =
-          Math.max(node.width - (lastChild.x + lastChild.width), 0) + "px";
-      }
-      const maxBottom = last(
-        sortBy(
-          node.children.filter(item => !isAbsolute(item)),
-          child => child.y + child.height
-        )
-      );
-      if (maxBottom) {
-        styles.paddingBottom =
-          Math.max(node.height - (maxBottom.y + maxBottom.height), 0) + "px";
-      }
-    }
-  }
-
   if (isRectangleNode(node)) {
     styles.borderRadius = numberValue(node, "cornerRadius");
   }
@@ -337,7 +233,7 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
     }
 
     if (Array.isArray(node.fills)) {
-      (node.fills as Paint[]).forEach(fill => {
+      (node.fills as Paint[]).forEach((fill) => {
         if (!fill.visible) {
           return;
         }
@@ -401,7 +297,7 @@ const sortBy = <T>(arr: Array<T> | ReadonlyArray<T>, fn: (item: T) => any) => {
 
 export function sortChildren(nodes: SceneNode[]) {
   // TODO: this is wrong for grids
-  return sortBy(nodes, node => node.x + node.y);
+  return sortBy(nodes, (node) => node.x + node.y);
 }
 
 function omit<T extends object>(obj: T, ...values: (keyof T)[]): Partial<T> {
@@ -432,7 +328,7 @@ export function processBackgroundLayer(node: SceneNode) {
 export function processFillImages(node: SceneNode) {
   if (isGeometryNode(node)) {
     if (typeof node.fills !== "symbol") {
-      node.fills.forEach(fill => {
+      node.fills.forEach((fill) => {
         if (fill.visible === false) {
           return;
         }
@@ -477,9 +373,9 @@ export function figmaToBuilder(
         type: "IMAGE",
         ...({
           url:
-            "https://cdn.builder.io/api/v1/image/assets%2Fpwgjf0RoYWbdnJSbpBAjXNRMe9F2%2Ffb27a7c790324294af8be1c35fe30f4d"
-        } as any)
-      }
+            "https://cdn.builder.io/api/v1/image/assets%2Fpwgjf0RoYWbdnJSbpBAjXNRMe9F2%2Ffb27a7c790324294af8be1c35fe30f4d",
+        } as any),
+      },
     ];
   }
 
@@ -496,13 +392,13 @@ export function figmaToBuilder(
 
   const image = getImage(node);
 
-  const widths = children && children.map(item => item.width);
+  const widths = children && children.map((item) => item.width);
   const allChildWidths = widths && widths.reduce((memo, num) => memo + num, 0);
 
   return el({
     // id: "builder-" + node.id,
     responsiveStyles: {
-      large: getCss(node, parent || null)
+      large: getCss(node, parent || null),
     },
     // TODO: maybe put original layer ID in metadata
     layerName: ["Frame", "Rectangle"].includes(node.name)
@@ -512,15 +408,15 @@ export function figmaToBuilder(
       : "",
     ...({
       meta: {
-        figmaLayerId: node.id
-      }
+        figmaLayerId: node.id,
+      },
     } as any),
     component: isTextNode(node)
       ? {
           name: "Text",
           options: {
-            text: node.characters || ""
-          }
+            text: node.characters || "",
+          },
         }
       : layout === "columns"
       ? {
@@ -538,9 +434,9 @@ export function figmaToBuilder(
                 width:
                   Math.fround(
                     (child.width / (allChildWidths || node.width)) * 10000
-                  ) / 100
-              }))
-          }
+                  ) / 100,
+              })),
+          },
         }
       : image
       ? // TODO: delete background image if set
@@ -550,14 +446,14 @@ export function figmaToBuilder(
             image: (image as any).url,
             aspectRatio: node.height / node.width,
             backgroundPosition: "center",
-            backgroundSize: image.scaleMode === "FIT" ? "contain" : "cover"
-          }
+            backgroundSize: image.scaleMode === "FIT" ? "contain" : "cover",
+          },
         }
       : undefined,
     children:
       children && layout !== "columns"
         ? children.map((child: SceneNode) => figmaToBuilder(child, node))
-        : undefined
+        : undefined,
   });
 }
 
@@ -576,133 +472,9 @@ export function getAssumeSizeTypeForNode(
   node: SceneNode,
   direction: "width" | "height"
 ): SizeType {
-  const data = getMetadata(node);
-  const setType =
-    data && data[(direction + "Type") as ("heightType" | "widthType")];
-
-  if (setType) {
-    return setType;
-  }
-
-  if (direction === "width") {
-    if (hasConstraints(node)) {
-      if (
-        // Hm... maybe not this one
-        node.constraints.horizontal === "MIN" ||
-        node.constraints.horizontal === "MAX" ||
-        node.constraints.horizontal === "CENTER"
-      ) {
-        return "fixed";
-      }
-    }
-    // Default for horizontal
-    return "expand";
-  } else {
-    if (hasConstraints(node)) {
-      if (
-        node.constraints.vertical === "MAX" ||
-        node.constraints.vertical === "CENTER"
-      ) {
-        return "fixed";
-      }
-    }
-    // Default for vertical
-    return "shrink";
-  }
+  return "expand";
 }
 
 export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
-  const data = getMetadata(node);
-  if (data && data.component) {
-    return data.component;
-  }
-
-  if (isImage(node)) {
-    return "stack";
-  }
-
-  if (hasChildren(node)) {
-    let children = node.children;
-    const firstChild = children[0];
-    if (firstChild) {
-      if (
-        Math.round(firstChild.x) === 0 &&
-        Math.round(firstChild.y) === 0 &&
-        Math.round(firstChild.width) === Math.round(node.width) &&
-        Math.round(firstChild.height) === Math.round(node.height)
-      ) {
-        children = children.slice(1);
-      }
-    }
-
-    if (children.length < 2) {
-      return "stack";
-    }
-
-    let xOverlap = 0;
-    let yOverlap = 0;
-    for (const child of children) {
-      const layoutSiblings = children.filter(
-        item => item !== child && !isAbsolute(item)
-      );
-      for (const sibling of layoutSiblings) {
-        const childLeft = child.x;
-        const childRight = child.x + child.width;
-        const siblingLeft = sibling.x;
-        const siblibgRight = sibling.x + sibling.width;
-
-        const leastRight = Math.min(childRight, siblibgRight);
-        const mostLeft = Math.max(childLeft, siblingLeft);
-        if (leastRight > mostLeft) {
-          xOverlap += leastRight - mostLeft;
-        }
-
-        const childTop = child.y;
-        const childBottom = child.y + child.height;
-        const siblingTop = sibling.y;
-        const siblibgBottom = sibling.y + sibling.height;
-
-        const leastBottom = Math.min(childBottom, siblibgBottom);
-        const mostTop = Math.max(childTop, siblingTop);
-        if (leastBottom > mostTop) {
-          yOverlap += leastBottom - mostTop;
-        }
-      }
-    }
-
-    // // TODO: if the overlaps are very similar, it is grid
-    // if (Math.abs(xOverlap - yOverlap) < (xOverlap - yOverlap) / 2) {
-    //   return "grid";
-    // }
-
-    if (xOverlap > yOverlap) {
-      return "stack";
-    }
-
-    const allWidths = node.children.reduce(
-      (memo, item) => item.width + memo,
-      0
-    );
-    if (xOverlap > allWidths / 10) {
-      return "stack";
-    }
-
-    const widths = children.map(item => item.width);
-    // If each width is alost the same
-    const minWidth = Math.min(...widths);
-    const maxWidth = Math.max(...widths);
-    if (node.width > 800) {
-      const allChildWidths = widths.reduce((memo, num) => memo + num, 0);
-      if (allChildWidths > node.width * 0.8) {
-        return "columns";
-      }
-    }
-    if (maxWidth - minWidth < maxWidth / 5) {
-      // TODO: take parent arg
-      return "columns";
-    }
-    return "row";
-  }
-
-  return "canvas";
+  return "stack";
 }
