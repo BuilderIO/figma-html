@@ -77,11 +77,7 @@ async function getMatchingFont(fontStr: string, availableFonts: Font[]) {
 const fontCache: { [key: string]: FontName | undefined } = {};
 
 async function serialize(
-  element: DefaultContainerMixin &
-    BaseNode &
-    FrameNode &
-    RectangleNode &
-    TextNode,
+  element: any,
   options: {
     withImages?: boolean;
     withChildren?: boolean;
@@ -147,7 +143,7 @@ async function serialize(
         element.children &&
         !isSvg &&
         (await Promise.all(
-          element.children.map((child) => serialize(child as any, options))
+          element.children.map((child: any) => serialize(child as any, options))
         ))) ||
       undefined,
     constraints: element.constraints,
@@ -253,7 +249,7 @@ figma.ui.onmessage = async (msg) => {
     for (const element of elements) {
       const el = figma.getNodeById(element.id);
       if (el) {
-        assign(el, element);
+        assign(el as any, element);
       }
     }
   }

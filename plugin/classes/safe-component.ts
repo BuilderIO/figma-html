@@ -16,28 +16,6 @@ export class SafeComponent<
 
   protected unmountDestroyers: VoidFunction[] = [];
 
-  constructor(props: P, state?: S) {
-    super(props, state);
-
-    const render = this.render;
-    this.render = function (...args) {
-      if (this.state && (this.state as any).hasError) {
-        return React.createElement(
-          "div",
-          {
-            style: {
-              display: "inline-block",
-              color: "red",
-              padding: 5
-            }
-          },
-          "Oh no! We had an error :( Try refreshing this page and contact help@builder.io if this continues"
-        );
-      }
-      return render.apply(this, args);
-    };
-  }
-
   onDestroy(cb: VoidFunction) {
     if (this._unMounted) {
       // TODO: nextTick? like promise for consistency
@@ -60,20 +38,6 @@ export class SafeComponent<
     }
   }
 
-  static getDerivedStateFromError(error: any) {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: any, errorInfo: any) {
-    console.error("Component error:", error, errorInfo);
-  }
-
-  // safeSubscribe<T>(observable: Observable<T>, callback: (value: T) => void) {
-  //   const subscription = observable.subscribe(action(callback));
-  //   this.onDestroy(() => subscription.unsubscribe());
-  //   return subscription;
-  // }
-
   // TODO: metadata ways of doing this
   safeListenToEvent(
     target: EventTarget,
@@ -94,7 +58,7 @@ export class SafeComponent<
     watchFunction: () => T,
     reactionFunction: (arg: T) => void,
     options: IReactionOptions = {
-      fireImmediately: true
+      fireImmediately: true,
     }
   ) {
     this.onDestroy(reaction(watchFunction, reactionFunction, options));

@@ -286,7 +286,7 @@ class App extends SafeComponent {
   @observable errorMessage = "";
 
   @observable generatingCode = false;
-  @observable urlValue = "https://builder.io";
+  @observable urlValue = "https://www.builder.io";
   @observable width = lsGet(WIDTH_LS_KEY) || "1200";
   @observable online = navigator.onLine;
   @observable useFrames =
@@ -566,7 +566,7 @@ class App extends SafeComponent {
   }
 
   componentDidMount() {
-    this.safeListenToEvent(window, "message", (e) => {
+    window.addEventListener("message", (e) => {
       const { data: rawData, source } = e as MessageEvent;
 
       const data = rawData.pluginMessage;
@@ -1266,7 +1266,7 @@ class App extends SafeComponent {
                       },
                     }}
                     value={this.apiRoot}
-                    placeholder="https://builder.io"
+                    placeholder="https://www.builder.io"
                     onChange={(e) => {
                       this.apiRoot = e.target.value;
                     }}
@@ -1334,24 +1334,21 @@ class App extends SafeComponent {
                   NEW
                 </span>
               </div>
-              <Tooltip
-                disableTouchListener={Boolean(this.selection.length)}
-                title="Select a layer first"
-              >
-                <div>
-                  <Button
-                    style={{ margin: "10px 0" }}
-                    variant="outlined"
-                    onClick={() => {
-                      this.getCode();
-                    }}
-                    disabled={!this.selection.length}
-                    color="primary"
-                  >
-                    Download as JSON
-                  </Button>
-                </div>
-              </Tooltip>
+
+              <div>
+                <Button
+                  style={{ margin: "10px 0" }}
+                  variant="outlined"
+                  onClick={() => {
+                    this.getCode();
+                  }}
+                  disabled={!this.selection.length}
+                  color="primary"
+                >
+                  Download as JSON
+                </Button>
+              </div>
+
               <a
                 target="_blank"
                 rel="noreferrer"
@@ -1377,7 +1374,7 @@ class App extends SafeComponent {
             by{" "}
             <a
               style={{ color: themeVars.colors.primary }}
-              href="https://builder.io?ref=figma"
+              href="https://www.builder.io?ref=figma"
               target="_blank"
             >
               Builder.io

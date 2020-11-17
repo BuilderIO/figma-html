@@ -123,7 +123,7 @@ const isImageNode = (node: SceneNode) => {
   return image && !isTextNode(node) && assumedLayout !== "columns";
 };
 
-const isAbsolute = (node: any) => false;
+const isAbsolute = (node: any) => true;
 // Boolean(
 //   node && node.data && ["absolute", "fixed"].includes(node.data.position)
 // );
@@ -474,5 +474,5 @@ export function getAssumeSizeTypeForNode(
 }
 
 export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
-  return "stack";
+  return "canvas";
 }
