@@ -8,7 +8,7 @@
     "strict": true,
     "declaration": true,
     "experimentalDecorators": true,
-    "typeRoots": ["node_modules/@types"],
+    "typeRoots": ["node_modules/@types", "node_modules/@figma"],
     "moduleResolution": "node",
     "skipLibCheck": true
   },

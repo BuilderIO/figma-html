@@ -3,10 +3,12 @@ import { settings } from "./constants/settings";
 import { fastClone } from "./functions/fast-clone";
 import { isGeometryNode, hasChildren } from "../lib/figma-to-builder";
 
+console.log("oh?");
+
 // This shows the HTML page in "ui.html".
 figma.showUI(__html__, {
   width: settings.ui.baseWidth,
-  height: settings.ui.baseHeight
+  height: settings.ui.baseHeight,
 });
 
 async function processImages(layer: RectangleNode | TextNode) {
@@ -14,7 +16,7 @@ async function processImages(layer: RectangleNode | TextNode) {
   return (
     images &&
     Promise.all(
-      images.map(async image => {
+      images.map(async (image) => {
         if (image && image.intArr) {
           image.imageHash = await figma.createImage(image.intArr).hash;
           delete image.intArr;
@@ -27,7 +29,7 @@ async function processImages(layer: RectangleNode | TextNode) {
 function getImageFills(layer: RectangleNode | TextNode) {
   const images =
     Array.isArray(layer.fills) &&
-    layer.fills.filter(item => item.type === "IMAGE");
+    layer.fills.filter((item) => item.type === "IMAGE");
   return images;
 }
 
@@ -62,14 +64,6 @@ async function getMatchingFont(fontStr: string, availableFonts: Font[]) {
 
 const fontCache: { [key: string]: FontName | undefined } = {};
 
-const selectionIds = (selection: ReadonlyArray<SceneNode>) =>
-  selection
-    .map(item => item.id)
-    .sort()
-    .join();
-
-let selection: ReadonlyArray<SceneNode> = [];
-
 async function serialize(
   element: DefaultContainerMixin &
     BaseNode &
@@ -101,7 +95,7 @@ async function serialize(
   // TODO: May have bg...
   const isSvg =
     (hasChildren(element) &&
-      element.children.every(item => item.type === "VECTOR")) ||
+      element.children.every((item) => item.type === "VECTOR")) ||
     element.type === "VECTOR";
 
   if (
@@ -113,7 +107,7 @@ async function serialize(
       format: "PNG",
       constraint: {
         type: "SCALE",
-        value: 2
+        value: 2,
       },
     });
     fills = [
@@ -121,8 +115,8 @@ async function serialize(
         type: "IMAGE",
         visible: true,
         scaleMode: "FIT",
-        ...({ intArr: image } as any)
-      }
+        ...({ intArr: image } as any),
+      },
     ];
   }
 
@@ -141,7 +135,7 @@ async function serialize(
         element.children &&
         !isSvg &&
         (await Promise.all(
-          element.children.map(child => serialize(child as any, options))
+          element.children.map((child) => serialize(child as any, options))
         ))) ||
       undefined,
     constraints: element.constraints,
@@ -179,33 +173,32 @@ async function serialize(
     topLeftRadius: element.topLeftRadius,
     topRightRadius: element.topRightRadius,
     bottomLeftRadius: element.bottomLeftRadius,
-    bottomRightRadius: element.bottomLeftRadius
+    bottomRightRadius: element.bottomLeftRadius,
   };
 }
 
-setInterval(async () => {
-  if (selectionIds(selection) !== selectionIds(figma.currentPage.selection)) {
-    selection = figma.currentPage.selection;
-    figma.ui.postMessage({
-      type: "selectionChange",
-      elements: await Promise.all(
-        figma.currentPage.selection.map(el =>
-          serialize(el as any, {
-            // TODO: only need one level deep......
-            withChildren: true
-          })
-        )
+figma.on("selectionchange", async () => {
+  console.log("code selectionchange");
+  figma.ui.postMessage({
+    type: "selectionChange",
+    elements: await Promise.all(
+      figma.currentPage.selection.map((el) =>
+        serialize(el as any, {
+          // TODO: only need one level deep......
+          withChildren: true,
+        })
       )
-    });
-  }
-}, 200);
+    ),
+  });
+  console.log("code selectionchange sent");
+});
 
 type AnyStringMap = { [key: string]: any };
 
 // Calls to "parent.postMessage" from within the HTML page will trigger this
 // callback. The callback will be passed the "pluginMessage" property of the
 // posted message.
-figma.ui.onmessage = async msg => {
+figma.ui.onmessage = async (msg) => {
   function assign(a: BaseNode & AnyStringMap, b: AnyStringMap) {
     for (const key in b) {
       const value = b[key];
@@ -237,7 +230,7 @@ figma.ui.onmessage = async msg => {
     const data = await figma.clientStorage.getAsync("data");
     figma.ui.postMessage({
       type: "storage",
-      data
+      data,
     });
   }
   if (msg.type === "setStorage") {
@@ -249,13 +242,13 @@ figma.ui.onmessage = async msg => {
     figma.ui.postMessage({
       type: "selectionWithImages",
       elements: await Promise.all(
-        figma.currentPage.selection.slice(0, 1).map(el =>
+        figma.currentPage.selection.slice(0, 1).map((el) =>
           serialize(el as any, {
             withChildren: true,
-            withImages: true
+            withImages: true,
           })
         )
-      )
+      ),
     });
   }
 
@@ -271,7 +264,7 @@ figma.ui.onmessage = async msg => {
 
   if (msg.type === "import") {
     const availableFonts = (await figma.listAvailableFontsAsync()).filter(
-      font => font.fontName.style === "Regular"
+      (font) => font.fontName.style === "Regular"
     );
     await figma.loadFontAsync(defaultFont);
     const { data } = msg;
@@ -371,7 +364,7 @@ figma.ui.onmessage = async msg => {
 
     figma.ui.postMessage({
       type: "doneLoading",
-      rootId: frameRoot.id
+      rootId: frameRoot.id,
     });
 
     figma.viewport.scrollAndZoomIntoView([frameRoot]);

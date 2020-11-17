@@ -23,6 +23,7 @@
   "license": "MIT",
   "devDependencies": {
     "@builder.io/sdk": "^1.0.40",
+    "@figma/plugin-typings": "^1.18.2",
     "@material-ui/core": "^4.3.3",
     "@material-ui/icons": "^4.2.1",
     "@types/escape-html": "0.0.20",

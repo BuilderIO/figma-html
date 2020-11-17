@@ -1,19 +1,15 @@
 import {
   Button,
-  CircularProgress,
   createMuiTheme,
   CssBaseline,
   Divider,
   FormControlLabel,
   IconButton,
-  ListItemIcon,
-  MenuItem,
   MuiThemeProvider,
   Switch,
   TextField,
   Tooltip,
   Typography,
-  ListItemText,
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
 import { SvgIconProps } from "@material-ui/core/SvgIcon";
@@ -35,30 +31,28 @@ import { action, computed, observable, when } from "mobx";
 import { observer } from "mobx-react";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
+import * as md5 from "spark-md5";
 import {
   figmaToBuilder,
   getAssumeLayoutTypeForNode,
-  isTextNode,
-  traverseNode,
   getAssumeSizeTypeForNode,
-  isGeometryNode,
 } from "../lib/figma-to-builder";
+import { arrayBufferToBase64 } from "../lib/functions/buffer-to-base64";
 import { SafeComponent } from "./classes/safe-component";
 import { settings } from "./constants/settings";
 import { theme as themeVars } from "./constants/theme";
 import { fastClone } from "./functions/fast-clone";
-import { generateLipsum } from "./functions/generate-lipsum";
 import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
-import { arrayBufferToBase64 } from "../lib/functions/buffer-to-base64";
-import * as md5 from "spark-md5";
+
+console.log("eh?");
 
 interface ClientStorage {
   imageUrlsByHash: { [hash: string]: string | null } | undefined;
 }
 
 const iframeOffset = 0;
-const newExperimentsUi = true;
+const newExperimentsUi = false;
 
 const apiKey = process.env.API_KEY || null;
 const apiRoot =
@@ -299,10 +293,7 @@ class App extends SafeComponent {
   @observable online = navigator.onLine;
   @observable useFrames =
     lsGet(FRAMES_LS_KEY) || process.env.NODE_ENV !== "production" || false;
-  @observable showExperimental =
-    lsGet(EXPERIMENTS_LS_KEY) ||
-    process.env.NODE_ENV === "development" ||
-    false;
+  @observable showExperimental = lsGet(EXPERIMENTS_LS_KEY) || false;
   @observable showMoreOptions = true; // lsGet(MORE_OPTIONS_LS_KEY) || false;
   @observable selection: (BaseNode & { data?: { [key: string]: any } })[] = [];
   @observable.ref selectionWithImages:
@@ -324,41 +315,6 @@ class App extends SafeComponent {
     return (
       this.showExperimental ||
       (this.commandKeyDown && this.shiftKeyDown && this.altKeyDown)
-    );
-  }
-
-  constructor(p: any, s: any) {
-    super(p, s);
-
-    this.safeListenToEvent(window, "message", (e) => {
-      const { data: rawData, source } = e as MessageEvent;
-
-      const data = rawData.pluginMessage;
-      if (!data) {
-        return;
-      }
-      if (data.type === "selectionChange") {
-        this.selection = data.elements;
-      }
-      if (data.type === "selectionWithImages") {
-        this.selectionWithImages = data.elements;
-      }
-      if (data.type === "doneLoading") {
-        this.loading = false;
-      }
-      if (data.type === "storage") {
-        console.log("got storage", data);
-        this.clientStorage = data.data || {};
-      }
-    });
-
-    parent.postMessage(
-      {
-        pluginMessage: {
-          type: "getStorage",
-        },
-      },
-      "*"
     );
   }
 
@@ -504,10 +460,10 @@ class App extends SafeComponent {
     function validURL(str: string) {
       var pattern = new RegExp(
         "^(https?:\\/\\/)?" + // protocol
-        "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // domain name
-        "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
-        "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
-        "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
+          "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // domain name
+          "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
+          "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
+          "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
           "(\\#[-a-z\\d_]*)?$",
         "i"
       ); // fragment locator
@@ -525,7 +481,127 @@ class App extends SafeComponent {
     this.ctrlKeyDown = event.ctrlKey;
   }
 
+  async getCode() {
+    if (!this.lipsum) {
+      this.selectionWithImages = null;
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "getSelectionWithImages",
+          },
+        },
+        "*"
+      );
+
+      this.generatingCode = true;
+
+      await when(() => !!this.selectionWithImages);
+    } else {
+      this.selectionWithImages = this.selection;
+    }
+
+    if (!(this.selectionWithImages && this.selectionWithImages[0])) {
+      console.warn("No selection with images");
+      return;
+    }
+
+    // TODO: analyze if page is properly nested and annotated, if not
+    // suggest in the UI what needs grouping
+    const block = figmaToBuilder(this.selectionWithImages[0] as any);
+
+    const data = {
+      data: {
+        blocks: [block],
+      },
+    };
+
+    const USE_FORM = false;
+    if (USE_FORM) {
+      const json = JSON.stringify(data);
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <form method='POST' enctype='text/plain' target="_blank" action="http://localhost:5000/import-doc?url=http://localhost:1234">
+        <input name='{"doc": ${escapeHtml(json)}, "_": "' value='"}'>
+        <button type="submit"></button>
+        </form>
+    `;
+
+      document.body.appendChild(div);
+      const button = div.querySelector("button[type=submit]");
+      if (button instanceof HTMLElement) {
+        button.click();
+      }
+      div.remove();
+      this.generatingCode = false;
+      this.selectionWithImages = null;
+      return;
+    }
+
+    if (newExperimentsUi) {
+      this.iframeRef?.contentWindow?.postMessage(
+        {
+          type: "builder.draggingInItem",
+          data: {
+            item: block,
+          },
+        },
+        "*"
+      );
+      this.generatingCode = false;
+    } else {
+      var json = JSON.stringify(data);
+      var blob = new Blob([json], {
+        type: "application/json",
+      });
+
+      const link = document.createElement("a");
+      link.setAttribute("href", URL.createObjectURL(blob));
+      link.setAttribute("download", "page.builder.json");
+      document.body.appendChild(link); // Required for FF
+
+      link.click();
+      document.body.removeChild(link);
+
+      this.generatingCode = false;
+      this.selectionWithImages = null;
+    }
+  }
+
   componentDidMount() {
+    this.safeListenToEvent(window, "message", (e) => {
+      const { data: rawData, source } = e as MessageEvent;
+
+      console.log("message?", e);
+
+      const data = rawData.pluginMessage;
+      if (!data) {
+        return;
+      }
+      if (data.type === "selectionChange") {
+        console.log("selectionChange?");
+        this.selection = data.elements;
+      }
+      if (data.type === "selectionWithImages") {
+        this.selectionWithImages = data.elements;
+      }
+      if (data.type === "doneLoading") {
+        this.loading = false;
+      }
+      if (data.type === "storage") {
+        console.log("got storage", data);
+        this.clientStorage = data.data || {};
+      }
+    });
+
+    parent.postMessage(
+      {
+        pluginMessage: {
+          type: "getStorage",
+        },
+      },
+      "*"
+    );
+
     // TODO: destroy on component unmount
     this.safeReaction(
       () => this.urlValue,
@@ -1162,103 +1238,7 @@ class App extends SafeComponent {
                           color="primary"
                           variant="contained"
                           onClick={async () => {
-                            if (!this.lipsum) {
-                              this.selectionWithImages = null;
-                              parent.postMessage(
-                                {
-                                  pluginMessage: {
-                                    type: "getSelectionWithImages",
-                                  },
-                                },
-                                "*"
-                              );
-
-                              this.generatingCode = true;
-
-                              await when(() => !!this.selectionWithImages);
-                            } else {
-                              this.selectionWithImages = this.selection;
-                            }
-
-                            if (
-                              !(
-                                this.selectionWithImages &&
-                                this.selectionWithImages[0]
-                              )
-                            ) {
-                              console.warn("No selection with images");
-                              return;
-                            }
-
-                            // TODO: analyze if page is properly nested and annotated, if not
-                            // suggest in the UI what needs grouping
-                            const block = figmaToBuilder(
-                              this.selectionWithImages[0] as any
-                            );
-
-                            const data = {
-                              data: {
-                                blocks: [block],
-                              },
-                            };
-
-                            const USE_FORM = false;
-                            if (USE_FORM) {
-                              const json = JSON.stringify(data);
-                              const div = document.createElement("div");
-                              div.innerHTML = `
-                                <form method='POST' enctype='text/plain' target="_blank" action="http://localhost:5000/import-doc?url=http://localhost:1234">
-                                <input name='{"doc": ${escapeHtml(
-                                  json
-                                )}, "_": "' value='"}'>
-                                <button type="submit"></button>
-                                </form>
-                            `;
-
-                              document.body.appendChild(div);
-                              const button = div.querySelector(
-                                "button[type=submit]"
-                              );
-                              if (button instanceof HTMLElement) {
-                                button.click();
-                              }
-                              div.remove();
-                              this.generatingCode = false;
-                              this.selectionWithImages = null;
-                              return;
-                            }
-
-                            if (newExperimentsUi) {
-                              this.iframeRef?.contentWindow?.postMessage({
-                                type: "builder.draggingInItem",
-                                data: {
-                                  item: block,
-                                },
-                              }, '*');
-                              this.generatingCode = false;
-                            } else {
-                              var json = JSON.stringify(data);
-                              var blob = new Blob([json], {
-                                type: "application/json",
-                              });
-
-                              const link = document.createElement("a");
-                              link.setAttribute(
-                                "href",
-                                URL.createObjectURL(blob)
-                              );
-                              link.setAttribute(
-                                "download",
-                                "page.builder.json"
-                              );
-                              document.body.appendChild(link); // Required for FF
-
-                              link.click();
-                              document.body.removeChild(link);
-
-                              this.generatingCode = false;
-                              this.selectionWithImages = null;
-                            }
+                            this.getCode();
                           }}
                         >
                           Grab code
@@ -1333,6 +1313,63 @@ class App extends SafeComponent {
               <Divider style={{ margin: "0 -15px" }} />
             </>
           )}
+
+          <div
+            style={{
+              margin: "10 -20px 0",
+            }}
+          >
+            <Divider />
+            <div
+              style={{
+                backgroundColor: "#f8f8f8",
+                padding: 15,
+                textAlign: "center",
+              }}
+            >
+              <div>
+                Turn your design into code{" "}
+                <span
+                  style={{
+                    color: themeVars.colors.primary,
+                    fontSize: 11,
+                    fontWeight: "bold",
+                    position: "relative",
+                    top: -4,
+                  }}
+                >
+                  NEW
+                </span>
+              </div>
+              <Tooltip
+                disableTouchListener={Boolean(this.selection.length)}
+                title="Select a layer first"
+              >
+                <div>
+                  <Button
+                    style={{ margin: "10px 0" }}
+                    variant="outlined"
+                    onClick={() => {
+                      this.getCode();
+                    }}
+                    disabled={!this.selection.length}
+                    color="primary"
+                  >
+                    Download as JSON
+                  </Button>
+                </div>
+              </Tooltip>
+              <a
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: themeVars.colors.primary }}
+                href="https://github.com/builderio/jsx-lite"
+              >
+                Learn more
+              </a>
+            </div>
+            <Divider />
+          </div>
 
           <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
             Made with{" "}

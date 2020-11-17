@@ -133,8 +133,6 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
   const parentLayout = parent && getAssumeLayoutTypeForNode(parent);
   const useAbsolute = isAbsolute(node); //  parentLayout === "unknown";
 
-  console.log("ya?");
-
   // parentLayout && ["canvas", "unknown"].includes(parentLayout);
 
   const numberValue = <T>(thing: T, property: keyof T) => {

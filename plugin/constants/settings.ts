@@ -1,6 +1,6 @@
 export const settings = {
   ui: {
-    baseHeight: 290,
-    baseWidth: 240,
+    baseHeight: 410,
+    baseWidth: 270,
   }
 };
