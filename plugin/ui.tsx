@@ -45,8 +45,6 @@ import { fastClone } from "./functions/fast-clone";
 import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
 
-console.log("eh?");
-
 interface ClientStorage {
   imageUrlsByHash: { [hash: string]: string | null } | undefined;
 }
@@ -571,14 +569,11 @@ class App extends SafeComponent {
     this.safeListenToEvent(window, "message", (e) => {
       const { data: rawData, source } = e as MessageEvent;
 
-      console.log("message?", e);
-
       const data = rawData.pluginMessage;
       if (!data) {
         return;
       }
       if (data.type === "selectionChange") {
-        console.log("selectionChange?");
         this.selection = data.elements;
       }
       if (data.type === "selectionWithImages") {
@@ -588,7 +583,6 @@ class App extends SafeComponent {
         this.loading = false;
       }
       if (data.type === "storage") {
-        console.log("got storage", data);
         this.clientStorage = data.data || {};
       }
     });
@@ -695,7 +689,6 @@ class App extends SafeComponent {
       )
         .then((res) => res.json())
         .then((data) => {
-          console.log("data", data);
           const layers = data.layers;
           return Promise.all(
             [data].concat(

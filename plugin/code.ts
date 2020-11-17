@@ -3,7 +3,19 @@ import { settings } from "./constants/settings";
 import { fastClone } from "./functions/fast-clone";
 import { isGeometryNode, hasChildren } from "../lib/figma-to-builder";
 
-console.log("oh?");
+figma.on("selectionchange", async () => {
+  figma.ui.postMessage({
+    type: "selectionChange",
+    elements: await Promise.all(
+      figma.currentPage.selection.map((el) =>
+        serialize(el as any, {
+          // TODO: only need one level deep......
+          withChildren: true,
+        })
+      )
+    ),
+  });
+});
 
 // This shows the HTML page in "ui.html".
 figma.showUI(__html__, {
@@ -176,22 +188,6 @@ async function serialize(
     bottomRightRadius: element.bottomLeftRadius,
   };
 }
-
-figma.on("selectionchange", async () => {
-  console.log("code selectionchange");
-  figma.ui.postMessage({
-    type: "selectionChange",
-    elements: await Promise.all(
-      figma.currentPage.selection.map((el) =>
-        serialize(el as any, {
-          // TODO: only need one level deep......
-          withChildren: true,
-        })
-      )
-    ),
-  });
-  console.log("code selectionchange sent");
-});
 
 type AnyStringMap = { [key: string]: any };
 
