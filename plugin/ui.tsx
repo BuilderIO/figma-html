@@ -33,9 +33,9 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 import * as md5 from "spark-md5";
 import {
-  figmaToBuilder,
   getAssumeLayoutTypeForNode,
   getAssumeSizeTypeForNode,
+  selectionToBuilder,
 } from "../lib/figma-to-builder";
 import { arrayBufferToBase64 } from "../lib/functions/buffer-to-base64";
 import { SafeComponent } from "./classes/safe-component";
@@ -505,11 +505,11 @@ class App extends SafeComponent {
 
     // TODO: analyze if page is properly nested and annotated, if not
     // suggest in the UI what needs grouping
-    const block = figmaToBuilder(this.selectionWithImages[0] as any);
+    const blocks = selectionToBuilder(this.selectionWithImages as any);
 
     const data = {
       data: {
-        blocks: [block],
+        blocks: blocks,
       },
     };
 
@@ -540,7 +540,7 @@ class App extends SafeComponent {
         {
           type: "builder.draggingInItem",
           data: {
-            item: block,
+            item: blocks,
           },
         },
         "*"
@@ -591,6 +591,14 @@ class App extends SafeComponent {
       {
         pluginMessage: {
           type: "getStorage",
+        },
+      },
+      "*"
+    );
+    parent.postMessage(
+      {
+        pluginMessage: {
+          type: "init",
         },
       },
       "*"
@@ -1335,19 +1343,24 @@ class App extends SafeComponent {
                 </span>
               </div>
 
-              <div>
-                <Button
-                  style={{ margin: "10px 0" }}
-                  variant="outlined"
-                  onClick={() => {
-                    this.getCode();
-                  }}
-                  disabled={!this.selection.length}
-                  color="primary"
-                >
-                  Download as JSON
-                </Button>
-              </div>
+              <Tooltip
+                disableHoverListener={Boolean(this.selection.length)}
+                title="Select a layer to download"
+              >
+                <div>
+                  <Button
+                    style={{ margin: "10px 0" }}
+                    variant="outlined"
+                    onClick={() => {
+                      this.getCode();
+                    }}
+                    disabled={!this.selection.length}
+                    color="primary"
+                  >
+                    Download as JSON
+                  </Button>
+                </div>
+              </Tooltip>
 
               <a
                 target="_blank"

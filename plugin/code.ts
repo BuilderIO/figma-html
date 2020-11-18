@@ -3,7 +3,7 @@ import { settings } from "./constants/settings";
 import { fastClone } from "./functions/fast-clone";
 import { isGeometryNode, hasChildren } from "../lib/figma-to-builder";
 
-figma.on("selectionchange", async () => {
+async function postSelection() {
   figma.ui.postMessage({
     type: "selectionChange",
     elements: await Promise.all(
@@ -15,6 +15,10 @@ figma.on("selectionchange", async () => {
       )
     ),
   });
+}
+
+figma.on("selectionchange", async () => {
+  postSelection();
 });
 
 // This shows the HTML page in "ui.html".
@@ -225,6 +229,9 @@ figma.ui.onmessage = async (msg) => {
       data,
     });
   }
+  if (msg.type === "init") {
+    postSelection();
+  }
   if (msg.type === "setStorage") {
     const data = msg.data;
     figma.clientStorage.setAsync("data", data);
@@ -234,7 +241,7 @@ figma.ui.onmessage = async (msg) => {
     figma.ui.postMessage({
       type: "selectionWithImages",
       elements: await Promise.all(
-        figma.currentPage.selection.slice(0, 1).map((el) =>
+        figma.currentPage.selection.map((el) =>
           serialize(el as any, {
             withChildren: true,
             withImages: true,

@@ -1,5 +1,7 @@
 // TODO: make private package and import this from the public plugin repo
 import { BuilderElement } from "@builder.io/sdk";
+import * as traverse from "traverse";
+import { fastClone } from "../plugin/functions/fast-clone";
 
 export type SizeType = "shrink" | "expand" | "fixed";
 
@@ -152,11 +154,6 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
   // TODO: top and left margin distances
 
   const styles: Partial<CSSStyleDeclaration> = {
-    display: "flex",
-    position: "relative",
-    flexShrink: "0",
-    flexDirection: "column",
-    boxSizing: "border-box",
     ...(isImage(node) &&
       (parentLayout === "stack"
         ? {
@@ -176,6 +173,7 @@ export function getCss(node: SceneNode, parent: SceneNode | null) {
     }),
     ...(useAbsolute && {
       position: "absolute",
+      // TODO: offset from parent or topmost/leftmost first item in selection
       top: node.y + "px",
       left: node.x + "px",
       width: node.width + "px",
@@ -353,7 +351,7 @@ export function processFillImages(node: SceneNode) {
 }
 
 export interface FigmaToBuilderOptions {
-  base64images: boolean;
+  base64images?: boolean;
 }
 
 export function figmaToBuilder(
@@ -450,7 +448,10 @@ export function figmaToBuilder(
       : undefined,
     children:
       children && layout !== "columns"
-        ? children.map((child: SceneNode) => figmaToBuilder(child, node))
+        ? children
+            .slice()
+            .reverse()
+            .map((child: SceneNode) => figmaToBuilder(child, node))
         : undefined,
   });
 }
@@ -475,4 +476,112 @@ export function getAssumeSizeTypeForNode(
 
 export function getAssumeLayoutTypeForNode(node: SceneNode): ComponentType {
   return "canvas";
+}
+
+const isBuilderElement = (thing: unknown): thing is BuilderElement => {
+  if (!thing) {
+    return false;
+  }
+  return (thing as any)["@type"] === "@builder.io/sdk:Element";
+};
+
+const getElStyles = (block: BuilderElement) => {
+  return block.responsiveStyles?.large || {};
+};
+const getElPosition = (block: BuilderElement) => {
+  const styles = getElStyles(block);
+  return {
+    top: parseFloat(styles.top || "") || 0,
+    left: parseFloat(styles.left || "") || 0,
+  };
+};
+
+const getTopMostElement = (blocks: BuilderElement[]) => {
+  return blocks.reduce((memo, block) => {
+    if (!memo) {
+      return block;
+    }
+    return getElPosition(block).top < getElPosition(memo).top ? block : memo;
+  }, null as BuilderElement | null);
+};
+const getLeftMostElement = (blocks: BuilderElement[]) => {
+  return blocks.reduce((memo, block) => {
+    if (!memo) {
+      return block;
+    }
+    return getElPosition(block).left < getElPosition(memo).left ? block : memo;
+  }, null as BuilderElement | null);
+};
+
+// Import elements and convert their absolute positioning to accomodate for hierarchy
+// (aka remove the top/left of each parent from each child)
+export function selectionToBuilder(
+  selection: SceneNode[],
+  options: FigmaToBuilderOptions = {}
+) {
+  if (!selection.length) {
+    return [];
+  }
+  const converted = selection.map((item) =>
+    figmaToBuilder(item, null, options)
+  );
+
+  console.log(JSON.stringify({ step1: fastClone(converted) }, null, 2));
+
+  const topMostOfSelection = getTopMostElement(converted)!;
+  const leftMostOfSelection = getLeftMostElement(converted)!;
+
+  const topMostTop = getElPosition(topMostOfSelection).top;
+  const leftMostLeft = getElPosition(leftMostOfSelection).left;
+
+  const newValuesById: { [id: string]: { top: number; left: number } } = {};
+
+  // First pass, gather new values
+  traverse(converted).forEach(function (item) {
+    if (isBuilderElement(item)) {
+      if (this.path.length === 1) {
+        // We want leaves
+        return;
+      }
+
+      const position = getElPosition(item);
+      let top = position.top;
+      let left = position.left;
+
+      for (const parent of this.parents) {
+        const node = parent.node;
+        if (isBuilderElement(node)) {
+          const parentLayout = getElPosition(node);
+          top = top - parentLayout.top;
+          left = left - parentLayout.left;
+          break;
+        }
+      }
+      newValuesById[item.id!] = { top, left };
+    }
+  });
+
+  // Second pass, apply new values
+  traverse(converted).forEach(function (item) {
+    if (isBuilderElement(item)) {
+      const newValues = newValuesById[item.id!];
+      if (newValues) {
+        Object.assign(item.responsiveStyles!.large!, {
+          top: `${newValues.top}px`,
+          left: `${newValues.left}px`,
+        });
+      }
+    }
+  });
+
+  console.log(JSON.stringify({ step2: fastClone(converted) }, null, 2));
+
+  for (const el of converted) {
+    const position = getElPosition(el);
+    el.responsiveStyles!.large!.top = `${position.top - topMostTop}px`;
+    el.responsiveStyles!.large!.left = `${position.left - leftMostLeft}px`;
+  }
+
+  console.log(JSON.stringify({ step3: fastClone(converted) }, null, 2));
+  return converted;
 }
