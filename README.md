@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="Html to figma" src="https://imgur.com/FrlJOr4.jpg" />
+  <img alt="Html to figma" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2Fd4b3b47142934d6cb471bf9689c0ade9" />
 </p>
 
 <br />
@@ -16,7 +16,6 @@ Figma plugin to convert HTML from a URL to Figma, or convert Figma designs to co
 
 <img src="https://i.imgur.com/YNDD9dH.gif" alt="Plugin demo" width="480" />
 
-
 ## Why?
 
 - Easily import real live site styles for a starting point for designs and prototypes
@@ -29,13 +28,12 @@ Want to capture a page behind an auth wall, or in a specific state you need to n
 
 <img src="https://imgur.com/ARz16KC.gif" alt="Chrome extension demo" width="480" />
 
-
 ## Using the library
 
 ```js
 // npm install @builder.io/html-to-figma
-import { htmlToFigma } from '@builder.io/html-to-figma';
-const layers = htmlToFigma(document.body)
+import { htmlToFigma } from "@builder.io/html-to-figma";
+const layers = htmlToFigma(document.body);
 // E.g. send these to the REST API, or generate a .figma.json file that can be uploaded through the Figma plugin
 ```
 
@@ -52,8 +50,8 @@ A few known limitations:
 
 If you find any issues or have feedback at all please [make an issue](https://github.com/BuilderIO/html-to-figma/issues/new)
 
-
 ## TODO
+
 - Support code import and export via [JSX Lite](https://github.com/BuilderIO/jsx-lite)
 - Support Figma components
 
