@@ -1366,7 +1366,7 @@ class App extends SafeComponent {
                 target="_blank"
                 rel="noreferrer"
                 style={{ color: themeVars.colors.primary }}
-                href="https://github.com/builderio/jsx-lite"
+                href="https://jsx-lite-fiddle.web.app?ref=figma&amp;inputTab=figma&amp;turial=figma"
               >
                 Learn more
               </a>
