@@ -52,7 +52,7 @@ If you find any issues or have feedback at all please [make an issue](https://gi
 
 ## TODO
 
-- Support code import and export via [JSX Lite](https://github.com/BuilderIO/jsx-lite)
+- Support code import from [JSX Lite](https://github.com/BuilderIO/jsx-lite)
 - Support Figma components
 
 <br />
