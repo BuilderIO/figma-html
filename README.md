@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="Html to figma" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2Fd4b3b47142934d6cb471bf9689c0ade9" />
+  <img alt="Html figma logo" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2Fd4b3b47142934d6cb471bf9689c0ade9" />
 </p>
 
 <br />
@@ -11,7 +11,7 @@ Figma plugin to convert HTML from a URL to Figma, or convert Figma designs to co
 ## How does it work
 
 1. [Install the plugin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma)
-1. In Figma, open a new or existing document, then hit cmd+/ and search "html to figma" and hit enter
+1. In Figma, open a new or existing document, then hit cmd+/ and search "html figma" and hit enter
 1. Enter a URL you want to import
 
 <img src="https://i.imgur.com/YNDD9dH.gif" alt="Plugin demo" width="480" />

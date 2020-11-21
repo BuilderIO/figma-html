@@ -1,4 +1,4 @@
-# HTML to Figma Chrome Extension
+# HTML <> Figma Chrome Extension
 
 > Chrome extension to import the current page HTML to Figma
 
@@ -10,7 +10,7 @@
 
 3) Open figma and be sure you have the [figma plugin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma) installed
 
-4) Hit command + / and type "html to figma" and hit enter
+4) Hit command + / and type "html figma" and hit enter
 
 5) Choose "upload here" and upload the file downloaded by the extension
 
