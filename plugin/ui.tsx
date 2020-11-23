@@ -1339,7 +1339,7 @@ class App extends SafeComponent {
                     top: -4,
                   }}
                 >
-                  NEW
+                  BETA
                 </span>
               </div>
 
