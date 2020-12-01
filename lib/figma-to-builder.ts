@@ -1,5 +1,5 @@
 // TODO: make private package and import this from the public plugin repo
-import { BuilderElement } from "@builder.io/sdk";
+import { Builder, BuilderElement } from "@builder.io/sdk";
 import * as traverse from "traverse";
 import { fastClone } from "../plugin/functions/fast-clone";
 
@@ -513,6 +513,31 @@ const getLeftMostElement = (blocks: BuilderElement[]) => {
   }, null as BuilderElement | null);
 };
 
+const removeExcessLayers = (...elements: BuilderElement[]) => {
+  traverse(elements).forEach(function (item) {
+    if (isBuilderElement(item)) {
+      if (
+        Object.keys(item.responsiveStyles?.large || {})
+          .sort()
+          .join() === "height,left,position,top,width"
+      ) {
+        const children = item.children;
+        if (children?.length) {
+          const parentNode = this.parent?.node;
+          if (Array.isArray(parentNode)) {
+            const index = parentNode.indexOf(item);
+            if (index > -1) {
+              parentNode.splice(index, 1, ...children);
+            }
+            return;
+          }
+        }
+        this.remove();
+      }
+    }
+  });
+};
+
 // Import elements and convert their absolute positioning to accomodate for hierarchy
 // (aka remove the top/left of each parent from each child)
 export function selectionToBuilder(
@@ -535,6 +560,8 @@ export function selectionToBuilder(
   const leftMostLeft = getElPosition(leftMostOfSelection).left;
 
   const newValuesById: { [id: string]: { top: number; left: number } } = {};
+
+  removeExcessLayers(...converted);
 
   // First pass, gather new values
   traverse(converted).forEach(function (item) {

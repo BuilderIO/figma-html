@@ -126,8 +126,11 @@ function getImageFills(layer: Node) {
   return images;
 }
 
-// const imageCache: { [key: string]: Uint8Array | undefined } = {};
+// TODO: replace with solid colors
+const useSolidColorForImages = true;
+
 // TODO: CACHE!
+// const imageCache: { [key: string]: Uint8Array | undefined } = {};
 async function processImages(layer: Node) {
   const images = getImageFills(layer);
 

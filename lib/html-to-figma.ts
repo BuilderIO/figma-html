@@ -63,7 +63,7 @@ export function htmlToFigma(
       bottom,
       right,
       width,
-      height
+      height,
     };
   }
   function getBoundingClientRect(el: Element): ClientRect {
@@ -80,7 +80,7 @@ export function htmlToFigma(
           ...aggregateRect,
           width: elRect.width,
           left: elRect.left,
-          right: elRect.right
+          right: elRect.right,
         };
       }
       return aggregateRect;
@@ -113,7 +113,7 @@ export function htmlToFigma(
       "borderRadius",
       "backgroundImage",
       "borderColor",
-      "boxShadow"
+      "boxShadow",
     ];
 
     const color = styles.color;
@@ -146,7 +146,7 @@ export function htmlToFigma(
       lineHeight: "normal",
       letterSpacing: "normal",
       backgroundRepeat: "repeat",
-      zIndex: "auto" // TODO
+      zIndex: "auto", // TODO
     };
 
     function pick<T extends { [key: string]: V }, V = any>(
@@ -154,7 +154,7 @@ export function htmlToFigma(
       paths: (keyof T)[]
     ) {
       const newObject: Partial<T> = {};
-      paths.forEach(path => {
+      paths.forEach((path) => {
         if (object[path]) {
           if (object[path] !== defaults[path]) {
             newObject[path] = object[path];
@@ -226,7 +226,7 @@ export function htmlToFigma(
     if (val) {
       return {
         unit: "PIXELS",
-        value: parseFloat(val)
+        value: parseFloat(val),
       };
     }
     return null;
@@ -286,7 +286,7 @@ export function htmlToFigma(
     }, [] as Element[]);
 
     if (els) {
-      Array.from(els).forEach(el => {
+      Array.from(els).forEach((el) => {
         if (isHidden(el)) {
           return;
         }
@@ -302,7 +302,7 @@ export function htmlToFigma(
             x: Math.round(rect.left),
             y: Math.round(rect.top),
             width: Math.round(rect.width),
-            height: Math.round(rect.height)
+            height: Math.round(rect.height),
           });
           return;
         }
@@ -341,9 +341,9 @@ export function htmlToFigma(
                 color: {
                   r: color.r,
                   g: color.g,
-                  b: color.b
+                  b: color.b,
                 },
-                opacity: color.a || 1
+                opacity: color.a || 1,
               } as SolidPaint);
             }
 
@@ -354,7 +354,7 @@ export function htmlToFigma(
               y: Math.round(rect.top),
               width: Math.round(rect.width),
               height: Math.round(rect.height),
-              fills: fills as any
+              fills: fills as any,
             } as WithRef<RectangleNode>;
 
             if (computedStyle.border) {
@@ -370,8 +370,8 @@ export function htmlToFigma(
                       {
                         type: "SOLID",
                         color: { r: rgb.r, b: rgb.b, g: rgb.g },
-                        opacity: rgb.a || 1
-                      }
+                        opacity: rgb.a || 1,
+                      },
                     ];
                     rectNode.strokeWeight = Math.round(parseFloat(width));
                   }
@@ -425,9 +425,9 @@ export function htmlToFigma(
                             {
                               type: "SOLID",
                               color: { r: rgb.r, b: rgb.b, g: rgb.g },
-                              opacity: rgb.a || 1
-                            } as SolidPaint
-                          ] as any
+                              opacity: rgb.a || 1,
+                            } as SolidPaint,
+                          ] as any,
                         } as WithRef<RectangleNode>);
                       }
                     }
@@ -451,7 +451,7 @@ export function htmlToFigma(
                   // TODO: backround size, position
                   scaleMode:
                     computedStyle.backgroundSize === "contain" ? "FIT" : "FILL",
-                  imageHash: null
+                  imageHash: null,
                 } as ImagePaint);
               }
             }
@@ -465,7 +465,7 @@ export function htmlToFigma(
                   type: "IMAGE",
                   // TODO: object fit, position
                   scaleMode: "FILL",
-                  imageHash: null
+                  imageHash: null,
                 } as ImagePaint);
               }
             }
@@ -478,7 +478,7 @@ export function htmlToFigma(
                   // TODO: object fit, position
                   scaleMode:
                     computedStyle.objectFit === "contain" ? "FIT" : "FILL",
-                  imageHash: null
+                  imageHash: null,
                 } as ImagePaint);
               }
             }
@@ -494,7 +494,7 @@ export function htmlToFigma(
                     // TODO: object fit, position
                     scaleMode:
                       computedStyle.objectFit === "contain" ? "FIT" : "FILL",
-                    imageHash: null
+                    imageHash: null,
                   } as ImagePaint);
                 }
               }
@@ -508,7 +508,7 @@ export function htmlToFigma(
                   // TODO: object fit, position
                   scaleMode:
                     computedStyle.objectFit === "contain" ? "FIT" : "FILL",
-                  imageHash: null
+                  imageHash: null,
                 } as ImagePaint);
               }
             }
@@ -548,8 +548,8 @@ export function htmlToFigma(
                 const color = !isLength(last) ? last : "rgba(0, 0, 0, 1)";
 
                 const nums = parts
-                  .filter(n => n !== "inset")
-                  .filter(n => n !== color)
+                  .filter((n) => n !== "inset")
+                  .filter((n) => n !== color)
                   .map(toNum);
 
                 const [offsetX, offsetY, blurRadius, spreadRadius] = nums;
@@ -560,7 +560,7 @@ export function htmlToFigma(
                   offsetY,
                   blurRadius,
                   spreadRadius,
-                  color
+                  color,
                 };
               };
 
@@ -576,9 +576,9 @@ export function htmlToFigma(
                     visible: true,
                     offset: {
                       x: parsed.offsetX,
-                      y: parsed.offsetY
-                    }
-                  } as ShadowEffect
+                      y: parsed.offsetY,
+                    },
+                  } as ShadowEffect,
                 ];
               }
             }
@@ -631,13 +631,14 @@ export function htmlToFigma(
           r: parseInt(r) / 255,
           g: parseInt(g) / 255,
           b: parseInt(b) / 255,
-          a: a ? parseFloat(a) : 1
+          a: a ? parseFloat(a) : 1,
         };
       }
       return null;
     }
 
-    const fastClone = (data: any) => JSON.parse(JSON.stringify(data));
+    const fastClone = (data: any) =>
+      typeof data === "symbol" ? null : JSON.parse(JSON.stringify(data));
 
     for (const node of textNodes) {
       if (node.textContent && node.textContent.trim().length) {
@@ -668,7 +669,7 @@ export function htmlToFigma(
             width: Math.round(rect.width),
             height: Math.round(rect.height),
             type: "TEXT",
-            characters: node.textContent.trim().replace(/\s+/g, " ") || ""
+            characters: node.textContent.trim().replace(/\s+/g, " ") || "",
           } as WithRef<TextNode>;
 
           const fills: SolidPaint[] = [];
@@ -680,9 +681,9 @@ export function htmlToFigma(
               color: {
                 r: rgb.r,
                 g: rgb.g,
-                b: rgb.b
+                b: rgb.b,
               },
-              opacity: rgb.a || 1
+              opacity: rgb.a || 1,
             } as SolidPaint);
           }
 
@@ -754,7 +755,7 @@ export function htmlToFigma(
     height: Math.round(document.documentElement.scrollHeight),
     x: 0,
     y: 0,
-    ref: document.body
+    ref: document.body,
   } as WithRef<FrameNode>;
 
   layers.unshift(root);
@@ -770,7 +771,7 @@ export function htmlToFigma(
     if (layer) {
       cb(layer, parent);
       if (hasChildren(layer)) {
-        layer.children.forEach(child =>
+        layer.children.forEach((child) =>
           traverse(child as LayerNode, cb, layer)
         );
       }
@@ -781,7 +782,7 @@ export function htmlToFigma(
     function getParent(layer: LayerNode) {
       let response: LayerNode | null = null;
       try {
-        traverse(root, child => {
+        traverse(root, (child) => {
           if (
             child &&
             (child as any).children &&
@@ -803,7 +804,7 @@ export function htmlToFigma(
     }
 
     const refMap = new WeakMap<Element | Node, LayerNode>();
-    layers.forEach(layer => {
+    layers.forEach((layer) => {
       if (layer.ref) {
         refMap.set(layer.ref, layer);
       }
@@ -864,7 +865,7 @@ export function htmlToFigma(
                   height: parentLayer.height,
                   ref: parentLayer.ref,
                   backgrounds: [] as any,
-                  children: [parentLayer, layer] as any[]
+                  children: [parentLayer, layer] as any[],
                 };
 
                 const parent = getParent(parentLayer);
@@ -930,7 +931,7 @@ export function htmlToFigma(
           if (layer.children && layer.children.length > 2) {
             const childRefs =
               layer.children &&
-              (layer.children as LayerNode[]).map(child => child.ref!);
+              (layer.children as LayerNode[]).map((child) => child.ref!);
 
             let lowestCommonDenominator = layer.ref!;
             let lowestCommonDenominatorDepth = getDepth(
@@ -940,7 +941,7 @@ export function htmlToFigma(
             // Find lowest common demoninator with greatest depth
             for (const childRef of childRefs) {
               const otherChildRefs = childRefs.filter(
-                item => item !== childRef
+                (item) => item !== childRef
               );
               const childParents = getParents(childRef);
               for (const otherChildRef of otherChildRefs) {
@@ -987,7 +988,7 @@ export function htmlToFigma(
                   width: lcdRect.width,
                   height: lcdRect.height,
                   backgrounds: [] as any,
-                  children: newChildren as any
+                  children: newChildren as any,
                 };
                 refMap.set(lowestCommonDenominator, ref);
                 let firstIndex = layer.children.length - 1;
@@ -1012,11 +1013,11 @@ export function htmlToFigma(
       });
     }
     // Update all positions
-    traverse(root, layer => {
+    traverse(root, (layer) => {
       if (layer.type === "FRAME" || layer.type === "GROUP") {
         const { x, y } = layer;
         if (x || y) {
-          traverse(layer, child => {
+          traverse(layer, (child) => {
             if (child === layer) {
               return;
             }
@@ -1029,20 +1030,20 @@ export function htmlToFigma(
   }
 
   function removeRefs(layers: LayerNode[]) {
-    layers.concat([root]).forEach(layer => {
-      traverse(layer, child => {
+    layers.concat([root]).forEach((layer) => {
+      traverse(layer, (child) => {
         delete child.ref;
       });
     });
   }
 
   function addConstraints(layers: LayerNode[]) {
-    layers.forEach(layer => {
-      traverse(layer, child => {
+    layers.forEach((layer) => {
+      traverse(layer, (child) => {
         if (child.type === "SVG") {
           child.constraints = {
             horizontal: "CENTER",
-            vertical: "MIN"
+            vertical: "MIN",
           };
         } else {
           const ref = child.ref;
@@ -1165,13 +1166,13 @@ export function htmlToFigma(
                     ? "CENTER"
                     : hasAutoMarginTop
                     ? "MAX"
-                    : "MIN"
+                    : "MIN",
               };
             }
           } else {
             child.constraints = {
               horizontal: "SCALE",
-              vertical: "MIN"
+              vertical: "MIN",
             };
           }
         }
