@@ -1,7 +1,7 @@
 import { traverseLayers } from "./functions/traverse-layers";
 import { settings } from "./constants/settings";
 import { fastClone } from "./functions/fast-clone";
-import { getLayout, hasChildren, isGroupNode } from "../lib/figma-to-builder";
+import { getLayout, hasChildren, isGroupNode } from "../lib/helpers";
 
 const allPropertyNames = [
   "width",

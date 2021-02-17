@@ -1,4 +1,4 @@
-import { hasChildren } from "../../lib/figma-to-builder";
+import { hasChildren } from "../../lib/helpers";
 
 export async function traverseLayers(
   layer: SceneNode,
