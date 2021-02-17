@@ -1,20 +1,175 @@
 import { traverseLayers } from "./functions/traverse-layers";
 import { settings } from "./constants/settings";
 import { fastClone } from "./functions/fast-clone";
-import { isGeometryNode } from "../lib/figma-to-builder";
+import { getLayout, hasChildren, isGroupNode } from "../lib/figma-to-builder";
+
+const allPropertyNames = [
+  "width",
+  "height",
+  "currentPage",
+  "cancel",
+  "origin",
+  "onmessage",
+  "center",
+  "zoom",
+  "fontName",
+  "name",
+  "visible",
+  "locked",
+  "constraints",
+  "relativeTransform",
+  "x",
+  "y",
+  "rotation",
+  "constrainProportions",
+  "layoutAlign",
+  "layoutGrow",
+  "opacity",
+  "blendMode",
+  "isMask",
+  "effects",
+  "effectStyleId",
+  "expanded",
+  "backgrounds",
+  "backgroundStyleId",
+  "fills",
+  "strokes",
+  "strokeWeight",
+  "strokeMiterLimit",
+  "strokeAlign",
+  "strokeCap",
+  "strokeJoin",
+  "dashPattern",
+  "fillStyleId",
+  "strokeStyleId",
+  "cornerRadius",
+  "cornerSmoothing",
+  "topLeftRadius",
+  "topRightRadius",
+  "bottomLeftRadius",
+  "bottomRightRadius",
+  "exportSettings",
+  "overflowDirection",
+  "numberOfFixedChildren",
+  "description",
+  "layoutMode",
+  "primaryAxisSizingMode",
+  "counterAxisSizingMode",
+  "primaryAxisAlignItems",
+  "counterAxisAlignItems",
+  "paddingLeft",
+  "paddingRight",
+  "paddingTop",
+  "paddingBottom",
+  "itemSpacing",
+  "layoutGrids",
+  "gridStyleId",
+  "clipsContent",
+  "guides",
+  "guides",
+  "selection",
+  "selectedTextRange",
+  "backgrounds",
+  "arcData",
+  "pointCount",
+  "pointCount",
+  "innerRadius",
+  "vectorNetwork",
+  "vectorPaths",
+  "handleMirroring",
+  "textAlignHorizontal",
+  "textAlignVertical",
+  "textAutoResize",
+  "paragraphIndent",
+  "paragraphSpacing",
+  "autoRename",
+  "textStyleId",
+  "fontSize",
+  "fontName",
+  "textCase",
+  "textDecoration",
+  "letterSpacing",
+  "lineHeight",
+  "characters",
+  "mainComponent",
+  "scaleFactor",
+  "booleanOperation",
+  "expanded",
+  "name",
+  "type",
+  "paints",
+  "type",
+  "fontSize",
+  "textDecoration",
+  "fontName",
+  "letterSpacing",
+  "lineHeight",
+  "paragraphIndent",
+  "paragraphSpacing",
+  "textCase",
+  "type",
+  "effects",
+  "type",
+  "layoutGrids",
+];
+
+// The Figma nodes are hard to inspect at a glance because almost all properties are non enumerable
+// getters. This removes that wrapping for easier inspecting
+const cloneObject = (obj: any, valuesSet = new Set()) => {
+  if (!obj || typeof obj !== "object") {
+    return obj;
+  }
+
+  const newObj: any = Array.isArray(obj) ? [] : {};
+
+  for (const property of allPropertyNames) {
+    const value = obj[property];
+    if (value !== undefined && typeof value !== "symbol") {
+      newObj[property] = obj[property];
+    }
+  }
+
+  return newObj;
+};
+
+async function postSelection() {
+  console.log(
+    JSON.stringify(
+      figma.currentPage.selection.map((obj) => cloneObject(obj)),
+      null,
+      2
+    )
+  );
+  figma.ui.postMessage({
+    type: "selectionChange",
+    elements: fastClone(
+      await Promise.all(
+        figma.currentPage.selection.map((el) =>
+          serialize(el as any, {
+            // TODO: only need one level deep......
+            withChildren: true,
+          })
+        )
+      )
+    ),
+  });
+}
+
+figma.on("selectionchange", async () => {
+  postSelection();
+});
 
 // This shows the HTML page in "ui.html".
 figma.showUI(__html__, {
   width: settings.ui.baseWidth,
-  height: settings.ui.baseHeight
+  height: settings.ui.baseHeight,
 });
-
 async function processImages(layer: RectangleNode | TextNode) {
   const images = getImageFills(layer);
   return (
     images &&
     Promise.all(
-      images.map(async image => {
+      images.map(async (image: any) => {
         if (image && image.intArr) {
           image.imageHash = await figma.createImage(image.intArr).hash;
           delete image.intArr;
@@ -27,7 +182,7 @@ async function processImages(layer: RectangleNode | TextNode) {
 function getImageFills(layer: RectangleNode | TextNode) {
   const images =
     Array.isArray(layer.fills) &&
-    layer.fills.filter(item => item.type === "IMAGE");
+    layer.fills.filter((item) => item.type === "IMAGE");
   return images;
 }
 
@@ -62,33 +217,23 @@ async function getMatchingFont(fontStr: string, availableFonts: Font[]) {
 
 const fontCache: { [key: string]: FontName | undefined } = {};
 
-const selectionIds = (selection: ReadonlyArray<SceneNode>) =>
-  selection
-    .map(item => item.id)
-    .sort()
-    .join();
-
-let selection: ReadonlyArray<SceneNode> = [];
-
 async function serialize(
-  element: DefaultContainerMixin &
-    BaseNode &
-    FrameNode &
-    RectangleNode &
-    TextNode,
+  element: any,
   options: {
     withImages?: boolean;
     withChildren?: boolean;
+    // TODO
+    withVectorsExported?: boolean;
   } = {}
 ): Promise<any> {
-  const fills =
-    (element.fills && (fastClone(element.fills) as Paint[])) || undefined;
-  if (options.withImages && fills) {
+  let fills = (element.fills && (fastClone(element.fills) as Paint[])) || [];
+  if (options.withImages && fills.length) {
     for (const fill of fills) {
       if (fill.type === "IMAGE" && fill.imageHash) {
         const image = figma.getImageByHash(fill.imageHash);
         try {
           const bytes = await image.getBytesAsync();
+          console.log("added intArr?");
           (fill as any).intArr = bytes;
         } catch (err) {
           console.warn("Could not get image for layer", element, fill, err);
@@ -96,123 +241,250 @@ async function serialize(
       }
     }
   }
+
+  // TODO: May have bg...
+  const isSvg =
+    (hasChildren(element) &&
+      element.children.every((item) => item.type === "VECTOR")) ||
+    element.type === "VECTOR";
+
+  if (
+    options.withImages &&
+    // options.withVectorsExported !== false &&
+    isSvg
+  ) {
+    const image = await element.exportAsync({
+      // TODO: use SVG for SVGs
+      format: "PNG",
+      constraint: {
+        type: "SCALE",
+        value: 2,
+      },
+    });
+    fills = [
+      {
+        type: "IMAGE",
+        visible: true,
+        scaleMode: "FIT",
+        ...({ intArr: image } as any),
+      },
+    ];
+  }
+
   // TODO: better way to enumerate everything, including getters, that is not function
   return {
-    id: element.id,
-    type: element.type,
-    x: element.x,
-    y: element.y,
-    width: element.width,
-    height: element.height,
-    characters: element.characters,
+    ...cloneObject(element),
+    fills,
+    type: element.type === "VECTOR" ? "RECTANGLE" : element.type,
     data: JSON.parse(element.getSharedPluginData("builder", "data") || "{}"),
     children:
       (options.withChildren &&
         element.children &&
+        !isSvg &&
         (await Promise.all(
-          element.children.map(child => serialize(child as any, options))
+          element.children.map((child: any) => serialize(child as any, options))
         ))) ||
       undefined,
-    constraints: element.constraints,
-    fills: fills,
-    fontSize: element.fontSize,
-    fontName: element.fontName,
-    lineHeight: element.lineHeight,
-    letterSpacing: element.letterSpacing,
-    textAlignVertical: element.textAlignVertical,
-    textAlignHorizontal: element.textAlignHorizontal,
-    backgrounds: element.backgrounds,
-    name: element.name,
-    removed: element.removed,
-    visible: element.visible,
-    locked: element.locked,
-    opacity: element.opacity,
-    blendMode: element.blendMode,
-    isMask: element.isMask,
-    effects: element.effects,
-    effectStyleId: element.effectStyleId,
-    fillStyleId: element.fillStyleId,
-    strokes: element.strokes,
-    strokeStyleId: element.strokeStyleId,
-    strokeWeight: element.strokeWeight,
-    strokeAlign: element.strokeAlign,
-    strokeCap: element.strokeCap,
-    strokeJoin: element.strokeJoin,
-    dashPattern: element.dashPattern,
-    relativeTransform: element.relativeTransform,
-    absoluteTransform: element.absoluteTransform,
-    rotation: element.rotation,
-    exportSettings: element.exportSettings,
-    cornerRadius: element.cornerRadius,
-    cornerSmoothing: element.cornerSmoothing,
-    topLeftRadius: element.topLeftRadius,
-    topRightRadius: element.topRightRadius,
-    bottomLeftRadius: element.bottomLeftRadius,
-    bottomRightRadius: element.bottomLeftRadius
   };
 }
 
-setInterval(async () => {
-  if (selectionIds(selection) !== selectionIds(figma.currentPage.selection)) {
-    selection = figma.currentPage.selection;
-    figma.ui.postMessage({
-      type: "selectionChange",
-      elements: await Promise.all(
-        figma.currentPage.selection.map(el =>
-          serialize(el as any, {
-            // TODO: only need one level deep......
-            withChildren: true
-          })
-        )
-      )
-    });
-  }
-}, 200);
-
 type AnyStringMap = { [key: string]: any };
+
+function assign(a: BaseNode & AnyStringMap, b: AnyStringMap) {
+  for (const key in b) {
+    const value = b[key];
+    if (key === "data" && value && typeof value === "object") {
+      const currentData =
+        JSON.parse(a.getSharedPluginData("builder", "data") || "{}") || {};
+      const newData = value;
+      const mergedData = Object.assign({}, currentData, newData);
+      // TODO merge plugin data
+      a.setSharedPluginData("builder", "data", JSON.stringify(mergedData));
+    } else if (
+      typeof value != "undefined" &&
+      ["width", "height", "type", "ref", "children", "svg"].indexOf(key) === -1
+    ) {
+      try {
+        a[key] = b[key];
+      } catch (err) {
+        console.warn(`Assign error for property "${key}"`, a, b, err);
+      }
+    }
+  }
+}
+
+const isImportErrorsKey = "isImportErrors";
+
+function clearAllErrors() {
+  figma.currentPage.children.forEach((el) => {
+    if (el.getPluginData(isImportErrorsKey) === "true") {
+      el.remove();
+    }
+  });
+}
+
+const isNotImportable = (node: SceneNode) =>
+  (node as FrameNode | GroupNode).children && getLayout(node) === "unknown";
+
+const getAbsolutePositionRelativeToArtboard = (node: SceneNode) => {
+  if (
+    typeof node.x !== "number" ||
+    !node.parent ||
+    ["PAGE", "DOCUMENT"].includes(node.type)
+  ) {
+    return { x: 0, y: 0 };
+  }
+  const position = {
+    x: node.x,
+    y: node.y,
+  };
+
+  if (["PAGE", "DOCUMENT"].includes(node.parent.type)) {
+    return position;
+  }
+
+  let parent: SceneNode | null = node;
+  while ((parent = parent.parent as SceneNode | null)) {
+    if (!isGroupNode(parent) && typeof parent.x === "number") {
+      position.x += parent.x;
+      position.y += parent.y;
+    }
+    // This is the end
+    if (["PAGE", "DOCUMENT"].includes(parent.parent!?.type)) {
+      break;
+    }
+  }
+
+  return position;
+};
+
+const getAbsolutePositionRelativeToRootLayer = (
+  node: SceneNode,
+  rootPosition: { x: number; y: number }
+) => {
+  const nodeAbsolutePosition = getAbsolutePositionRelativeToArtboard(node);
+  return {
+    x: nodeAbsolutePosition.x - rootPosition.x,
+    y: nodeAbsolutePosition.y - rootPosition.y,
+  };
+};
+
+// Returns true if valid
+async function checkIfCanGetCode() {
+  clearAllErrors();
+  const selected = figma.currentPage.selection[0];
+  if (!selected) {
+    return false;
+  }
+
+  const invalidLayers: SceneNode[] = [];
+
+  await traverseLayers(selected, (node: SceneNode) => {
+    if (isNotImportable(node)) {
+      invalidLayers.push(node);
+    }
+  });
+
+  if (invalidLayers.length) {
+    const errorFrame = figma.createFrame();
+    errorFrame.name = "Export to code errors - delete me anytime";
+    const absolutePosition = getAbsolutePositionRelativeToArtboard(selected);
+    errorFrame.x = absolutePosition.x;
+    errorFrame.y = absolutePosition.y;
+    errorFrame.fills = [];
+    errorFrame.resize(selected.width || 1, selected.height || 1);
+    errorFrame.setPluginData(isImportErrorsKey, "true");
+    errorFrame.strokeWeight = 4;
+    errorFrame.strokes = [
+      {
+        type: "SOLID",
+        visible: true,
+        opacity: 1,
+        blendMode: "NORMAL",
+        color: {
+          r: 1,
+          g: 0,
+          b: 0,
+        },
+      },
+    ];
+
+    for (const invalidLayer of invalidLayers) {
+      const errorLayer = figma.createRectangle();
+      errorLayer.setPluginData(isImportErrorsKey, "true");
+      errorLayer.name = `"${invalidLayer.name}" needs to use autolayout or be a rasterized image`;
+      const { x, y } = getAbsolutePositionRelativeToRootLayer(
+        invalidLayer,
+        absolutePosition
+      );
+      errorLayer.x = x;
+      errorLayer.y = y;
+      errorLayer.fills = [];
+      errorLayer.resize(invalidLayer.width || 1, invalidLayer.height || 1);
+
+      errorLayer.strokeWeight = 4;
+      errorLayer.strokes = [
+        {
+          type: "SOLID",
+          visible: true,
+          opacity: 1,
+          blendMode: "NORMAL",
+          color: {
+            r: 1,
+            g: 0,
+            b: 0,
+          },
+        },
+      ];
+      errorFrame.appendChild(errorLayer);
+    }
+  }
+
+  return !invalidLayers.length;
+}
 
 // Calls to "parent.postMessage" from within the HTML page will trigger this
 // callback. The callback will be passed the "pluginMessage" property of the
 // posted message.
-figma.ui.onmessage = async msg => {
-  function assign(a: BaseNode & AnyStringMap, b: AnyStringMap) {
-    for (const key in b) {
-      const value = b[key];
-      if (key === "data" && value && typeof value === "object") {
-        const currentData =
-          JSON.parse(a.getSharedPluginData("builder", "data") || "{}") || {};
-        const newData = value;
-        const mergedData = Object.assign({}, currentData, newData);
-        // TODO merge plugin data
-        a.setSharedPluginData("builder", "data", JSON.stringify(mergedData));
-      } else if (
-        typeof value != "undefined" &&
-        ["width", "height", "type", "ref", "children", "svg"].indexOf(key) ===
-          -1
-      ) {
-        try {
-          a[key] = b[key];
-        } catch (err) {
-          console.warn(`Assign error for property "${key}"`, a, b, err);
-        }
-      }
-    }
-  }
+figma.ui.onmessage = async (msg) => {
   if (msg.type === "resize") {
     figma.ui.resize(msg.width, msg.height);
+  }
+
+  if (msg.type === "getStorage") {
+    const data = await figma.clientStorage.getAsync("data");
+    figma.ui.postMessage({
+      type: "storage",
+      data,
+    });
+  }
+  if (msg.type === "init") {
+    postSelection();
+  }
+  if (msg.type === "setStorage") {
+    const data = msg.data;
+    figma.clientStorage.setAsync("data", data);
+  }
+
+  if (msg.type === "checkIfCanGetCode") {
+    const canGet = await checkIfCanGetCode();
+    figma.ui.postMessage({
+      type: "canGetCode",
+      value: canGet,
+    });
   }
 
   if (msg.type === "getSelectionWithImages") {
     figma.ui.postMessage({
       type: "selectionWithImages",
       elements: await Promise.all(
-        figma.currentPage.selection.slice(0, 1).map(el =>
+        figma.currentPage.selection.map((el) =>
           serialize(el as any, {
             withChildren: true,
-            withImages: true
+            withImages: true,
           })
         )
-      )
+      ),
     });
   }
 
@@ -221,14 +493,17 @@ figma.ui.onmessage = async msg => {
     for (const element of elements) {
       const el = figma.getNodeById(element.id);
       if (el) {
-        assign(el, element);
+        assign(el as any, element);
       }
     }
+  }
+  if (msg.type === "clearErrors") {
+    clearAllErrors();
   }
 
   if (msg.type === "import") {
     const availableFonts = (await figma.listAvailableFontsAsync()).filter(
-      font => font.fontName.style === "Regular"
+      (font) => font.fontName.style === "Regular"
     );
     await figma.loadFontAsync(defaultFont);
     const { data } = msg;
@@ -239,7 +514,7 @@ figma.ui.onmessage = async msg => {
     // and the reassignment unless I force it to treat baseFrame as any
     let frameRoot: PageNode | FrameNode = baseFrame as any;
     for (const rootLayer of layers) {
-      await traverseLayers(rootLayer, async (layer, parent) => {
+      await traverseLayers(rootLayer, async (layer: any, parent) => {
         try {
           if (layer.type === "FRAME" || layer.type === "GROUP") {
             const frame = figma.createFrame();
@@ -328,7 +603,7 @@ figma.ui.onmessage = async msg => {
 
     figma.ui.postMessage({
       type: "doneLoading",
-      rootId: frameRoot.id
+      rootId: frameRoot.id,
     });
 
     figma.viewport.scrollAndZoomIntoView([frameRoot]);

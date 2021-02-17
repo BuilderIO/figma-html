@@ -3,35 +3,18 @@ import { reaction, IReactionOptions, action } from "mobx";
 
 type VoidFunction = () => void;
 
+/**
+ * Provides error boundaries for safety (one component errors won't crash the whole app)
+ * and adds some methods for safe handling of subscriptions and reactions (that
+ * unsubscribe when the component is destroyed)
+ */
 export class SafeComponent<
   P extends object = {},
-  S extends object = {}
+  S = any
 > extends React.Component<P, S> {
   private _unMounted = false;
 
   protected unmountDestroyers: VoidFunction[] = [];
-
-  constructor(props: P, state: S) {
-    super(props, state);
-
-    const render = this.render;
-    this.render = (...args) => {
-      if (this.state && (this.state as any).hasError) {
-        return React.createElement(
-          "div",
-          {
-            style: {
-              display: "inline-block",
-              color: "red",
-              padding: 5
-            }
-          },
-          "Oh no! We had an error :( Try refreshing this page and contact steve@builder.io if this continues"
-        );
-      }
-      return render.apply(this, args);
-    };
-  }
 
   onDestroy(cb: VoidFunction) {
     if (this._unMounted) {
@@ -55,20 +38,6 @@ export class SafeComponent<
     }
   }
 
-  static getDerivedStateFromError(error: any) {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: any, errorInfo: any) {
-    console.error("Component error:", error, errorInfo);
-  }
-
-  // safeSubscribe<T>(observable: Observable<T>, callback: (value: T) => void) {
-  //   const subscription = observable.subscribe(action(callback));
-  //   this.onDestroy(() => subscription.unsubscribe());
-  //   return subscription;
-  // }
-
   // TODO: metadata ways of doing this
   safeListenToEvent(
     target: EventTarget,
@@ -89,7 +58,7 @@ export class SafeComponent<
     watchFunction: () => T,
     reactionFunction: (arg: T) => void,
     options: IReactionOptions = {
-      fireImmediately: true
+      fireImmediately: true,
     }
   ) {
     this.onDestroy(reaction(watchFunction, reactionFunction, options));

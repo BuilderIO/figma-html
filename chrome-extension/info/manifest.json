@@ -1,9 +1,9 @@
 {
   "manifest_version": 2,
 
-  "name": "HTML to Figma",
+  "name": "HTML <> Figma",
   "description": "Import a web page to Figma layers",
-  "version": "0.0.1",
+  "version": "0.0.5",
 
   "browser_action": {
     "default_icon": "icon16.png",
@@ -21,5 +21,5 @@
     "128": "icon128.png"
   },
 
-  "permissions": ["activeTab", "tabs", "http://*/*", "https://*/*", "*://*/*"]
+  "permissions": ["activeTab"]
 }

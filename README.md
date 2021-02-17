@@ -1,26 +1,41 @@
 <p align="center">
-  <img alt="Html to figma" src="https://imgur.com/FrlJOr4.jpg" />
+  <img alt="Html figma logo" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2Fd4b3b47142934d6cb471bf9689c0ade9" />
 </p>
 
 <br />
 
-# HTML To Figma
+# HTML <-> Figma
 
-Figma plugin to convert HTML from a URL to Figma
+Figma plugin to convert HTML from a URL to Figma, or convert Figma designs to code via [JSX Lite](https://github.com/BuilderIO/jsx-lite)
 
 ## How does it work
 
 1. [Install the plugin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma)
-1. In Figma hit cmd+/ and search "html to figma" and hit enter
+1. In Figma, open a new or existing document, then hit cmd+/ and search "html figma" and hit enter
 1. Enter a URL you want to import
 
-<img src="https://i.imgur.com/YNDD9dH.gif" alt="Demo" width="500" />
+<img src="https://i.imgur.com/YNDD9dH.gif" alt="Plugin demo" width="480" />
 
 ## Why?
 
 - Easily import real live site styles for a starting point for designs and prototypes
 - Quickly turn real site components into design components
 - Easy import from storybook, etc
+
+## Chrome Extension
+
+Want to capture a page behind an auth wall, or in a specific state you need to navigate to? Then the [chrome extension](https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim) is for you!
+
+<img src="https://imgur.com/ARz16KC.gif" alt="Chrome extension demo" width="480" />
+
+## Using the library
+
+```js
+// npm install @builder.io/html-to-figma
+import { htmlToFigma } from "@builder.io/html-to-figma";
+const layers = htmlToFigma(document.body);
+// E.g. send these to the REST API, or generate a .figma.json file that can be uploaded through the Figma plugin
+```
 
 ## Limitations
 
@@ -35,11 +50,11 @@ A few known limitations:
 
 If you find any issues or have feedback at all please [make an issue](https://github.com/BuilderIO/html-to-figma/issues/new)
 
-## Todo
+## TODO
 
-- Chrome extension
+- Support code import from [JSX Lite](https://github.com/BuilderIO/jsx-lite)
+- Support Figma components
 
-<br />
 <br />
 <p align="center">
   Made with ❤️ by <a target="_blank" href="https://builder.io/">Builder.io</a>

@@ -11,6 +11,9 @@ function copyInfoToDist() {
 copyInfoToDist();
 
 module.exports = {
+  optimization: {
+    minimize: false
+  },
   entry: {
     popup: path.join(__dirname, "src/popup/index.tsx"),
     inject: path.join(__dirname, "src/inject.ts"),
@@ -41,6 +44,10 @@ module.exports = {
             loader: "sass-loader" // Compiles Sass to CSS
           }
         ]
+      },
+      {
+        test: /\.(png|jpg|gif|webp|svg)$/,
+        loader: [{ loader: "url-loader" }]
       }
     ]
   },

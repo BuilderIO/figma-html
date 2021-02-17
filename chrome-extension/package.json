@@ -33,6 +33,8 @@
     "@builder.io/html-to-figma": "0.0.2-1",
     "@material-ui/core": "^4.4.0",
     "@material-ui/icons": "^4.2.1",
+    "mobx": "^5.13.0",
+    "mobx-react": "^6.1.3",
     "react": "^16.9.0",
     "react-dom": "^16.9.0"
   }
