@@ -1,3 +1,4 @@
+import { BuilderElement } from "@builder.io/sdk";
 import {
   Button,
   CircularProgress,
@@ -12,6 +13,7 @@ import {
   Tooltip,
   Typography,
 } from "@material-ui/core";
+import { HelpOutline } from "@material-ui/icons";
 import green from "@material-ui/core/colors/green";
 import Favorite from "@material-ui/icons/Favorite";
 import LaptopMac from "@material-ui/icons/LaptopMac";
@@ -24,13 +26,13 @@ import { observer } from "mobx-react";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import * as md5 from "spark-md5";
+import * as traverse from "traverse";
 import { arrayBufferToBase64 } from "../lib/functions/buffer-to-base64";
 import { SafeComponent } from "./classes/safe-component";
 import { settings } from "./constants/settings";
 import { theme as themeVars } from "./constants/theme";
 import { fastClone } from "./functions/fast-clone";
 import { traverseLayers } from "./functions/traverse-layers";
-import { BuilderElement } from "@builder.io/sdk";
 import "./ui.css";
 
 // Simple debug flag - flip when needed locally
@@ -68,20 +70,6 @@ const apiRoot =
 const WIDTH_LS_KEY = "builder.widthSetting";
 const FRAMES_LS_KEY = "builder.useFramesSetting";
 const EXPERIMENTS_LS_KEY = "builder.showExperiments";
-
-function padStart(str: string, targetLength: number, padString: string) {
-  targetLength = targetLength >> 0;
-  padString = String(typeof padString !== "undefined" ? padString : " ");
-  if (str.length >= targetLength) {
-    return String(str);
-  } else {
-    targetLength = targetLength - str.length;
-    if (targetLength > padString.length) {
-      padString += padString.repeat(targetLength / padString.length); //append to original to ensure we are longer than needed
-    }
-    return padString.slice(0, targetLength) + String(str);
-  }
-}
 
 // TODO: make async and use figma.clientStorage
 function lsGet(key: string) {
@@ -409,12 +397,54 @@ class App extends SafeComponent {
 
     // TODO: analyze if page is properly nested and annotated, if not
     // suggest in the UI what needs grouping
-    const blocks = await selectionToBuilder(
+    const selectionToBuilderPromise = selectionToBuilder(
       this.selectionWithImages as any
     ).catch((err) => {
       this.loadingGenerate = false;
       alert("Oh no! There was an error :(");
       throw err;
+    });
+
+    const imagesPromises: Promise<any>[] = [];
+    const imageMap: { [key: string]: string } = {};
+    for (const layer of this.selectionWithImages as SceneNode[]) {
+      traverseLayers(layer, (node) => {
+        const imageFills = getImageFills(node as Node);
+        const image = imageFills && imageFills[0];
+        if ((image as any)?.intArr) {
+          imagesPromises.push(
+            (async () => {
+              const { id } = await fetch(`${apiHost}/api/v1/stage-image`, {
+                method: "POST",
+                body: JSON.stringify({
+                  image: arrayBufferToBase64((image as any).intArr),
+                }),
+                headers: {
+                  "content-type": "application/json",
+                },
+              }).then((res) => res.json());
+              delete (node as any).intArr;
+              imageMap[node.id] = id;
+            })()
+          );
+        }
+      });
+    }
+
+    const blocks = await selectionToBuilderPromise;
+    await Promise.all(imagesPromises);
+
+    console.log({ imageMap });
+
+    traverse(blocks).forEach((item) => {
+      if (item?.["@type"] === "@builder.io/sdk:Element") {
+        const image = imageMap[item.meta?.figmaLayerId];
+        if (image) {
+          if (item.component?.options) {
+            item.component.options.image = `https://cdn.builder.io/api/v1/image/assets%2FTEMP%2F${image}`;
+          }
+        }
+      }
     });
 
     const data = {
@@ -1279,20 +1309,29 @@ class App extends SafeComponent {
                 textAlign: "center",
               }}
             >
-              <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 Turn your design into code{" "}
-                <span
+                <a
                   style={{
                     color: themeVars.colors.primary,
-                    fontSize: 11,
+                    marginLeft: 5,
                     fontWeight: "bold",
                     position: "relative",
-                    top: -4,
                   }}
+                  href="https://www.builder.io/c/docs/import-from-figma"
+                  target="_blank"
+                  rel="noopenner"
                 >
-                  BETA
-                </span>
+                  <HelpOutline style={{ fontSize: 20 }} />
+                </a>
               </div>
+
               {!this.initialized ? (
                 <div>
                   <div style={{ display: "flex", padding: 20 }}>

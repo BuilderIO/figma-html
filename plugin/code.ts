@@ -4,6 +4,7 @@ import { fastClone } from "./functions/fast-clone";
 import { getLayout, hasChildren, isGroupNode } from "../lib/helpers";
 
 const allPropertyNames = [
+  "id",
   "width",
   "height",
   "currentPage",
@@ -233,7 +234,6 @@ async function serialize(
         const image = figma.getImageByHash(fill.imageHash);
         try {
           const bytes = await image.getBytesAsync();
-          console.log("added intArr?");
           (fill as any).intArr = bytes;
         } catch (err) {
           console.warn("Could not get image for layer", element, fill, err);
