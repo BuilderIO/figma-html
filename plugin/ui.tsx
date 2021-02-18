@@ -36,7 +36,7 @@ import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
 
 // Simple debug flag - flip when needed locally
-const useDev = true;
+const useDev = false;
 const apiHost = useDev ? "http://localhost:5000" : "https://builder.io";
 
 const selectionToBuilder = async (
