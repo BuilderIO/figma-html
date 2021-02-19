@@ -1,23 +1,34 @@
 <p align="center">
-  <img alt="Html figma logo" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2Fd4b3b47142934d6cb471bf9689c0ade9" />
+  <img alt="Html figma logo" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2Fe31dc4774af54ee08cb6af0f78afd02c" />
 </p>
 
 <br />
 
 # HTML <-> Figma
 
-Figma plugin to convert HTML from a URL to Figma, or convert Figma designs to code via [JSX Lite](https://github.com/BuilderIO/jsx-lite)
+Figma to code and back!
+
+Converts HTML from a URL to Figma, or convert Figma designs to code via [JSX Lite](https://github.com/BuilderIO/jsx-lite)
 
 ## How does it work
 
+### Export designs to code
+
+1. Ensure all layers you want to import use autolayout as described [here](https://www.builder.io/c/docs/import-from-figma)
+2. Click the "get code" button to launch into the Builder.io editor
+3. Make any final adjustments, and click "get code" at the top of Builder to view code output, or copy and paste it to content of a Builder account to publish live
+
+### Import webpages to Figma designs
+
 1. [Install the plugin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma)
-1. In Figma, open a new or existing document, then hit cmd+/ and search "html figma" and hit enter
-1. Enter a URL you want to import
+2. In Figma, open a new or existing document, then hit cmd+/ and search "html figma" and hit enter
+3. Enter a URL you want to import
 
 <img src="https://i.imgur.com/YNDD9dH.gif" alt="Plugin demo" width="480" />
 
 ## Why?
 
+- Instantly convert designs into live webpages and code
 - Easily import real live site styles for a starting point for designs and prototypes
 - Quickly turn real site components into design components
 - Easy import from storybook, etc
