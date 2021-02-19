@@ -4,7 +4,7 @@
 
 <br />
 
-# HTML <-> Figma
+# HTML <-> Figma - Figma to code and back!
 
 Figma plugin to convert HTML from a URL to Figma, or convert Figma designs to code via [JSX Lite](https://github.com/BuilderIO/jsx-lite)
 
