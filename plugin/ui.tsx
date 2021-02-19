@@ -1446,6 +1446,30 @@ class App extends SafeComponent {
                       >
                         Download json
                       </Button>
+                      <div
+                        style={{
+                          textAlign: "center",
+                          fontSize: 11,
+                          color: "rgba(0, 0, 0, 0.5)",
+                          fontStyle: "italic",
+                          marginTop: 10,
+                        }}
+                      >
+                        This feature is in beta. Please send{" "}
+                        <a
+                          style={{
+                            color: themeVars.colors.primary,
+                            textDecoration: "none",
+                            cursor: "pointer",
+                          }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            open("mailto:support@builder.io", "_blank");
+                          }}
+                        >
+                          feedback
+                        </a>
+                      </div>
                     </div>
                   </Tooltip>
                 </>
