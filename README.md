@@ -6,7 +6,7 @@
 
 # Figma <-> HTML
 
-Convert Figma designs into high quality HTML, React, Vue, Svelte, etc code via [JSX Lite](https://github.com/BuilderIO/jsx-lite)
+Convert Figma designs into high quality HTML, React, Vue, Svelte, Angular, Solid, etc code via [JSX Lite](https://github.com/BuilderIO/jsx-lite)
 
 ## How does it work
 
