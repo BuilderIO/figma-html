@@ -33,24 +33,41 @@ import { settings } from "./constants/settings";
 import { theme as themeVars } from "./constants/theme";
 import { fastClone } from "./functions/fast-clone";
 import { traverseLayers } from "./functions/traverse-layers";
+import * as pako from "pako";
 import "./ui.css";
 
 // Simple debug flag - flip when needed locally
-const useDev = false;
+const useDev = true;
 const apiHost = useDev ? "http://localhost:5000" : "https://builder.io";
 
 const selectionToBuilder = async (
   selection: SceneNode[]
 ): Promise<BuilderElement[]> => {
+  const useGzip = true;
+
   const res = await fetch(`${apiHost}/api/v1/figma-to-builder`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
     },
-    body: JSON.stringify({
-      nodes: selection,
-    }),
-  }).then((res) => res.json());
+    body: JSON.stringify(
+      useGzip
+        ? {
+            compressedNodes: pako.deflate(JSON.stringify(selection), {
+              to: "string",
+            }),
+          }
+        : {
+            nodes: selection,
+          }
+    ),
+  }).then((res) => {
+    if (!res.ok) {
+      console.error("Figma-to-builder request failed", res);
+      throw new Error("Figma-to-builder request failed");
+    }
+    return res.json();
+  });
   return res.blocks;
 };
 
@@ -236,6 +253,7 @@ class App extends SafeComponent {
   @observable shiftKeyDown = false;
   @observable altKeyDown = false;
   @observable ctrlKeyDown = false;
+  @observable showRequestFailedError = false;
   @observable showImportInvalidError = false;
   @observable isValidImport: null | boolean = null;
   @observable.ref previewData: any;
@@ -372,6 +390,7 @@ class App extends SafeComponent {
 
   async getCode(useFiddle = false) {
     this.showImportInvalidError = false;
+    this.showRequestFailedError = false;
     if (!this.lipsum) {
       this.selectionWithImages = null;
       parent.postMessage(
@@ -401,7 +420,8 @@ class App extends SafeComponent {
       this.selectionWithImages as any
     ).catch((err) => {
       this.loadingGenerate = false;
-      alert("Oh no! There was an error :(");
+      this.generatingCode = false;
+      this.showRequestFailedError = true;
       throw err;
     });
 
@@ -422,7 +442,13 @@ class App extends SafeComponent {
                 headers: {
                   "content-type": "application/json",
                 },
-              }).then((res) => res.json());
+              }).then((res) => {
+                if (!res.ok) {
+                  console.error("Image upload failed", res);
+                  throw new Error("Image upload failed");
+                }
+                return res.json();
+              });
               delete (node as any).intArr;
               imageMap[node.id] = id;
             })()
@@ -432,9 +458,12 @@ class App extends SafeComponent {
     }
 
     const blocks = await selectionToBuilderPromise;
-    await Promise.all(imagesPromises);
-
-    console.log({ imageMap });
+    await Promise.all(imagesPromises).catch((err) => {
+      this.loadingGenerate = false;
+      this.generatingCode = false;
+      this.showRequestFailedError = true;
+      throw err;
+    });
 
     traverse(blocks).forEach((item) => {
       if (item?.["@type"] === "@builder.io/sdk:Element") {
@@ -517,7 +546,21 @@ class App extends SafeComponent {
             "content-type": "application/json",
           },
           body: json,
-        }).then((res) => res.json());
+        })
+          .then((res) => {
+            if (!res.ok) {
+              console.error("Failed to create fiddle", res);
+              throw new Error("Failed to create fiddle");
+            }
+            return res.json();
+          })
+          .catch((err) => {
+            this.generatingCode = false;
+            this.selectionWithImages = null;
+            this.showRequestFailedError = true;
+
+            throw err;
+          });
         if (res.url) {
           open(res.url, "_blank");
         }
@@ -673,7 +716,13 @@ class App extends SafeComponent {
       fetch(
         `${apiRoot}/api/v1/url-to-figma?url=${encocedUrl}&width=${width}&useFrames=${this.useFrames}`
       )
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) {
+            console.error("Url-to-figma failed", res);
+            throw new Error("Url-to-figma failed");
+          }
+          return res.json();
+        })
         .then((data) => {
           const layers = data.layers;
           return Promise.all(
@@ -1353,12 +1402,27 @@ class App extends SafeComponent {
                   </div>
                 </div>
               ) : this.generatingCode ? (
-                <div style={{ display: "flex", padding: 20 }}>
-                  <CircularProgress
-                    size={30}
-                    disableShrink
-                    style={{ margin: "auto" }}
-                  />
+                <div style={{ padding: 20 }}>
+                  <div style={{ display: "flex", padding: 20 }}>
+                    <CircularProgress
+                      size={30}
+                      disableShrink
+                      style={{ margin: "auto" }}
+                    />
+                  </div>
+                  <Typography
+                    variant="caption"
+                    style={{
+                      textAlign: "center",
+                      marginTop: 10,
+                      color: themeVars.colors.primaryLight,
+                      marginBottom: -10,
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Processing... <br />
+                    This can take about a minute...
+                  </Typography>
                 </div>
               ) : (
                 <>
@@ -1383,24 +1447,19 @@ class App extends SafeComponent {
                           autolayout
                         </a>
                       </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-around",
-                          opacity: 0.5,
-                        }}
-                      >
-                        {/* TODO: link to Builder doc with video explaining autolayout */}
+                      <div>
                         <Button
                           size="small"
                           href="https://www.builder.io/c/docs/import-from-figma"
                           target="_blank"
+                          color="primary"
                           rel="noopenner"
                         >
                           Learn more
                         </Button>
                         <Button
                           size="small"
+                          style={{ opacity: 0.5 }}
                           onClick={() => {
                             parent.postMessage(
                               {
@@ -1412,6 +1471,41 @@ class App extends SafeComponent {
                               "*"
                             );
                             this.showImportInvalidError = false;
+                          }}
+                        >
+                          Clear errors
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  {this.showRequestFailedError && (
+                    <div>
+                      <div
+                        style={{
+                          color: "rgb(200, 0, 0)",
+                          marginTop: 10,
+                          marginBottom: 10,
+                        }}
+                      >
+                        Oh no, there was an error! To troubleshoot, if you are
+                        importing a whole page, try importing a smaller part of
+                        the page at a time, like one section or even one button
+                      </div>
+                      <div>
+                        <Button
+                          size="small"
+                          color="primary"
+                          href="https://www.builder.io/c/docs/import-from-figma#troubleshooting"
+                          target="_blank"
+                          rel="noopenner"
+                        >
+                          Learn more
+                        </Button>
+                        <Button
+                          size="small"
+                          style={{ opacity: 0.5 }}
+                          onClick={() => {
+                            this.showRequestFailedError = false;
                           }}
                         >
                           Clear errors
