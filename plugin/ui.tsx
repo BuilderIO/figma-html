@@ -1521,7 +1521,7 @@ class App extends SafeComponent {
                       <Button
                         fullWidth
                         style={{ marginTop: 20 }}
-                        variant="outlined"
+                        variant="contained"
                         onClick={(e) => {
                           this.getCode(true);
                         }}
