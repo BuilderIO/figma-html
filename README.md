@@ -29,7 +29,9 @@
 2. In Figma, open a new or existing document, then hit cmd+/ and search "html figma" and hit enter
 3. Enter a URL you want to import
 
-<img src="https://i.imgur.com/YNDD9dH.gif" alt="Plugin demo" width="480" />
+<a href="https://github.com/builderio/jsx-lite">
+  <img src="https://i.imgur.com/YNDD9dH.gif" alt="Plugin demo" width="480" />
+</a>
 
 ## Why?
 
