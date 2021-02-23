@@ -1,12 +1,8 @@
-<p align="center">
-  <img alt="Html figma logo" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2Fe31dc4774af54ee08cb6af0f78afd02c" />
-</p>
-
-<br />
-
 # Figma <-> HTML
 
 Convert Figma designs into high quality HTML, React, Vue, Svelte, Angular, Solid, etc code via [JSX Lite](https://github.com/BuilderIO/jsx-lite)
+
+<img src="https://i.imgur.com/BoKsLFs.gif" />
 
 ## How does it work
 
