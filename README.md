@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="Figma to HTML title" height="200" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2F3481f32197d3436b8089a9f730f297b8" />
+  <img alt="Figma to HTML title" height="400" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2F7fbe481d20d74cee827ee7256b37a736" />
 </p>
 
 <p align="center">
