@@ -83,8 +83,6 @@ interface ClientStorage {
   imageUrlsByHash: { [hash: string]: string | null } | undefined;
 }
 
-const iframeOffset = 0;
-
 const apiKey = process.env.API_KEY || null;
 const apiRoot =
   process.env.API_ROOT && process.env.NODE_ENV !== "production"
@@ -915,7 +913,7 @@ class App extends SafeComponent {
                 </div>
               </Tooltip>
               {this.displayFiddleUrl && (
-                <div style={{ margin: "10px 0 5px 0" }}>
+                <div style={{ margin: "15px 0 5px 0" }}>
                   Done!{" "}
                   <a
                     style={{
@@ -929,8 +927,7 @@ class App extends SafeComponent {
                   >
                     Click here
                   </a>{" "}
-                  to open your content in Builder.io and choose "get code" to
-                  get code
+                  to open your content in Builder.io and choose "get code"
                 </div>
               )}
               <Button
