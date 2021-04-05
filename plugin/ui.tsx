@@ -242,8 +242,7 @@ class App extends SafeComponent {
   @observable urlValue = "https://www.builder.io";
   @observable width = lsGet(WIDTH_LS_KEY) || "1200";
   @observable online = navigator.onLine;
-  @observable useFrames =
-    lsGet(FRAMES_LS_KEY) || process.env.NODE_ENV !== "production" || false;
+  @observable useFrames = lsGet(FRAMES_LS_KEY) || false;
   @observable showMoreOptions = true; // lsGet(MORE_OPTIONS_LS_KEY) || false;
   @observable selection: (BaseNode & { data?: { [key: string]: any } })[] = [];
   @observable.ref selectionWithImages:
