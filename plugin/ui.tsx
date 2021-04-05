@@ -13,16 +13,16 @@ import {
   Tooltip,
   Typography,
 } from "@material-ui/core";
-import { HelpOutline } from "@material-ui/icons";
 import green from "@material-ui/core/colors/green";
+import { HelpOutline } from "@material-ui/icons";
 import Favorite from "@material-ui/icons/Favorite";
 import LaptopMac from "@material-ui/icons/LaptopMac";
 import PhoneIphone from "@material-ui/icons/PhoneIphone";
 import TabletMac from "@material-ui/icons/TabletMac";
-import * as escapeHtml from "escape-html";
 import * as fileType from "file-type";
 import { action, computed, observable, when } from "mobx";
 import { observer } from "mobx-react";
+import * as pako from "pako";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import * as md5 from "spark-md5";
@@ -33,7 +33,6 @@ import { settings } from "./constants/settings";
 import { theme as themeVars } from "./constants/theme";
 import { fastClone } from "./functions/fast-clone";
 import { traverseLayers } from "./functions/traverse-layers";
-import * as pako from "pako";
 import "./ui.css";
 
 // Simple debug flag - flip when needed locally
@@ -85,7 +84,6 @@ interface ClientStorage {
 }
 
 const iframeOffset = 0;
-const newExperimentsUi = false;
 
 const apiKey = process.env.API_KEY || null;
 const apiRoot =
@@ -95,7 +93,6 @@ const apiRoot =
 
 const WIDTH_LS_KEY = "builder.widthSetting";
 const FRAMES_LS_KEY = "builder.useFramesSetting";
-const EXPERIMENTS_LS_KEY = "builder.showExperiments";
 
 // TODO: make async and use figma.clientStorage
 function lsGet(key: string) {
@@ -249,7 +246,6 @@ class App extends SafeComponent {
   @observable online = navigator.onLine;
   @observable useFrames =
     lsGet(FRAMES_LS_KEY) || process.env.NODE_ENV !== "production" || false;
-  @observable showExperimental = lsGet(EXPERIMENTS_LS_KEY) || false;
   @observable showMoreOptions = true; // lsGet(MORE_OPTIONS_LS_KEY) || false;
   @observable selection: (BaseNode & { data?: { [key: string]: any } })[] = [];
   @observable.ref selectionWithImages:
@@ -266,16 +262,10 @@ class App extends SafeComponent {
   @observable showImportInvalidError = false;
   @observable isValidImport: null | boolean = null;
   @observable.ref previewData: any;
+  @observable displayFiddleUrl = "";
+
   editorScriptAdded = false;
-
   dataToPost: any;
-
-  @computed get showExperimentalLink() {
-    return (
-      this.showExperimental ||
-      (this.commandKeyDown && this.shiftKeyDown && this.altKeyDown)
-    );
-  }
 
   async getImageUrl(
     intArr: Uint8Array,
@@ -397,7 +387,9 @@ class App extends SafeComponent {
     this.ctrlKeyDown = event.ctrlKey;
   }
 
+  @action
   async getCode(useFiddle = false) {
+    this.displayFiddleUrl = "";
     this.showImportInvalidError = false;
     this.showRequestFailedError = false;
     if (!this.lipsum) {
@@ -491,106 +483,72 @@ class App extends SafeComponent {
       },
     };
 
-    const USE_FORM = false;
-    if (USE_FORM) {
-      const json = JSON.stringify(data);
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <form method='POST' enctype='text/plain' target="_blank" action="http://localhost:5000/import-doc?url=http://localhost:1234">
-        <input name='{"doc": ${escapeHtml(json)}, "_": "' value='"}'>
-        <button type="submit"></button>
-        </form>
-    `;
+    this.isValidImport = null;
+    parent.postMessage(
+      {
+        pluginMessage: {
+          type: "checkIfCanGetCode",
+        },
+      },
+      "*"
+    );
 
-      document.body.appendChild(div);
-      const button = div.querySelector("button[type=submit]");
-      if (button instanceof HTMLElement) {
-        button.click();
-      }
-      div.remove();
+    this.generatingCode = true;
+
+    await when(() => typeof this.isValidImport === "boolean");
+    if (!this.isValidImport) {
       this.generatingCode = false;
-      this.selectionWithImages = null;
+      this.isValidImport = null;
+      this.showImportInvalidError = true;
       return;
     }
+    this.isValidImport = null;
 
-    if (newExperimentsUi) {
-      this.iframeRef?.contentWindow?.postMessage(
-        {
-          type: "builder.draggingInItem",
-          data: {
-            item: blocks,
-          },
+    const json = JSON.stringify(data);
+
+    if (useFiddle) {
+      const res = await fetch(apiHost + "/api/v1/fiddle", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
         },
-        "*"
-      );
-      this.generatingCode = false;
-    } else {
-      this.isValidImport = null;
-      parent.postMessage(
-        {
-          pluginMessage: {
-            type: "checkIfCanGetCode",
-          },
-        },
-        "*"
-      );
-
-      this.generatingCode = true;
-
-      await when(() => typeof this.isValidImport === "boolean");
-      if (!this.isValidImport) {
-        this.generatingCode = false;
-        this.isValidImport = null;
-        this.showImportInvalidError = true;
-        return;
-      }
-      this.isValidImport = null;
-
-      const json = JSON.stringify(data);
-
-      if (useFiddle) {
-        const res = await fetch(apiHost + "/api/v1/fiddle", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: json,
+        body: json,
+      })
+        .then((res) => {
+          if (!res.ok) {
+            console.error("Failed to create fiddle", res);
+            throw new Error("Failed to create fiddle");
+          }
+          return res.json();
         })
-          .then((res) => {
-            if (!res.ok) {
-              console.error("Failed to create fiddle", res);
-              throw new Error("Failed to create fiddle");
-            }
-            return res.json();
-          })
-          .catch((err) => {
-            this.generatingCode = false;
-            this.selectionWithImages = null;
-            this.showRequestFailedError = true;
+        .catch((err) => {
+          this.generatingCode = false;
+          this.selectionWithImages = null;
+          this.showRequestFailedError = true;
 
-            throw err;
-          });
-        if (res.url) {
-          open(res.url, "_blank");
-        }
-        this.generatingCode = false;
-        this.selectionWithImages = null;
-      } else {
-        const blob = new Blob([json], {
-          type: "application/json",
+          throw err;
         });
-
-        const link = document.createElement("a");
-        link.setAttribute("href", URL.createObjectURL(blob));
-        link.setAttribute("download", "page.builder.json");
-        document.body.appendChild(link); // Required for FF
-
-        link.click();
-        document.body.removeChild(link);
-
-        this.generatingCode = false;
-        this.selectionWithImages = null;
+      if (res.url) {
+        open(res.url, "_blank");
+        this.displayFiddleUrl = res.url;
       }
+      this.generatingCode = false;
+      this.selectionWithImages = null;
+    } else {
+      const blob = new Blob([json], {
+        type: "application/json",
+      });
+
+      const link = document.createElement("a");
+      link.setAttribute("href", URL.createObjectURL(blob));
+      link.setAttribute("download", "page.builder.json");
+      document.body.appendChild(link); // Required for FF
+
+      link.click();
+      document.body.removeChild(link);
+
+      this.generatingCode = false;
+      this.selectionWithImages = null;
     }
   }
 
@@ -662,23 +620,6 @@ class App extends SafeComponent {
         if (this.clientStorage) {
           this.updateStorage();
         }
-      }
-    );
-
-    this.safeReaction(
-      () => `${this.showMoreOptions}:${this.showExperimental}"`,
-      () => {
-        let height = settings.ui.baseHeight;
-        parent.postMessage(
-          {
-            pluginMessage: {
-              type: "resize",
-              width: this.showExperimental ? 1300 : settings.ui.baseWidth,
-              height,
-            },
-          },
-          "*"
-        );
       }
     );
   }
@@ -785,178 +726,417 @@ class App extends SafeComponent {
       <div
         style={{
           display: "flex",
+          flexDirection: "column",
+          overflow: "auto",
           alignItems: "stretch",
           height: "100%",
         }}
       >
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
-            position: "relative",
-            zIndex: 3,
             padding: 15,
-            background: "white",
-            borderRight: "1px solid #eee",
-            maxWidth: settings.ui.baseWidth,
-            fontWeight: 400,
+            textAlign: "center",
           }}
         >
-          {/* <Typography style={{ textAlign: "center", marginTop: 0 }} variant="h6">
-          Import from URL
-        </Typography> */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: "bold",
+            }}
+          >
+            Turn your design into code{" "}
+            <a
+              style={{
+                color: themeVars.colors.primary,
+                marginLeft: 5,
+                fontWeight: "bold",
+                position: "relative",
+              }}
+              href="https://www.builder.io/c/docs/import-from-figma"
+              target="_blank"
+              rel="noopenner"
+            >
+              <HelpOutline style={{ fontSize: 20 }} />
+            </a>
+          </div>
 
-          <form
-            ref={(ref) => (this.form = ref)}
-            // {...{ validate: 'true' }}
+          {!this.initialized ? (
+            <div>
+              <div style={{ display: "flex", padding: 20 }}>
+                <CircularProgress
+                  size={30}
+                  disableShrink
+                  style={{ margin: "auto" }}
+                />
+              </div>
+              <div
+                style={{
+                  textAlign: "center",
+                  fontSize: 12,
+                  opacity: 0.6,
+                  fontStyle: "italic",
+                }}
+              >
+                Initializing for export, this can take about a minute...
+              </div>
+            </div>
+          ) : this.generatingCode ? (
+            <div style={{ padding: 20 }}>
+              <div style={{ display: "flex", padding: 20 }}>
+                <CircularProgress
+                  size={30}
+                  disableShrink
+                  style={{ margin: "auto" }}
+                />
+              </div>
+              <Typography
+                variant="caption"
+                style={{
+                  textAlign: "center",
+                  marginTop: 10,
+                  color: themeVars.colors.primaryLight,
+                  marginBottom: -10,
+                  fontStyle: "italic",
+                }}
+              >
+                Processing... <br />
+                This can take about a minute...
+              </Typography>
+            </div>
+          ) : (
+            <>
+              {this.showImportInvalidError && (
+                <div>
+                  <div
+                    style={{
+                      color: "rgb(200, 0, 0)",
+                      marginTop: 10,
+                      marginBottom: 10,
+                    }}
+                  >
+                    To import a layer, that layer and all children must use{" "}
+                    <a
+                      style={{
+                        color: themeVars.colors.primary,
+                      }}
+                      href="https://help.figma.com/hc/en-us/articles/360040451373-Create-dynamic-designs-with-Auto-layout"
+                      target="_blank"
+                      rel="noopenner"
+                    >
+                      autolayout
+                    </a>
+                  </div>
+                  <div>
+                    <Button
+                      size="small"
+                      href="https://www.builder.io/c/docs/import-from-figma"
+                      target="_blank"
+                      color="primary"
+                      rel="noopenner"
+                    >
+                      Learn more
+                    </Button>
+                    <Button
+                      size="small"
+                      style={{ opacity: 0.5 }}
+                      onClick={() => {
+                        parent.postMessage(
+                          {
+                            pluginMessage: {
+                              type: "clearErrors",
+                              data: true,
+                            },
+                          },
+                          "*"
+                        );
+                        this.showImportInvalidError = false;
+                      }}
+                    >
+                      Clear errors
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {this.showRequestFailedError && (
+                <div>
+                  <div
+                    style={{
+                      color: "rgb(200, 0, 0)",
+                      marginTop: 10,
+                      marginBottom: 10,
+                    }}
+                  >
+                    Oh no, there was an error! To troubleshoot, if you are
+                    importing a whole page, try importing a smaller part of the
+                    page at a time, like one section or even one button
+                  </div>
+                  <div>
+                    <Button
+                      size="small"
+                      color="primary"
+                      href="https://www.builder.io/c/docs/import-from-figma#troubleshooting"
+                      target="_blank"
+                      rel="noopenner"
+                    >
+                      Learn more
+                    </Button>
+                    <Button
+                      size="small"
+                      style={{ opacity: 0.5 }}
+                      onClick={() => {
+                        this.showRequestFailedError = false;
+                      }}
+                    >
+                      Clear errors
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <Tooltip
+                disableHoverListener={Boolean(this.selection.length)}
+                title="Select a layer to get code for"
+              >
+                <div>
+                  <Button
+                    fullWidth
+                    style={{ marginTop: 20 }}
+                    variant="contained"
+                    onClick={(e) => {
+                      this.getCode(true);
+                    }}
+                    disabled={!this.selection.length}
+                    color="primary"
+                  >
+                    Get Code
+                  </Button>
+                </div>
+              </Tooltip>
+              {this.displayFiddleUrl && (
+                <div style={{ margin: "10px 0 5px 0" }}>
+                  Done!{" "}
+                  <a
+                    style={{
+                      color: themeVars.colors.primary,
+                      fontWeight: "bold",
+                      textDecoration: "none",
+                    }}
+                    rel="noopenner"
+                    href={this.displayFiddleUrl}
+                    target="_blank"
+                  >
+                    Click here
+                  </a>{" "}
+                  to open your content in Builder.io and choose "get code" to
+                  get code
+                </div>
+              )}
+              <Button
+                fullWidth
+                style={{ marginTop: 10, opacity: 0.4 }}
+                onClick={(e) => {
+                  this.getCode(false);
+                }}
+                disabled={!this.selection.length}
+              >
+                Download json
+              </Button>
+              <div
+                style={{
+                  textAlign: "center",
+                  fontSize: 11,
+                  color: "rgba(0, 0, 0, 0.5)",
+                  fontStyle: "italic",
+                  marginTop: 10,
+                }}
+              >
+                This feature is in beta. Please send{" "}
+                <a
+                  style={{
+                    color: themeVars.colors.primary,
+                    textDecoration: "none",
+                    cursor: "pointer",
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    open("mailto:support@builder.io", "_blank");
+                  }}
+                >
+                  feedback
+                </a>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div>
+          <Divider />
+
+          <div
             style={{
               display: "flex",
               flexDirection: "column",
-              // marginTop: 20
-            }}
-            onSubmit={(e) => {
-              e.preventDefault();
-              this.onCreate();
+              position: "relative",
+              zIndex: 3,
+              padding: 15,
+              backgroundColor: "#f8f8f8",
+              maxWidth: settings.ui.baseWidth,
+              fontWeight: 400,
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {this.showExperimental && (
-                <div
-                  style={{
-                    fontWeight: "bold",
-                    fontSize: 11,
-                    marginBottom: 10,
-                  }}
-                >
-                  Import from code
-                </div>
-              )}
-              <div style={{ display: "flex", position: "relative" }}>
-                <TextField
-                  inputProps={{
-                    style: {
-                      fontSize: 13,
-                    },
-                  }}
-                  label="URL to import"
-                  autoFocus
-                  fullWidth
-                  inputRef={(ref) => (this.urlInputRef = ref)}
-                  disabled={this.loading}
-                  required
-                  onKeyDown={(e) => {
-                    // Default cmd + a functionality as weird
-                    if ((e.metaKey || e.ctrlKey) && e.which === 65) {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      if (e.shiftKey) {
-                        const input = this.urlInputRef!;
-                        input.setSelectionRange(0, 0);
-                      } else {
-                        this.selectAllUrlInputText();
-                      }
-                    }
-                  }}
-                  placeholder="e.g. https://builder.io"
-                  type="url"
-                  value={this.urlValue}
-                  onChange={(e) => {
-                    let value = e.target.value.trim();
-                    if (!value.match(/^https?:\/\//)) {
-                      value = "http://" + value;
-                    }
-                    this.urlValue = value;
-                  }}
-                />
+            <form
+              ref={(ref) => (this.form = ref)}
+              // {...{ validate: 'true' }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                // marginTop: 20
+              }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                this.onCreate();
+              }}
+            >
+              <div
+                style={{
+                  textAlign: "center",
+                  paddingBottom: 18,
+                  fontWeight: "bold",
+                }}
+              >
+                Import designs from the web
               </div>
-              {this.showMoreOptions && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-end",
-                    marginTop: 15,
-                  }}
-                >
-                  <div style={{ position: "relative", flexGrow: 1 }}>
-                    <TextField
-                      label="Width"
-                      required
-                      inputProps={{
-                        min: "200",
-                        max: "3000",
-                        step: "10",
-                        style: {
-                          fontSize: 13,
-                        },
-                      }}
-                      disabled={this.loading}
-                      onKeyDown={(e) => {
-                        // Default cmd + a functionality as weird
-                        if ((e.metaKey || e.ctrlKey) && e.which === 65) {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          if (e.shiftKey) {
-                            const input = this.urlInputRef!;
-                            input.setSelectionRange(0, 0);
-                          } else {
-                            const input = this.urlInputRef!;
-                            input.setSelectionRange(0, input.value.length - 1);
-                          }
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{ display: "flex", position: "relative" }}>
+                  <TextField
+                    inputProps={{
+                      style: {
+                        fontSize: 13,
+                      },
+                    }}
+                    label="URL to import"
+                    autoFocus
+                    fullWidth
+                    inputRef={(ref) => (this.urlInputRef = ref)}
+                    disabled={this.loading}
+                    required
+                    onKeyDown={(e) => {
+                      // Default cmd + a functionality as weird
+                      if ((e.metaKey || e.ctrlKey) && e.which === 65) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (e.shiftKey) {
+                          const input = this.urlInputRef!;
+                          input.setSelectionRange(0, 0);
+                        } else {
+                          this.selectAllUrlInputText();
                         }
-                      }}
-                      placeholder="1200"
-                      // style={{ marginLeft: 20 , width: 100  }}
-                      fullWidth
-                      type="number"
-                      value={this.width}
-                      onChange={(e) => {
-                        this.width = String(parseInt(e.target.value) || 1200);
-                      }}
-                    />
-                    <div
-                      style={{
-                        position: "absolute",
-                        right: -4,
-                        top: 18,
-                        backgroundColor: "white",
-                        borderRadius: 100,
-                        display: "flex",
-                        ...(this.loading && {
-                          pointerEvents: "none",
-                          opacity: 0.5,
-                        }),
-                      }}
-                    >
-                      <IconButton
-                        style={{
-                          padding: 5,
-                          color: this.width === "1200" ? "#888" : "#ddd",
+                      }
+                    }}
+                    placeholder="e.g. https://builder.io"
+                    type="url"
+                    value={this.urlValue}
+                    onChange={(e) => {
+                      let value = e.target.value.trim();
+                      if (!value.match(/^https?:\/\//)) {
+                        value = "http://" + value;
+                      }
+                      this.urlValue = value;
+                    }}
+                  />
+                </div>
+                {this.showMoreOptions && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-end",
+                      marginTop: 15,
+                    }}
+                  >
+                    <div style={{ position: "relative", flexGrow: 1 }}>
+                      <TextField
+                        label="Width"
+                        required
+                        inputProps={{
+                          min: "200",
+                          max: "3000",
+                          step: "10",
+                          style: {
+                            fontSize: 13,
+                          },
                         }}
-                        onClick={() => (this.width = "1200")}
-                      >
-                        <LaptopMac style={{ fontSize: 14 }} />
-                      </IconButton>
-                      <IconButton
-                        style={{
-                          padding: 5,
-                          color: this.width === "900" ? "#888" : "#ddd",
+                        disabled={this.loading}
+                        onKeyDown={(e) => {
+                          // Default cmd + a functionality as weird
+                          if ((e.metaKey || e.ctrlKey) && e.which === 65) {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            if (e.shiftKey) {
+                              const input = this.urlInputRef!;
+                              input.setSelectionRange(0, 0);
+                            } else {
+                              const input = this.urlInputRef!;
+                              input.setSelectionRange(
+                                0,
+                                input.value.length - 1
+                              );
+                            }
+                          }
                         }}
-                        onClick={() => (this.width = "900")}
-                      >
-                        <TabletMac style={{ fontSize: 14 }} />
-                      </IconButton>
-                      <IconButton
-                        style={{
-                          padding: 5,
-                          color: this.width === "400" ? "#888" : "#ddd",
+                        placeholder="1200"
+                        // style={{ marginLeft: 20 , width: 100  }}
+                        fullWidth
+                        type="number"
+                        value={this.width}
+                        onChange={(e) => {
+                          this.width = String(parseInt(e.target.value) || 1200);
                         }}
-                        onClick={() => (this.width = "400")}
+                      />
+                      <div
+                        style={{
+                          position: "absolute",
+                          right: -4,
+                          top: 18,
+                          borderRadius: 100,
+                          display: "flex",
+                          ...(this.loading && {
+                            pointerEvents: "none",
+                            opacity: 0.5,
+                          }),
+                        }}
                       >
-                        <PhoneIphone style={{ fontSize: 14 }} />
-                      </IconButton>
+                        <IconButton
+                          style={{
+                            padding: 5,
+                            color: this.width === "1200" ? "#888" : "#ddd",
+                          }}
+                          onClick={() => (this.width = "1200")}
+                        >
+                          <LaptopMac style={{ fontSize: 14 }} />
+                        </IconButton>
+                        <IconButton
+                          style={{
+                            padding: 5,
+                            color: this.width === "900" ? "#888" : "#ddd",
+                          }}
+                          onClick={() => (this.width = "900")}
+                        >
+                          <TabletMac style={{ fontSize: 14 }} />
+                        </IconButton>
+                        <IconButton
+                          style={{
+                            padding: 5,
+                            color: this.width === "400" ? "#888" : "#ddd",
+                          }}
+                          onClick={() => (this.width = "400")}
+                        >
+                          <PhoneIphone style={{ fontSize: 14 }} />
+                        </IconButton>
+                      </div>
                     </div>
-                  </div>
-                  {this.showExperimental && (
+
                     <Tooltip
                       PopperProps={{
                         modifiers: { flip: { behavior: ["top"] } },
@@ -996,590 +1176,210 @@ class App extends SafeComponent {
                         labelPlacement="top"
                       />
                     </Tooltip>
-                  )}
-                </div>
-              )}
-            </div>
-            {this.errorMessage && (
-              <div
-                style={{
-                  color: "#721c24",
-                  backgroundColor: "#f8d7da",
-                  border: "1px solid #f5c6cb",
-                  borderRadius: 4,
-                  padding: ".75rem 1.25rem",
-                  marginTop: 20,
-                }}
-              >
-                {this.errorMessage}
+                  </div>
+                )}
               </div>
-            )}
-            {!this.online && (
-              <div
-                style={{
-                  color: "#721c24",
-                  backgroundColor: "#f8d7da",
-                  border: "1px solid #f5c6cb",
-                  borderRadius: 4,
-                  padding: ".75rem 1.25rem",
-                  marginTop: 20,
-                }}
-              >
-                You need to be online to use this plugin
-              </div>
-            )}
-            {this.loading ? (
-              <>
-                <div style={{ margin: "0 auto" }} className="lds-ellipsis">
-                  <div style={{ background: themeVars.colors.primaryLight }} />
-                  <div style={{ background: themeVars.colors.primaryLight }} />
-                  <div style={{ background: themeVars.colors.primaryLight }} />
-                  <div style={{ background: themeVars.colors.primaryLight }} />
-                </div>
-                <Typography
-                  variant="caption"
-                  style={{
-                    textAlign: "center",
-                    // marginTop: 10,
-                    color: themeVars.colors.primaryLight,
-                    marginBottom: -10,
-                    // fontStyle: "italic"
-                  }}
-                >
-                  Processing code... <br />
-                  This can take a couple minutes...
-                </Typography>
-              </>
-            ) : (
-              <>
-                <Button
-                  type="submit"
-                  disabled={Boolean(
-                    this.errorMessage || this.loading || !this.online
-                  )}
-                  style={{ marginTop: 20 }}
-                  fullWidth
-                  color="primary"
-                  variant="outlined"
-                  onClick={this.onCreate}
-                >
-                  Import
-                </Button>
+              {this.errorMessage && (
                 <div
                   style={{
-                    color: "#888",
-                    fontSize: 12,
-                    textAlign: "center",
-                    marginTop: 15,
-                    userSelect: "none",
-                    marginBottom: -10,
+                    color: "#721c24",
+                    backgroundColor: "#f8d7da",
+                    border: "1px solid #f5c6cb",
+                    borderRadius: 4,
+                    padding: ".75rem 1.25rem",
+                    marginTop: 20,
                   }}
                 >
-                  Or try our{" "}
-                  <a
-                    style={{
-                      color: themeVars.colors.primary,
-                      cursor: "pointer",
-                      textDecoration: "none",
-                    }}
-                    href="https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim"
-                    target="_blank"
-                  >
-                    chrome extension
-                  </a>{" "}
-                  to capture a page in your browser and
-                  <a
-                    onClick={() => {
-                      const input = document.createElement("input");
-
-                      input.type = "file";
-                      document.body.appendChild(input);
-                      input.style.visibility = "hidden";
-                      input.click();
-
-                      const onFocus = () => {
-                        setTimeout(() => {
-                          if (
-                            input.parentElement &&
-                            (!input.files || input.files.length === 0)
-                          ) {
-                            done();
-                          }
-                        }, 200);
-                      };
-
-                      const done = () => {
-                        input.remove();
-                        this.loading = false;
-                        window.removeEventListener("focus", onFocus);
-                      };
-
-                      window.addEventListener("focus", onFocus);
-
-                      // TODO: parse and upload images!
-                      input.addEventListener("change", (event) => {
-                        const file = (event.target as HTMLInputElement)
-                          .files![0];
-                        if (file) {
-                          this.loading = true;
-                          var reader = new FileReader();
-
-                          // Closure to capture the file information.
-                          reader.onload = (e) => {
-                            const text = (e.target as any).result;
-                            try {
-                              const json = JSON.parse(text);
-                              Promise.all(
-                                json.layers.map(async (rootLayer: Node) => {
-                                  await traverseLayers(
-                                    rootLayer,
-                                    (layer: any) => {
-                                      if (getImageFills(layer)) {
-                                        return processImages(layer).catch(
-                                          (err) => {
-                                            console.warn(
-                                              "Could not process image",
-                                              err
-                                            );
-                                          }
-                                        );
-                                      }
-                                    }
-                                  );
-                                })
-                              )
-                                .then(() => {
-                                  parent.postMessage(
-                                    {
-                                      pluginMessage: {
-                                        type: "import",
-                                        data: json,
-                                      },
-                                    },
-                                    "*"
-                                  );
-                                  setTimeout(() => {
-                                    done();
-                                  }, 1000);
-                                })
-                                .catch((err) => {
-                                  done();
-                                  console.error(err);
-                                  alert(err);
-                                });
-                            } catch (err) {
-                              alert("File read error: " + err);
-                              done();
-                            }
-                          };
-
-                          reader.readAsText(file);
-                        } else {
-                          done();
-                        }
-                      });
-                    }}
-                    style={{
-                      color: themeVars.colors.primary,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {" "}
-                    upload here{" "}
-                  </a>
-                  {/* <HelpOutline
+                  {this.errorMessage}
+                </div>
+              )}
+              {!this.online && (
+                <div
                   style={{
-                    cursor: "pointer",
-                    fontSize: 14,
-                    verticalAlign: "middle"
+                    color: "#721c24",
+                    backgroundColor: "#f8d7da",
+                    border: "1px solid #f5c6cb",
+                    borderRadius: 4,
+                    padding: ".75rem 1.25rem",
+                    marginTop: 20,
                   }}
-                /> */}
-                </div>
-              </>
-            )}
-          </form>
-          {this.showExperimental && (
-            <>
-              <div
-                style={{
-                  marginTop: 15,
-                  marginBottom: 15,
-                }}
-              >
-                <Divider style={{ margin: "0 -15px" }} />
-                <div style={{ fontSize: 11 }}>
-                  <div
-                    style={{
-                      fontWeight: "bold",
-                      fontSize: 11,
-                      marginTop: 15,
-                    }}
-                  >
-                    Export to code
-                  </div>
-
-                  {!this.selection.length && (
-                    <div style={{ marginTop: 15, color: "#888" }}>
-                      {this.selection.length} elements selected
-                    </div>
-                  )}
-                  {!!this.selection.length && (
-                    <div style={{ marginTop: 15, color: "#888" }}>
-                      {this.generatingCode && (
-                        <div
-                          style={{ display: "flex", flexDirection: "column" }}
-                        >
-                          <div
-                            style={{ margin: "10px auto 0" }}
-                            className="lds-ellipsis"
-                          >
-                            <div
-                              style={{
-                                background: themeVars.colors.primaryLight,
-                              }}
-                            />
-                            <div
-                              style={{
-                                background: themeVars.colors.primaryLight,
-                              }}
-                            />
-                            <div
-                              style={{
-                                background: themeVars.colors.primaryLight,
-                              }}
-                            />
-                            <div
-                              style={{
-                                background: themeVars.colors.primaryLight,
-                              }}
-                            />
-                          </div>
-                          <Typography
-                            variant="caption"
-                            style={{
-                              textAlign: "center",
-                              // marginTop: 10,
-                              color: themeVars.colors.primaryLight,
-                              marginBottom: 10,
-                              // fontStyle: "italic"
-                            }}
-                          >
-                            Generating code...
-                          </Typography>
-                        </div>
-                      )}
-
-                      {/* TODO: check validitiy and prompt, select all elements not valid */}
-                      {!this.generatingCode && (
-                        <Button
-                          style={{ marginTop: 15, fontWeight: 400 }}
-                          fullWidth
-                          disabled={this.generatingCode}
-                          color="primary"
-                          variant="contained"
-                          onClick={async () => {
-                            this.getCode();
-                          }}
-                        >
-                          Grab code
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <Divider style={{ margin: "0 -15px", marginTop: 15 }} />
-              </div>
-              <div
-                style={{
-                  marginBottom: 10,
-                }}
-              >
-                <div style={{ fontSize: 11 }}>
-                  <div
-                    style={{
-                      fontWeight: "bold",
-                      fontSize: 11,
-                    }}
-                  >
-                    Dev options
-                  </div>
-                  <TextField
-                    label="API Root"
-                    fullWidth
-                    style={{ marginTop: 15 }}
-                    inputProps={{
-                      style: {
-                        fontSize: 13,
-                      },
-                    }}
-                    value={this.apiRoot}
-                    placeholder="https://www.builder.io"
-                    onChange={(e) => {
-                      this.apiRoot = e.target.value;
-                    }}
-                  />
-
-                  <FormControlLabel
-                    value="Use Frames"
-                    disabled={this.loading}
-                    style={{ marginTop: 20, marginLeft: 0 }}
-                    control={
-                      <Switch
-                        // disabled={this.loading}
-                        size="small"
-                        // style={{ marginLeft: 20 }}
-                        color="primary"
-                        checked={this.lipsum}
-                        onChange={(e) => (this.lipsum = e.target.checked)}
-                      />
-                    }
-                    label={
-                      <span
-                        style={{
-                          fontSize: 12,
-                          opacity: 0.6,
-                          marginLeft: 5,
-                          // position: "relative",
-                          // top: -5
-                        }}
-                      >
-                        Placeholder content
-                      </span>
-                    }
-                    labelPlacement="end"
-                  />
-                </div>
-              </div>
-              <Divider style={{ margin: "0 -15px" }} />
-            </>
-          )}
-
-          <div
-            style={{
-              margin: "10 -20px 0",
-            }}
-          >
-            <Divider />
-            <div
-              style={{
-                backgroundColor: "#f8f8f8",
-                padding: 15,
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                Turn your design into code{" "}
-                <a
-                  style={{
-                    color: themeVars.colors.primary,
-                    marginLeft: 5,
-                    fontWeight: "bold",
-                    position: "relative",
-                  }}
-                  href="https://www.builder.io/c/docs/import-from-figma"
-                  target="_blank"
-                  rel="noopenner"
                 >
-                  <HelpOutline style={{ fontSize: 20 }} />
-                </a>
-              </div>
-
-              {!this.initialized ? (
-                <div>
-                  <div style={{ display: "flex", padding: 20 }}>
-                    <CircularProgress
-                      size={30}
-                      disableShrink
-                      style={{ margin: "auto" }}
+                  You need to be online to use this plugin
+                </div>
+              )}
+              {this.loading ? (
+                <>
+                  <div style={{ margin: "0 auto" }} className="lds-ellipsis">
+                    <div
+                      style={{ background: themeVars.colors.primaryLight }}
                     />
-                  </div>
-                  <div
-                    style={{
-                      textAlign: "center",
-                      fontSize: 12,
-                      opacity: 0.6,
-                      fontStyle: "italic",
-                    }}
-                  >
-                    Initializing for export, this can take about a minute...
-                  </div>
-                </div>
-              ) : this.generatingCode ? (
-                <div style={{ padding: 20 }}>
-                  <div style={{ display: "flex", padding: 20 }}>
-                    <CircularProgress
-                      size={30}
-                      disableShrink
-                      style={{ margin: "auto" }}
+                    <div
+                      style={{ background: themeVars.colors.primaryLight }}
+                    />
+                    <div
+                      style={{ background: themeVars.colors.primaryLight }}
+                    />
+                    <div
+                      style={{ background: themeVars.colors.primaryLight }}
                     />
                   </div>
                   <Typography
                     variant="caption"
                     style={{
                       textAlign: "center",
-                      marginTop: 10,
+                      // marginTop: 10,
                       color: themeVars.colors.primaryLight,
                       marginBottom: -10,
-                      fontStyle: "italic",
+                      // fontStyle: "italic"
                     }}
                   >
-                    Processing... <br />
-                    This can take about a minute...
+                    Processing code... <br />
+                    This can take a couple minutes...
                   </Typography>
-                </div>
+                </>
               ) : (
                 <>
-                  {this.showImportInvalidError && (
-                    <div>
-                      <div
-                        style={{
-                          color: "rgb(200, 0, 0)",
-                          marginTop: 10,
-                          marginBottom: 10,
-                        }}
-                      >
-                        To import a layer, that layer and all children must use{" "}
-                        <a
-                          style={{
-                            color: themeVars.colors.primary,
-                          }}
-                          href="https://help.figma.com/hc/en-us/articles/360040451373-Create-dynamic-designs-with-Auto-layout"
-                          target="_blank"
-                          rel="noopenner"
-                        >
-                          autolayout
-                        </a>
-                      </div>
-                      <div>
-                        <Button
-                          size="small"
-                          href="https://www.builder.io/c/docs/import-from-figma"
-                          target="_blank"
-                          color="primary"
-                          rel="noopenner"
-                        >
-                          Learn more
-                        </Button>
-                        <Button
-                          size="small"
-                          style={{ opacity: 0.5 }}
-                          onClick={() => {
-                            parent.postMessage(
-                              {
-                                pluginMessage: {
-                                  type: "clearErrors",
-                                  data: true,
-                                },
-                              },
-                              "*"
-                            );
-                            this.showImportInvalidError = false;
-                          }}
-                        >
-                          Clear errors
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  {this.showRequestFailedError && (
-                    <div>
-                      <div
-                        style={{
-                          color: "rgb(200, 0, 0)",
-                          marginTop: 10,
-                          marginBottom: 10,
-                        }}
-                      >
-                        Oh no, there was an error! To troubleshoot, if you are
-                        importing a whole page, try importing a smaller part of
-                        the page at a time, like one section or even one button
-                      </div>
-                      <div>
-                        <Button
-                          size="small"
-                          color="primary"
-                          href="https://www.builder.io/c/docs/import-from-figma#troubleshooting"
-                          target="_blank"
-                          rel="noopenner"
-                        >
-                          Learn more
-                        </Button>
-                        <Button
-                          size="small"
-                          style={{ opacity: 0.5 }}
-                          onClick={() => {
-                            this.showRequestFailedError = false;
-                          }}
-                        >
-                          Clear errors
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  <Tooltip
-                    disableHoverListener={Boolean(this.selection.length)}
-                    title="Select a layer to get code for"
+                  <Button
+                    type="submit"
+                    disabled={Boolean(
+                      this.errorMessage || this.loading || !this.online
+                    )}
+                    style={{ marginTop: 20 }}
+                    fullWidth
+                    color="primary"
+                    variant="outlined"
+                    onClick={this.onCreate}
                   >
-                    <div style={{ margin: "0 10px" }}>
-                      <Button
-                        fullWidth
-                        style={{ marginTop: 20 }}
-                        variant="contained"
-                        onClick={(e) => {
-                          this.getCode(true);
-                        }}
-                        disabled={!this.selection.length}
-                        color="primary"
-                      >
-                        Get Code
-                      </Button>
-                      <Button
-                        fullWidth
-                        style={{ marginTop: 10, opacity: 0.4 }}
-                        onClick={(e) => {
-                          this.getCode(false);
-                        }}
-                        disabled={!this.selection.length}
-                      >
-                        Download json
-                      </Button>
-                      <div
-                        style={{
-                          textAlign: "center",
-                          fontSize: 11,
-                          color: "rgba(0, 0, 0, 0.5)",
-                          fontStyle: "italic",
-                          marginTop: 10,
-                        }}
-                      >
-                        This feature is in beta. Please send{" "}
-                        <a
-                          style={{
-                            color: themeVars.colors.primary,
-                            textDecoration: "none",
-                            cursor: "pointer",
-                          }}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            open("mailto:support@builder.io", "_blank");
-                          }}
-                        >
-                          feedback
-                        </a>
-                      </div>
-                    </div>
-                  </Tooltip>
+                    Import
+                  </Button>
+                  <div
+                    style={{
+                      color: "#888",
+                      fontSize: 12,
+                      textAlign: "center",
+                      marginTop: 15,
+                      userSelect: "none",
+                      marginBottom: -10,
+                    }}
+                  >
+                    Or try our{" "}
+                    <a
+                      style={{
+                        color: themeVars.colors.primary,
+                        cursor: "pointer",
+                        textDecoration: "none",
+                      }}
+                      href="https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim"
+                      target="_blank"
+                    >
+                      chrome extension
+                    </a>{" "}
+                    to capture a page in your browser and
+                    <a
+                      onClick={() => {
+                        const input = document.createElement("input");
+
+                        input.type = "file";
+                        document.body.appendChild(input);
+                        input.style.visibility = "hidden";
+                        input.click();
+
+                        const onFocus = () => {
+                          setTimeout(() => {
+                            if (
+                              input.parentElement &&
+                              (!input.files || input.files.length === 0)
+                            ) {
+                              done();
+                            }
+                          }, 200);
+                        };
+
+                        const done = () => {
+                          input.remove();
+                          this.loading = false;
+                          window.removeEventListener("focus", onFocus);
+                        };
+
+                        window.addEventListener("focus", onFocus);
+
+                        // TODO: parse and upload images!
+                        input.addEventListener("change", (event) => {
+                          const file = (event.target as HTMLInputElement)
+                            .files![0];
+                          if (file) {
+                            this.loading = true;
+                            var reader = new FileReader();
+
+                            // Closure to capture the file information.
+                            reader.onload = (e) => {
+                              const text = (e.target as any).result;
+                              try {
+                                const json = JSON.parse(text);
+                                Promise.all(
+                                  json.layers.map(async (rootLayer: Node) => {
+                                    await traverseLayers(
+                                      rootLayer,
+                                      (layer: any) => {
+                                        if (getImageFills(layer)) {
+                                          return processImages(layer).catch(
+                                            (err) => {
+                                              console.warn(
+                                                "Could not process image",
+                                                err
+                                              );
+                                            }
+                                          );
+                                        }
+                                      }
+                                    );
+                                  })
+                                )
+                                  .then(() => {
+                                    parent.postMessage(
+                                      {
+                                        pluginMessage: {
+                                          type: "import",
+                                          data: json,
+                                        },
+                                      },
+                                      "*"
+                                    );
+                                    setTimeout(() => {
+                                      done();
+                                    }, 1000);
+                                  })
+                                  .catch((err) => {
+                                    done();
+                                    console.error(err);
+                                    alert(err);
+                                  });
+                              } catch (err) {
+                                alert("File read error: " + err);
+                                done();
+                              }
+                            };
+
+                            reader.readAsText(file);
+                          } else {
+                            done();
+                          }
+                        });
+                      }}
+                      style={{
+                        color: themeVars.colors.primary,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {" "}
+                      upload here{" "}
+                    </a>
+                  </div>
                 </>
               )}
-            </div>
-            <Divider />
+            </form>
           </div>
+          <Divider />
 
           <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
             Made with{" "}
@@ -1611,6 +1411,7 @@ class App extends SafeComponent {
               justifyContent: "center",
               fontWeight: 400,
               fontSize: 9,
+              paddingBottom: 10,
             }}
           >
             <a
@@ -1667,60 +1468,7 @@ class App extends SafeComponent {
             >
               Help
             </a>
-            {this.showExperimentalLink && (
-              <>
-                <span
-                  style={{
-                    display: "inline-block",
-                    height: 10,
-                    width: 1,
-                    background: "#999",
-                    marginTop: 1,
-                    opacity: 0.8,
-                    marginLeft: 5,
-                  }}
-                />
-                <a
-                  style={{
-                    color: this.showExperimental
-                      ? themeVars.colors.primary
-                      : "#999",
-                    textDecoration: "none",
-                    marginLeft: 5,
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    this.showExperimental = !this.showExperimental;
-                    lsSet(EXPERIMENTS_LS_KEY, this.showExperimental);
-                  }}
-                >
-                  Experiments
-                </a>
-              </>
-            )}
           </div>
-        </div>
-
-        <div
-          style={{
-            flexGrow: 1,
-            position: "relative",
-          }}
-        >
-          <iframe
-            ref={(ref) => (this.iframeRef = ref)}
-            style={{
-              border: 0,
-              position: "absolute",
-              top: 0,
-              left: -iframeOffset,
-              width: `calc(100% + ${iframeOffset}px)`,
-              height: "100%",
-            }}
-            src="https://local.builder.io/fiddle"
-          ></iframe>
         </div>
       </div>
     );
