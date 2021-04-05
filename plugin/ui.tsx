@@ -38,12 +38,21 @@ import "./ui.css";
 
 // Simple debug flag - flip when needed locally
 const useDev = false;
+
 const apiHost = useDev ? "http://localhost:5000" : "https://builder.io";
 
 const selectionToBuilder = async (
   selection: SceneNode[]
 ): Promise<BuilderElement[]> => {
   const useGzip = true;
+
+  selection = fastClone(selection);
+
+  traverse(selection).forEach(function (item) {
+    if (this.key === "intArr") {
+      this.delete();
+    }
+  });
 
   const res = await fetch(`${apiHost}/api/v1/figma-to-builder`, {
     method: "POST",
@@ -1051,7 +1060,7 @@ class App extends SafeComponent {
                   style={{ marginTop: 20 }}
                   fullWidth
                   color="primary"
-                  variant="contained"
+                  variant="outlined"
                   onClick={this.onCreate}
                 >
                   Import
