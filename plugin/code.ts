@@ -282,7 +282,9 @@ async function serialize(
         element.children &&
         !isSvg &&
         (await Promise.all(
-          element.children.map((child: any) => serialize(child as any, options))
+          element.children
+            .filter((child: SceneNode) => child.visible)
+            .map((child: any) => serialize(child as any, options))
         ))) ||
       undefined,
   };
@@ -323,8 +325,21 @@ function clearAllErrors() {
   });
 }
 
+const importableLayerTypes = new Set<NodeType>([
+  "RECTANGLE",
+  "FRAME",
+  "TEXT",
+  "COMPONENT",
+  "LINE",
+]);
+
 const isNotImportable = (node: SceneNode) =>
-  (node as FrameNode | GroupNode).children && getLayout(node) === "unknown";
+  // Don't show warnings for invisble nodes, we don't import them
+  !node.visible
+    ? false
+    : ((node as FrameNode | GroupNode).children &&
+        getLayout(node) === "unknown") ||
+      !importableLayerTypes.has(node.type);
 
 const getAbsolutePositionRelativeToArtboard = (node: SceneNode) => {
   if (
@@ -369,6 +384,17 @@ const getAbsolutePositionRelativeToRootLayer = (
   };
 };
 
+const hasInvisibleParent = (node: SceneNode): boolean => {
+  let parent: SceneNode | null = node;
+  do {
+    if (!parent.visible) {
+      return true;
+    }
+  } while ((parent = parent.parent as SceneNode | null));
+
+  return false;
+};
+
 // Returns true if valid
 async function checkIfCanGetCode() {
   clearAllErrors();
@@ -380,7 +406,7 @@ async function checkIfCanGetCode() {
   const invalidLayers: SceneNode[] = [];
 
   await traverseLayers(selected, (node: SceneNode) => {
-    if (isNotImportable(node)) {
+    if (!hasInvisibleParent(node) && isNotImportable(node)) {
       invalidLayers.push(node);
     }
   });
@@ -394,20 +420,6 @@ async function checkIfCanGetCode() {
     errorFrame.fills = [];
     errorFrame.resize(selected.width || 1, selected.height || 1);
     errorFrame.setPluginData(isImportErrorsKey, "true");
-    errorFrame.strokeWeight = 4;
-    errorFrame.strokes = [
-      {
-        type: "SOLID",
-        visible: true,
-        opacity: 1,
-        blendMode: "NORMAL",
-        color: {
-          r: 1,
-          g: 0,
-          b: 0,
-        },
-      },
-    ];
 
     for (const invalidLayer of invalidLayers) {
       const errorLayer = figma.createRectangle();

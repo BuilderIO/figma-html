@@ -467,8 +467,11 @@ class App extends SafeComponent {
       if (item?.["@type"] === "@builder.io/sdk:Element") {
         const image = imageMap[item.meta?.figmaLayerId];
         if (image) {
+          const url = `https://cdn.builder.io/api/v1/image/assets%2FTEMP%2F${image}`;
           if (item.component?.options) {
-            item.component.options.image = `https://cdn.builder.io/api/v1/image/assets%2FTEMP%2F${image}`;
+            item.component.options.image = url;
+          } else if (item.responsiveStyles?.large?.backgroundImage) {
+            item.responsiveStyles.large.backgroundImage = `url("${url}")`;
           }
         }
       }
@@ -732,14 +735,13 @@ class App extends SafeComponent {
         <div
           style={{
             padding: 15,
-            textAlign: "center",
+            fontSize: 12,
           }}
         >
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
               fontWeight: "bold",
             }}
           >
@@ -755,7 +757,7 @@ class App extends SafeComponent {
               target="_blank"
               rel="noopenner"
             >
-              <HelpOutline style={{ fontSize: 20 }} />
+              <HelpOutline style={{ fontSize: 18 }} />
             </a>
           </div>
 
@@ -955,10 +957,9 @@ class App extends SafeComponent {
                     textDecoration: "none",
                     cursor: "pointer",
                   }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    open("mailto:support@builder.io", "_blank");
-                  }}
+                  target="_blank"
+                  rel="noopener"
+                  href="https://github.com/BuilderIO/figma-html/issues"
                 >
                   feedback
                 </a>
@@ -997,7 +998,7 @@ class App extends SafeComponent {
             >
               <div
                 style={{
-                  textAlign: "center",
+                  fontSize: 12,
                   paddingBottom: 18,
                   fontWeight: "bold",
                 }}
@@ -1013,7 +1014,6 @@ class App extends SafeComponent {
                       },
                     }}
                     label="URL to import"
-                    autoFocus
                     fullWidth
                     inputRef={(ref) => (this.urlInputRef = ref)}
                     disabled={this.loading}
@@ -1376,6 +1376,21 @@ class App extends SafeComponent {
             </form>
           </div>
           <Divider />
+
+          {useDev && (
+            <div
+              onClick={() => {
+                lsSet("builder.env", "production");
+              }}
+              style={{
+                padding: 10,
+                color: "rgb(200, 0, 0)",
+                textAlign: "center",
+              }}
+            >
+              Using dev env. Click here to reset then reload the extension
+            </div>
+          )}
 
           <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
             Made with{" "}
