@@ -12,6 +12,9 @@ import {
   TextField,
   Tooltip,
   Typography,
+  Select,
+  MenuItem,
+  withStyles,
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
 import { HelpOutline } from "@material-ui/icons";
@@ -34,6 +37,8 @@ import { theme as themeVars } from "./constants/theme";
 import { fastClone } from "./functions/fast-clone";
 import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
+import {IntlProvider, FormattedMessage} from 'react-intl'
+import { en, ru } from './localize/i18n'
 
 // Simple debug flag - flip when needed locally
 const useDev = false;
@@ -120,6 +125,17 @@ const theme = createMuiTheme({
     secondary: green,
   },
 });
+
+const StyledButton = withStyles({
+  root: {
+    fontSize: "12px",
+    padding: "8px",
+    height: "30px",
+    minHeight: "unset",
+    display: "flex",
+    justifyContent: "center",
+  },
+})(MenuItem);
 
 const BASE64_MARKER = ";base64,";
 function convertDataURIToBinary(dataURI: string) {
@@ -260,6 +276,7 @@ class App extends SafeComponent {
   @observable isValidImport: null | boolean = null;
   @observable.ref previewData: any;
   @observable displayFiddleUrl = "";
+  @observable currentLanguage = "en";
 
   editorScriptAdded = false;
   dataToPost: any;
@@ -721,8 +738,13 @@ class App extends SafeComponent {
     }
   }
 
+  getLang() {
+    return this.currentLanguage === "en" ? en : ru
+  }
+
   render() {
     return (
+      <IntlProvider messages={this.currentLanguage === "en" ? en : ru} locale={this.currentLanguage} defaultLocale="en">
       <div
         style={{
           display: "flex",
@@ -741,24 +763,46 @@ class App extends SafeComponent {
           <div
             style={{
               display: "flex",
-              alignItems: "center",
-              fontWeight: "bold",
+                alignItems: "center",
+                justifyContent: "space-between"
             }}
-          >
-            Turn your design into code{" "}
-            <a
-              style={{
-                color: themeVars.colors.primary,
-                marginLeft: 5,
-                fontWeight: "bold",
-                position: "relative",
-              }}
-              href="https://www.builder.io/c/docs/import-from-figma"
-              target="_blank"
-              rel="noopenner"
             >
-              <HelpOutline style={{ fontSize: 18 }} />
-            </a>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+              fontWeight: "bold",
+              }}>
+                <FormattedMessage
+                  id="title"
+                  defaultMessage="Turn your design into code "
+                />
+                <a
+                  style={{
+                    color: themeVars.colors.primary,
+                    marginLeft: 5,
+                    fontWeight: "bold",
+                    position: "relative",
+                  }}
+                  href="https://www.builder.io/c/docs/import-from-figma"
+                  target="_blank"
+                  rel="noopenner"
+                >
+                  <HelpOutline style={{ fontSize: 18 }} />
+                </a>
+              </div>
+              <Select
+                style={{
+                  opacity: 0.3,
+                  fontSize: "11px",
+                  fontWeight: 600,
+                }}
+                id="demo-simple-select"
+                value={this.currentLanguage}
+                onChange={(e) => this.currentLanguage = (e.target as HTMLInputElement).value}
+              >
+                <StyledButton value={"en"}>EN</StyledButton>
+                <StyledButton value={"ru"}>RU</StyledButton>
+              </Select>
           </div>
 
           {!this.initialized ? (
@@ -777,8 +821,11 @@ class App extends SafeComponent {
                   opacity: 0.6,
                   fontStyle: "italic",
                 }}
-              >
-                Initializing for export, this can take about a minute...
+                >
+                <FormattedMessage
+                  id="initExport"
+                  defaultMessage="Initializing for export, this can take about a minute..."
+                />
               </div>
             </div>
           ) : this.generatingCode ? (
@@ -799,9 +846,15 @@ class App extends SafeComponent {
                   marginBottom: -10,
                   fontStyle: "italic",
                 }}
-              >
-                Processing... <br />
-                This can take about a minute...
+                  >
+                  <FormattedMessage
+                    id="processing"
+                    defaultMessage="Processing..."
+                    /> <br />
+                  <FormattedMessage
+                    id="processing2"
+                    defaultMessage="This can take about a minute..."
+                    />
               </Typography>
             </div>
           ) : (
@@ -814,8 +867,11 @@ class App extends SafeComponent {
                       marginTop: 10,
                       marginBottom: 10,
                     }}
-                  >
-                    To import a layer, that layer and all children must use{" "}
+                        >
+                    <FormattedMessage
+                      id="importLayerHelp"
+                      defaultMessage="To import a layer, that layer and all children must use "
+                    />
                     <a
                       style={{
                         color: themeVars.colors.primary,
@@ -823,8 +879,11 @@ class App extends SafeComponent {
                       href="https://help.figma.com/hc/en-us/articles/360040451373-Create-dynamic-designs-with-Auto-layout"
                       target="_blank"
                       rel="noopenner"
-                    >
-                      autolayout
+                          >
+                      <FormattedMessage
+                        id="autolayout"
+                        defaultMessage="autolayout"
+                      />
                     </a>
                   </div>
                   <div>
@@ -834,8 +893,11 @@ class App extends SafeComponent {
                       target="_blank"
                       color="primary"
                       rel="noopenner"
-                    >
-                      Learn more
+                          >
+                      <FormattedMessage
+                        id="learnMore"
+                        defaultMessage="Learn more"
+                      />
                     </Button>
                     <Button
                       size="small"
@@ -852,8 +914,11 @@ class App extends SafeComponent {
                         );
                         this.showImportInvalidError = false;
                       }}
-                    >
-                      Clear errors
+                          >
+                      <FormattedMessage
+                        id="clearErrors"
+                        defaultMessage="Clear errors"
+                      />
                     </Button>
                   </div>
                 </div>
@@ -866,10 +931,13 @@ class App extends SafeComponent {
                       marginTop: 10,
                       marginBottom: 10,
                     }}
-                  >
-                    Oh no, there was an error! To troubleshoot, if you are
-                    importing a whole page, try importing a smaller part of the
-                    page at a time, like one section or even one button
+                        >
+                    <FormattedMessage
+                        id="errorMessage"
+                        defaultMessage="Oh no, there was an error! To troubleshoot, if you are
+                            importing a whole page, try importing a smaller part of the
+                            page at a time, like one section or even one button"
+                      />
                   </div>
                   <div>
                     <Button
@@ -878,8 +946,11 @@ class App extends SafeComponent {
                       href="https://www.builder.io/c/docs/import-from-figma#troubleshooting"
                       target="_blank"
                       rel="noopenner"
-                    >
-                      Learn more
+                          >
+                      <FormattedMessage
+                        id="learnMore"
+                        defaultMessage="Learn more"
+                      />
                     </Button>
                     <Button
                       size="small"
@@ -888,7 +959,10 @@ class App extends SafeComponent {
                         this.showRequestFailedError = false;
                       }}
                     >
-                      Clear errors
+                      <FormattedMessage
+                        id="clearErrors"
+                        defaultMessage="Clear errors"
+                      />
                     </Button>
                   </div>
                 </div>
@@ -896,7 +970,7 @@ class App extends SafeComponent {
 
               <Tooltip
                 disableHoverListener={Boolean(this.selection.length)}
-                title="Select a layer to get code for"
+                title={this.getLang().selectLayerPop}
               >
                 <div>
                   <Button
@@ -908,14 +982,20 @@ class App extends SafeComponent {
                     }}
                     disabled={!this.selection.length}
                     color="primary"
-                  >
-                    Get Code
+                        >
+                    <FormattedMessage
+                      id="getCode"
+                      defaultMessage="Get Code"
+                    />
                   </Button>
                 </div>
               </Tooltip>
               {this.displayFiddleUrl && (
                 <div style={{ margin: "15px 0 5px 0" }}>
-                  Done!{" "}
+                  <FormattedMessage
+                    id="done"
+                    defaultMessage="Done! "
+                  />
                   <a
                     style={{
                       color: themeVars.colors.primary,
@@ -925,10 +1005,16 @@ class App extends SafeComponent {
                     rel="noopenner"
                     href={this.displayFiddleUrl}
                     target="_blank"
-                  >
-                    Click here
-                  </a>{" "}
-                  to open your content in Builder.io and choose "get code"
+                        >
+                    <FormattedMessage
+                      id="done"
+                      defaultMessage="Click here"
+                    />
+                  </a>
+                  <FormattedMessage
+                    id="clickHere2"
+                    defaultMessage=" to open your content in Builder.io and choose 'get code'"
+                  />
                 </div>
               )}
               <Button
@@ -938,8 +1024,11 @@ class App extends SafeComponent {
                   this.getCode(false);
                 }}
                 disabled={!this.selection.length}
-              >
-                Download json
+                    >
+                <FormattedMessage
+                  id="downloadJson"
+                  defaultMessage="Download json"
+                />
               </Button>
               <div
                 style={{
@@ -949,8 +1038,11 @@ class App extends SafeComponent {
                   fontStyle: "italic",
                   marginTop: 10,
                 }}
-              >
-                This feature is in beta. Please send{" "}
+                    >
+                <FormattedMessage
+                  id="feedback"
+                  defaultMessage="This feature is in beta. Please send "
+                />
                 <a
                   style={{
                     color: themeVars.colors.primary,
@@ -960,8 +1052,11 @@ class App extends SafeComponent {
                   target="_blank"
                   rel="noopener"
                   href="https://github.com/BuilderIO/figma-html/issues"
-                >
-                  feedback
+                      >
+                  <FormattedMessage
+                    id="feedback2"
+                    defaultMessage="feedback"
+                  />
                 </a>
               </div>
             </>
@@ -1002,8 +1097,11 @@ class App extends SafeComponent {
                   paddingBottom: 18,
                   fontWeight: "bold",
                 }}
-              >
-                Import designs from the web
+                >
+                <FormattedMessage
+                  id="importDesigns"
+                  defaultMessage="Import designs from the web"
+                />
               </div>
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex", position: "relative" }}>
@@ -1012,8 +1110,8 @@ class App extends SafeComponent {
                       style: {
                         fontSize: 13,
                       },
-                    }}
-                    label="URL to import"
+                      }}
+                    label={this.getLang().urlToImport}
                     fullWidth
                     inputRef={(ref) => (this.urlInputRef = ref)}
                     disabled={this.loading}
@@ -1053,7 +1151,7 @@ class App extends SafeComponent {
                   >
                     <div style={{ position: "relative", flexGrow: 1 }}>
                       <TextField
-                        label="Width"
+                        label={this.getLang().width}
                         required
                         inputProps={{
                           min: "200",
@@ -1138,8 +1236,8 @@ class App extends SafeComponent {
                         modifiers: { flip: { behavior: ["top"] } },
                       }}
                       enterDelay={300}
-                      placement="top"
-                      title="Nest layers in frames"
+                        placement="top"
+                      title={this.getLang().framesPop}
                     >
                       <FormControlLabel
                         value="Use Frames"
@@ -1166,7 +1264,10 @@ class App extends SafeComponent {
                               top: -5,
                             }}
                           >
-                            Frames
+                            <FormattedMessage
+                              id="frames"
+                              defaultMessage="Frames"
+                            />
                           </span>
                         }
                         labelPlacement="top"
@@ -1199,8 +1300,11 @@ class App extends SafeComponent {
                     padding: ".75rem 1.25rem",
                     marginTop: 20,
                   }}
-                >
-                  You need to be online to use this plugin
+                  >
+                  <FormattedMessage
+                    id="needOnline"
+                    defaultMessage="You need to be online to use this plugin"
+                  />
                 </div>
               )}
               {this.loading ? (
@@ -1228,9 +1332,16 @@ class App extends SafeComponent {
                       marginBottom: -10,
                       // fontStyle: "italic"
                     }}
-                  >
-                    Processing code... <br />
-                    This can take a couple minutes...
+                    >
+                    <FormattedMessage
+                      id="processingCode"
+                      defaultMessage="Processing code..."
+                    />
+                    <br />
+                    <FormattedMessage
+                      id="processingCode2"
+                      defaultMessage="This can take a couple minutes..."
+                    />
                   </Typography>
                 </>
               ) : (
@@ -1245,8 +1356,11 @@ class App extends SafeComponent {
                     color="primary"
                     variant="outlined"
                     onClick={this.onCreate}
-                  >
-                    Import
+                      >
+                    <FormattedMessage
+                      id="import"
+                      defaultMessage="Import"
+                    />
                   </Button>
                   <div
                     style={{
@@ -1257,8 +1371,11 @@ class App extends SafeComponent {
                       userSelect: "none",
                       marginBottom: -10,
                     }}
-                  >
-                    Or try our{" "}
+                      >
+                    <FormattedMessage
+                      id="orTry"
+                      defaultMessage="Or try our "
+                    />
                     <a
                       style={{
                         color: themeVars.colors.primary,
@@ -1267,10 +1384,16 @@ class App extends SafeComponent {
                       }}
                       href="https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim"
                       target="_blank"
-                    >
-                      chrome extension
-                    </a>{" "}
-                    to capture a page in your browser and
+                        >
+                      <FormattedMessage
+                        id="orTry2"
+                        defaultMessage="chrome extension"
+                      />
+                      </a>
+                      <FormattedMessage
+                        id="orTry3"
+                        defaultMessage=" to capture a page in your browser and"
+                      />
                     <a
                       onClick={() => {
                         const input = document.createElement("input");
@@ -1366,9 +1489,11 @@ class App extends SafeComponent {
                         color: themeVars.colors.primary,
                         cursor: "pointer",
                       }}
-                    >
-                      {" "}
-                      upload here{" "}
+                        >
+                      <FormattedMessage
+                        id="orTry4"
+                        defaultMessage=" upload here "
+                      />
                     </a>
                   </div>
                 </>
@@ -1393,7 +1518,10 @@ class App extends SafeComponent {
           )}
 
           <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
-            Made with{" "}
+            <FormattedMessage
+              id="made"
+              defaultMessage="Made with "
+            />
             <Favorite
               style={{
                 color: "rgb(236, 55, 88)",
@@ -1401,8 +1529,11 @@ class App extends SafeComponent {
                 marginTop: -2,
                 verticalAlign: "middle",
               }}
-            />{" "}
-            by{" "}
+              />
+            <FormattedMessage
+              id="made2"
+              defaultMessage=" by "
+            />
             <a
               style={{ color: themeVars.colors.primary }}
               href="https://www.builder.io?ref=figma"
@@ -1432,8 +1563,11 @@ class App extends SafeComponent {
               }}
               href="https://github.com/BuilderIO/html-to-figma/issues"
               target="_blank"
-            >
-              Feedback
+              >
+              <FormattedMessage
+                id="feedbackFooter"
+                defaultMessage="Feedback"
+              />
             </a>
             <span
               style={{
@@ -1454,8 +1588,11 @@ class App extends SafeComponent {
               }}
               href="https://github.com/BuilderIO/html-to-figma"
               target="_blank"
-            >
-              Source
+              >
+              <FormattedMessage
+                id="source"
+                defaultMessage="Source"
+              />
             </a>
             <span
               style={{
@@ -1476,12 +1613,16 @@ class App extends SafeComponent {
               }}
               href="https://github.com/BuilderIO/html-to-figma"
               target="_blank"
-            >
-              Help
+              >
+              <FormattedMessage
+                id="help"
+                defaultMessage="Help"
+              />
             </a>
           </div>
         </div>
       </div>
+      </IntlProvider>
     );
   }
 }
