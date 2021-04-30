@@ -37,8 +37,8 @@ import { theme as themeVars } from "./constants/theme";
 import { fastClone } from "./functions/fast-clone";
 import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
-import {IntlProvider, FormattedMessage} from 'react-intl'
-import { en, ru } from './localize/i18n'
+import { IntlProvider, FormattedMessage } from "react-intl";
+import { en, ru } from "./localize/i18n";
 
 // Simple debug flag - flip when needed locally
 const useDev = false;
@@ -739,39 +739,45 @@ class App extends SafeComponent {
   }
 
   getLang() {
-    return this.currentLanguage === "en" ? en : ru
+    return this.currentLanguage === "en" ? en : ru;
   }
 
   render() {
     return (
-      <IntlProvider messages={this.currentLanguage === "en" ? en : ru} locale={this.currentLanguage} defaultLocale="en">
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          overflow: "auto",
-          alignItems: "stretch",
-          height: "100%",
-        }}
+      <IntlProvider
+        messages={this.currentLanguage === "en" ? en : ru}
+        locale={this.currentLanguage}
+        defaultLocale="en"
       >
         <div
           style={{
-            padding: 15,
-            fontSize: 12,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "auto",
+            alignItems: "stretch",
+            height: "100%",
           }}
         >
           <div
             style={{
-              display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between"
+              padding: 15,
+              fontSize: 12,
             }}
-            >
-              <div style={{
+          >
+            <div
+              style={{
                 display: "flex",
                 alignItems: "center",
-              fontWeight: "bold",
-              }}>
+                justifyContent: "space-between",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  fontWeight: "bold",
+                }}
+              >
                 <FormattedMessage
                   id="title"
                   defaultMessage="Turn your design into code "
@@ -790,6 +796,742 @@ class App extends SafeComponent {
                   <HelpOutline style={{ fontSize: 18 }} />
                 </a>
               </div>
+            </div>
+
+            {!this.initialized ? (
+              <div>
+                <div style={{ display: "flex", padding: 20 }}>
+                  <CircularProgress
+                    size={30}
+                    disableShrink
+                    style={{ margin: "auto" }}
+                  />
+                </div>
+                <div
+                  style={{
+                    textAlign: "center",
+                    fontSize: 12,
+                    opacity: 0.6,
+                    fontStyle: "italic",
+                  }}
+                >
+                  <FormattedMessage
+                    id="initExport"
+                    defaultMessage="Initializing for export, this can take about a minute..."
+                  />
+                </div>
+              </div>
+            ) : this.generatingCode ? (
+              <div style={{ padding: 20 }}>
+                <div style={{ display: "flex", padding: 20 }}>
+                  <CircularProgress
+                    size={30}
+                    disableShrink
+                    style={{ margin: "auto" }}
+                  />
+                </div>
+                <Typography
+                  variant="caption"
+                  style={{
+                    textAlign: "center",
+                    marginTop: 10,
+                    color: themeVars.colors.primaryLight,
+                    marginBottom: -10,
+                    fontStyle: "italic",
+                  }}
+                >
+                  <FormattedMessage
+                    id="processing"
+                    defaultMessage="Processing..."
+                  />{" "}
+                  <br />
+                  <FormattedMessage
+                    id="processing2"
+                    defaultMessage="This can take about a minute..."
+                  />
+                </Typography>
+              </div>
+            ) : (
+              <>
+                {this.showImportInvalidError && (
+                  <div>
+                    <div
+                      style={{
+                        color: "rgb(200, 0, 0)",
+                        marginTop: 10,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <FormattedMessage
+                        id="importLayerHelp"
+                        defaultMessage="To import a layer, that layer and all children must use "
+                      />
+                      <a
+                        style={{
+                          color: themeVars.colors.primary,
+                        }}
+                        href="https://help.figma.com/hc/en-us/articles/360040451373-Create-dynamic-designs-with-Auto-layout"
+                        target="_blank"
+                        rel="noopenner"
+                      >
+                        <FormattedMessage
+                          id="autolayout"
+                          defaultMessage="autolayout"
+                        />
+                      </a>
+                    </div>
+                    <div>
+                      <Button
+                        size="small"
+                        href="https://www.builder.io/c/docs/import-from-figma"
+                        target="_blank"
+                        color="primary"
+                        rel="noopenner"
+                      >
+                        <FormattedMessage
+                          id="learnMore"
+                          defaultMessage="Learn more"
+                        />
+                      </Button>
+                      <Button
+                        size="small"
+                        style={{ opacity: 0.5 }}
+                        onClick={() => {
+                          parent.postMessage(
+                            {
+                              pluginMessage: {
+                                type: "clearErrors",
+                                data: true,
+                              },
+                            },
+                            "*"
+                          );
+                          this.showImportInvalidError = false;
+                        }}
+                      >
+                        <FormattedMessage
+                          id="clearErrors"
+                          defaultMessage="Clear errors"
+                        />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {this.showRequestFailedError && (
+                  <div>
+                    <div
+                      style={{
+                        color: "rgb(200, 0, 0)",
+                        marginTop: 10,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <FormattedMessage
+                        id="errorMessage"
+                        defaultMessage="Oh no, there was an error! To troubleshoot, if you are
+                            importing a whole page, try importing a smaller part of the
+                            page at a time, like one section or even one button"
+                      />
+                    </div>
+                    <div>
+                      <Button
+                        size="small"
+                        color="primary"
+                        href="https://www.builder.io/c/docs/import-from-figma#troubleshooting"
+                        target="_blank"
+                        rel="noopenner"
+                      >
+                        <FormattedMessage
+                          id="learnMore"
+                          defaultMessage="Learn more"
+                        />
+                      </Button>
+                      <Button
+                        size="small"
+                        style={{ opacity: 0.5 }}
+                        onClick={() => {
+                          this.showRequestFailedError = false;
+                        }}
+                      >
+                        <FormattedMessage
+                          id="clearErrors"
+                          defaultMessage="Clear errors"
+                        />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <Tooltip
+                  disableHoverListener={Boolean(this.selection.length)}
+                  title={this.getLang().selectLayerPop}
+                >
+                  <div>
+                    <Button
+                      fullWidth
+                      style={{ marginTop: 20 }}
+                      variant="contained"
+                      onClick={(e) => {
+                        this.getCode(true);
+                      }}
+                      disabled={!this.selection.length}
+                      color="primary"
+                    >
+                      <FormattedMessage
+                        id="getCode"
+                        defaultMessage="Get Code"
+                      />
+                    </Button>
+                  </div>
+                </Tooltip>
+                {this.displayFiddleUrl && (
+                  <div style={{ margin: "15px 0 5px 0" }}>
+                    <FormattedMessage id="done" defaultMessage="Done! " />
+                    <a
+                      style={{
+                        color: themeVars.colors.primary,
+                        fontWeight: "bold",
+                        textDecoration: "none",
+                      }}
+                      rel="noopenner"
+                      href={this.displayFiddleUrl}
+                      target="_blank"
+                    >
+                      <FormattedMessage id="done" defaultMessage="Click here" />
+                    </a>
+                    <FormattedMessage
+                      id="clickHere2"
+                      defaultMessage=" to open your content in Builder.io and choose 'get code'"
+                    />
+                  </div>
+                )}
+                <Button
+                  fullWidth
+                  style={{ marginTop: 10, opacity: 0.4 }}
+                  onClick={(e) => {
+                    this.getCode(false);
+                  }}
+                  disabled={!this.selection.length}
+                >
+                  <FormattedMessage
+                    id="downloadJson"
+                    defaultMessage="Download json"
+                  />
+                </Button>
+                <div
+                  style={{
+                    textAlign: "center",
+                    fontSize: 11,
+                    color: "rgba(0, 0, 0, 0.5)",
+                    fontStyle: "italic",
+                    marginTop: 10,
+                  }}
+                >
+                  <FormattedMessage
+                    id="feedback"
+                    defaultMessage="This feature is in beta. Please send "
+                  />
+                  <a
+                    style={{
+                      color: themeVars.colors.primary,
+                      textDecoration: "none",
+                      cursor: "pointer",
+                    }}
+                    target="_blank"
+                    rel="noopener"
+                    href="https://github.com/BuilderIO/figma-html/issues"
+                  >
+                    <FormattedMessage
+                      id="feedback2"
+                      defaultMessage="feedback"
+                    />
+                  </a>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div>
+            <Divider />
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                position: "relative",
+                zIndex: 3,
+                padding: 15,
+                backgroundColor: "#f8f8f8",
+                maxWidth: settings.ui.baseWidth,
+                fontWeight: 400,
+              }}
+            >
+              <form
+                ref={(ref) => (this.form = ref)}
+                // {...{ validate: 'true' }}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  // marginTop: 20
+                }}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  this.onCreate();
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    paddingBottom: 18,
+                    fontWeight: "bold",
+                  }}
+                >
+                  <FormattedMessage
+                    id="importDesigns"
+                    defaultMessage="Import designs from the web"
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  <div style={{ display: "flex", position: "relative" }}>
+                    <TextField
+                      inputProps={{
+                        style: {
+                          fontSize: 13,
+                        },
+                      }}
+                      label={this.getLang().urlToImport}
+                      fullWidth
+                      inputRef={(ref) => (this.urlInputRef = ref)}
+                      disabled={this.loading}
+                      required
+                      onKeyDown={(e) => {
+                        // Default cmd + a functionality as weird
+                        if ((e.metaKey || e.ctrlKey) && e.which === 65) {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          if (e.shiftKey) {
+                            const input = this.urlInputRef!;
+                            input.setSelectionRange(0, 0);
+                          } else {
+                            this.selectAllUrlInputText();
+                          }
+                        }
+                      }}
+                      placeholder="e.g. https://builder.io"
+                      type="url"
+                      value={this.urlValue}
+                      onChange={(e) => {
+                        let value = e.target.value.trim();
+                        if (!value.match(/^https?:\/\//)) {
+                          value = "http://" + value;
+                        }
+                        this.urlValue = value;
+                      }}
+                    />
+                  </div>
+                  {this.showMoreOptions && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-end",
+                        marginTop: 15,
+                      }}
+                    >
+                      <div style={{ position: "relative", flexGrow: 1 }}>
+                        <TextField
+                          label={this.getLang().width}
+                          required
+                          inputProps={{
+                            min: "200",
+                            max: "3000",
+                            step: "10",
+                            style: {
+                              fontSize: 13,
+                            },
+                          }}
+                          disabled={this.loading}
+                          onKeyDown={(e) => {
+                            // Default cmd + a functionality as weird
+                            if ((e.metaKey || e.ctrlKey) && e.which === 65) {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              if (e.shiftKey) {
+                                const input = this.urlInputRef!;
+                                input.setSelectionRange(0, 0);
+                              } else {
+                                const input = this.urlInputRef!;
+                                input.setSelectionRange(
+                                  0,
+                                  input.value.length - 1
+                                );
+                              }
+                            }
+                          }}
+                          placeholder="1200"
+                          // style={{ marginLeft: 20 , width: 100  }}
+                          fullWidth
+                          type="number"
+                          value={this.width}
+                          onChange={(e) => {
+                            this.width = String(
+                              parseInt(e.target.value) || 1200
+                            );
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: "absolute",
+                            right: -4,
+                            top: 18,
+                            borderRadius: 100,
+                            display: "flex",
+                            ...(this.loading && {
+                              pointerEvents: "none",
+                              opacity: 0.5,
+                            }),
+                          }}
+                        >
+                          <IconButton
+                            style={{
+                              padding: 5,
+                              color: this.width === "1200" ? "#888" : "#ddd",
+                            }}
+                            onClick={() => (this.width = "1200")}
+                          >
+                            <LaptopMac style={{ fontSize: 14 }} />
+                          </IconButton>
+                          <IconButton
+                            style={{
+                              padding: 5,
+                              color: this.width === "900" ? "#888" : "#ddd",
+                            }}
+                            onClick={() => (this.width = "900")}
+                          >
+                            <TabletMac style={{ fontSize: 14 }} />
+                          </IconButton>
+                          <IconButton
+                            style={{
+                              padding: 5,
+                              color: this.width === "400" ? "#888" : "#ddd",
+                            }}
+                            onClick={() => (this.width = "400")}
+                          >
+                            <PhoneIphone style={{ fontSize: 14 }} />
+                          </IconButton>
+                        </div>
+                      </div>
+
+                      <Tooltip
+                        PopperProps={{
+                          modifiers: { flip: { behavior: ["top"] } },
+                        }}
+                        enterDelay={300}
+                        placement="top"
+                        title={this.getLang().framesPop}
+                      >
+                        <FormControlLabel
+                          value="Use Frames"
+                          disabled={this.loading}
+                          style={{ marginLeft: 20 }}
+                          control={
+                            <Switch
+                              // disabled={this.loading}
+                              size="small"
+                              // style={{ marginLeft: 20 }}
+                              color="primary"
+                              checked={this.useFrames}
+                              onChange={(e) =>
+                                (this.useFrames = e.target.checked)
+                              }
+                            />
+                          }
+                          label={
+                            <span
+                              style={{
+                                fontSize: 12,
+                                opacity: 0.6,
+                                position: "relative",
+                                top: -5,
+                              }}
+                            >
+                              <FormattedMessage
+                                id="frames"
+                                defaultMessage="Frames"
+                              />
+                            </span>
+                          }
+                          labelPlacement="top"
+                        />
+                      </Tooltip>
+                    </div>
+                  )}
+                </div>
+                {this.errorMessage && (
+                  <div
+                    style={{
+                      color: "#721c24",
+                      backgroundColor: "#f8d7da",
+                      border: "1px solid #f5c6cb",
+                      borderRadius: 4,
+                      padding: ".75rem 1.25rem",
+                      marginTop: 20,
+                    }}
+                  >
+                    {this.errorMessage}
+                  </div>
+                )}
+                {!this.online && (
+                  <div
+                    style={{
+                      color: "#721c24",
+                      backgroundColor: "#f8d7da",
+                      border: "1px solid #f5c6cb",
+                      borderRadius: 4,
+                      padding: ".75rem 1.25rem",
+                      marginTop: 20,
+                    }}
+                  >
+                    <FormattedMessage
+                      id="needOnline"
+                      defaultMessage="You need to be online to use this plugin"
+                    />
+                  </div>
+                )}
+                {this.loading ? (
+                  <>
+                    <div style={{ margin: "0 auto" }} className="lds-ellipsis">
+                      <div
+                        style={{ background: themeVars.colors.primaryLight }}
+                      />
+                      <div
+                        style={{ background: themeVars.colors.primaryLight }}
+                      />
+                      <div
+                        style={{ background: themeVars.colors.primaryLight }}
+                      />
+                      <div
+                        style={{ background: themeVars.colors.primaryLight }}
+                      />
+                    </div>
+                    <Typography
+                      variant="caption"
+                      style={{
+                        textAlign: "center",
+                        // marginTop: 10,
+                        color: themeVars.colors.primaryLight,
+                        marginBottom: -10,
+                        // fontStyle: "italic"
+                      }}
+                    >
+                      <FormattedMessage
+                        id="processingCode"
+                        defaultMessage="Processing code..."
+                      />
+                      <br />
+                      <FormattedMessage
+                        id="processingCode2"
+                        defaultMessage="This can take a couple minutes..."
+                      />
+                    </Typography>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      type="submit"
+                      disabled={Boolean(
+                        this.errorMessage || this.loading || !this.online
+                      )}
+                      style={{ marginTop: 20 }}
+                      fullWidth
+                      color="primary"
+                      variant="outlined"
+                      onClick={this.onCreate}
+                    >
+                      <FormattedMessage id="import" defaultMessage="Import" />
+                    </Button>
+                    <div
+                      style={{
+                        color: "#888",
+                        fontSize: 12,
+                        textAlign: "center",
+                        marginTop: 15,
+                        userSelect: "none",
+                        marginBottom: -10,
+                      }}
+                    >
+                      <FormattedMessage
+                        id="orTry"
+                        defaultMessage="Or try our "
+                      />
+                      <a
+                        style={{
+                          color: themeVars.colors.primary,
+                          cursor: "pointer",
+                          textDecoration: "none",
+                        }}
+                        href="https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim"
+                        target="_blank"
+                      >
+                        <FormattedMessage
+                          id="orTry2"
+                          defaultMessage="chrome extension"
+                        />
+                      </a>
+                      <FormattedMessage
+                        id="orTry3"
+                        defaultMessage=" to capture a page in your browser and"
+                      />
+                      <a
+                        onClick={() => {
+                          const input = document.createElement("input");
+
+                          input.type = "file";
+                          document.body.appendChild(input);
+                          input.style.visibility = "hidden";
+                          input.click();
+
+                          const onFocus = () => {
+                            setTimeout(() => {
+                              if (
+                                input.parentElement &&
+                                (!input.files || input.files.length === 0)
+                              ) {
+                                done();
+                              }
+                            }, 200);
+                          };
+
+                          const done = () => {
+                            input.remove();
+                            this.loading = false;
+                            window.removeEventListener("focus", onFocus);
+                          };
+
+                          window.addEventListener("focus", onFocus);
+
+                          // TODO: parse and upload images!
+                          input.addEventListener("change", (event) => {
+                            const file = (event.target as HTMLInputElement)
+                              .files![0];
+                            if (file) {
+                              this.loading = true;
+                              var reader = new FileReader();
+
+                              // Closure to capture the file information.
+                              reader.onload = (e) => {
+                                const text = (e.target as any).result;
+                                try {
+                                  const json = JSON.parse(text);
+                                  Promise.all(
+                                    json.layers.map(async (rootLayer: Node) => {
+                                      await traverseLayers(
+                                        rootLayer,
+                                        (layer: any) => {
+                                          if (getImageFills(layer)) {
+                                            return processImages(layer).catch(
+                                              (err) => {
+                                                console.warn(
+                                                  "Could not process image",
+                                                  err
+                                                );
+                                              }
+                                            );
+                                          }
+                                        }
+                                      );
+                                    })
+                                  )
+                                    .then(() => {
+                                      parent.postMessage(
+                                        {
+                                          pluginMessage: {
+                                            type: "import",
+                                            data: json,
+                                          },
+                                        },
+                                        "*"
+                                      );
+                                      setTimeout(() => {
+                                        done();
+                                      }, 1000);
+                                    })
+                                    .catch((err) => {
+                                      done();
+                                      console.error(err);
+                                      alert(err);
+                                    });
+                                } catch (err) {
+                                  alert("File read error: " + err);
+                                  done();
+                                }
+                              };
+
+                              reader.readAsText(file);
+                            } else {
+                              done();
+                            }
+                          });
+                        }}
+                        style={{
+                          color: themeVars.colors.primary,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <FormattedMessage
+                          id="orTry4"
+                          defaultMessage=" upload here "
+                        />
+                      </a>
+                    </div>
+                  </>
+                )}
+              </form>
+            </div>
+            <Divider />
+
+            {useDev && (
+              <div
+                onClick={() => {
+                  lsSet("builder.env", "production");
+                }}
+                style={{
+                  padding: 10,
+                  color: "rgb(200, 0, 0)",
+                  textAlign: "center",
+                }}
+              >
+                Using dev env. Click here to reset then reload the extension
+              </div>
+            )}
+
+            <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
+              <FormattedMessage id="made" defaultMessage="Made with " />
+              <Favorite
+                style={{
+                  color: "rgb(236, 55, 88)",
+                  fontSize: 16,
+                  marginTop: -2,
+                  verticalAlign: "middle",
+                }}
+              />
+              <FormattedMessage id="made2" defaultMessage=" by " />
+              <a
+                style={{ color: themeVars.colors.primary }}
+                href="https://www.builder.io?ref=figma"
+                target="_blank"
+              >
+                Builder.io
+              </a>
+            </div>
+
+            <div
+              style={{
+                marginTop: 15,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               <Select
                 style={{
                   opacity: 0.3,
@@ -798,830 +1540,88 @@ class App extends SafeComponent {
                 }}
                 id="demo-simple-select"
                 value={this.currentLanguage}
-                onChange={(e) => this.currentLanguage = (e.target as HTMLInputElement).value}
+                onChange={(e) =>
+                  (this.currentLanguage = (e.target as HTMLInputElement).value)
+                }
               >
-                <StyledButton value={"en"}>EN</StyledButton>
-                <StyledButton value={"ru"}>RU</StyledButton>
+                <StyledButton value="en">EN</StyledButton>
+                <StyledButton value="ru">RU</StyledButton>
               </Select>
-          </div>
-
-          {!this.initialized ? (
-            <div>
-              <div style={{ display: "flex", padding: 20 }}>
-                <CircularProgress
-                  size={30}
-                  disableShrink
-                  style={{ margin: "auto" }}
-                />
-              </div>
-              <div
-                style={{
-                  textAlign: "center",
-                  fontSize: 12,
-                  opacity: 0.6,
-                  fontStyle: "italic",
-                }}
-                >
-                <FormattedMessage
-                  id="initExport"
-                  defaultMessage="Initializing for export, this can take about a minute..."
-                />
-              </div>
             </div>
-          ) : this.generatingCode ? (
-            <div style={{ padding: 20 }}>
-              <div style={{ display: "flex", padding: 20 }}>
-                <CircularProgress
-                  size={30}
-                  disableShrink
-                  style={{ margin: "auto" }}
-                />
-              </div>
-              <Typography
-                variant="caption"
-                style={{
-                  textAlign: "center",
-                  marginTop: 10,
-                  color: themeVars.colors.primaryLight,
-                  marginBottom: -10,
-                  fontStyle: "italic",
-                }}
-                  >
-                  <FormattedMessage
-                    id="processing"
-                    defaultMessage="Processing..."
-                    /> <br />
-                  <FormattedMessage
-                    id="processing2"
-                    defaultMessage="This can take about a minute..."
-                    />
-              </Typography>
-            </div>
-          ) : (
-            <>
-              {this.showImportInvalidError && (
-                <div>
-                  <div
-                    style={{
-                      color: "rgb(200, 0, 0)",
-                      marginTop: 10,
-                      marginBottom: 10,
-                    }}
-                        >
-                    <FormattedMessage
-                      id="importLayerHelp"
-                      defaultMessage="To import a layer, that layer and all children must use "
-                    />
-                    <a
-                      style={{
-                        color: themeVars.colors.primary,
-                      }}
-                      href="https://help.figma.com/hc/en-us/articles/360040451373-Create-dynamic-designs-with-Auto-layout"
-                      target="_blank"
-                      rel="noopenner"
-                          >
-                      <FormattedMessage
-                        id="autolayout"
-                        defaultMessage="autolayout"
-                      />
-                    </a>
-                  </div>
-                  <div>
-                    <Button
-                      size="small"
-                      href="https://www.builder.io/c/docs/import-from-figma"
-                      target="_blank"
-                      color="primary"
-                      rel="noopenner"
-                          >
-                      <FormattedMessage
-                        id="learnMore"
-                        defaultMessage="Learn more"
-                      />
-                    </Button>
-                    <Button
-                      size="small"
-                      style={{ opacity: 0.5 }}
-                      onClick={() => {
-                        parent.postMessage(
-                          {
-                            pluginMessage: {
-                              type: "clearErrors",
-                              data: true,
-                            },
-                          },
-                          "*"
-                        );
-                        this.showImportInvalidError = false;
-                      }}
-                          >
-                      <FormattedMessage
-                        id="clearErrors"
-                        defaultMessage="Clear errors"
-                      />
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {this.showRequestFailedError && (
-                <div>
-                  <div
-                    style={{
-                      color: "rgb(200, 0, 0)",
-                      marginTop: 10,
-                      marginBottom: 10,
-                    }}
-                        >
-                    <FormattedMessage
-                        id="errorMessage"
-                        defaultMessage="Oh no, there was an error! To troubleshoot, if you are
-                            importing a whole page, try importing a smaller part of the
-                            page at a time, like one section or even one button"
-                      />
-                  </div>
-                  <div>
-                    <Button
-                      size="small"
-                      color="primary"
-                      href="https://www.builder.io/c/docs/import-from-figma#troubleshooting"
-                      target="_blank"
-                      rel="noopenner"
-                          >
-                      <FormattedMessage
-                        id="learnMore"
-                        defaultMessage="Learn more"
-                      />
-                    </Button>
-                    <Button
-                      size="small"
-                      style={{ opacity: 0.5 }}
-                      onClick={() => {
-                        this.showRequestFailedError = false;
-                      }}
-                    >
-                      <FormattedMessage
-                        id="clearErrors"
-                        defaultMessage="Clear errors"
-                      />
-                    </Button>
-                  </div>
-                </div>
-              )}
 
-              <Tooltip
-                disableHoverListener={Boolean(this.selection.length)}
-                title={this.getLang().selectLayerPop}
-              >
-                <div>
-                  <Button
-                    fullWidth
-                    style={{ marginTop: 20 }}
-                    variant="contained"
-                    onClick={(e) => {
-                      this.getCode(true);
-                    }}
-                    disabled={!this.selection.length}
-                    color="primary"
-                        >
-                    <FormattedMessage
-                      id="getCode"
-                      defaultMessage="Get Code"
-                    />
-                  </Button>
-                </div>
-              </Tooltip>
-              {this.displayFiddleUrl && (
-                <div style={{ margin: "15px 0 5px 0" }}>
-                  <FormattedMessage
-                    id="done"
-                    defaultMessage="Done! "
-                  />
-                  <a
-                    style={{
-                      color: themeVars.colors.primary,
-                      fontWeight: "bold",
-                      textDecoration: "none",
-                    }}
-                    rel="noopenner"
-                    href={this.displayFiddleUrl}
-                    target="_blank"
-                        >
-                    <FormattedMessage
-                      id="done"
-                      defaultMessage="Click here"
-                    />
-                  </a>
-                  <FormattedMessage
-                    id="clickHere2"
-                    defaultMessage=" to open your content in Builder.io and choose 'get code'"
-                  />
-                </div>
-              )}
-              <Button
-                fullWidth
-                style={{ marginTop: 10, opacity: 0.4 }}
-                onClick={(e) => {
-                  this.getCode(false);
-                }}
-                disabled={!this.selection.length}
-                    >
-                <FormattedMessage
-                  id="downloadJson"
-                  defaultMessage="Download json"
-                />
-              </Button>
-              <div
-                style={{
-                  textAlign: "center",
-                  fontSize: 11,
-                  color: "rgba(0, 0, 0, 0.5)",
-                  fontStyle: "italic",
-                  marginTop: 10,
-                }}
-                    >
-                <FormattedMessage
-                  id="feedback"
-                  defaultMessage="This feature is in beta. Please send "
-                />
-                <a
-                  style={{
-                    color: themeVars.colors.primary,
-                    textDecoration: "none",
-                    cursor: "pointer",
-                  }}
-                  target="_blank"
-                  rel="noopener"
-                  href="https://github.com/BuilderIO/figma-html/issues"
-                      >
-                  <FormattedMessage
-                    id="feedback2"
-                    defaultMessage="feedback"
-                  />
-                </a>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div>
-          <Divider />
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              position: "relative",
-              zIndex: 3,
-              padding: 15,
-              backgroundColor: "#f8f8f8",
-              maxWidth: settings.ui.baseWidth,
-              fontWeight: 400,
-            }}
-          >
-            <form
-              ref={(ref) => (this.form = ref)}
-              // {...{ validate: 'true' }}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                // marginTop: 20
-              }}
-              onSubmit={(e) => {
-                e.preventDefault();
-                this.onCreate();
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  paddingBottom: 18,
-                  fontWeight: "bold",
-                }}
-                >
-                <FormattedMessage
-                  id="importDesigns"
-                  defaultMessage="Import designs from the web"
-                />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <div style={{ display: "flex", position: "relative" }}>
-                  <TextField
-                    inputProps={{
-                      style: {
-                        fontSize: 13,
-                      },
-                      }}
-                    label={this.getLang().urlToImport}
-                    fullWidth
-                    inputRef={(ref) => (this.urlInputRef = ref)}
-                    disabled={this.loading}
-                    required
-                    onKeyDown={(e) => {
-                      // Default cmd + a functionality as weird
-                      if ((e.metaKey || e.ctrlKey) && e.which === 65) {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        if (e.shiftKey) {
-                          const input = this.urlInputRef!;
-                          input.setSelectionRange(0, 0);
-                        } else {
-                          this.selectAllUrlInputText();
-                        }
-                      }
-                    }}
-                    placeholder="e.g. https://builder.io"
-                    type="url"
-                    value={this.urlValue}
-                    onChange={(e) => {
-                      let value = e.target.value.trim();
-                      if (!value.match(/^https?:\/\//)) {
-                        value = "http://" + value;
-                      }
-                      this.urlValue = value;
-                    }}
-                  />
-                </div>
-                {this.showMoreOptions && (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-end",
-                      marginTop: 15,
-                    }}
-                  >
-                    <div style={{ position: "relative", flexGrow: 1 }}>
-                      <TextField
-                        label={this.getLang().width}
-                        required
-                        inputProps={{
-                          min: "200",
-                          max: "3000",
-                          step: "10",
-                          style: {
-                            fontSize: 13,
-                          },
-                        }}
-                        disabled={this.loading}
-                        onKeyDown={(e) => {
-                          // Default cmd + a functionality as weird
-                          if ((e.metaKey || e.ctrlKey) && e.which === 65) {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            if (e.shiftKey) {
-                              const input = this.urlInputRef!;
-                              input.setSelectionRange(0, 0);
-                            } else {
-                              const input = this.urlInputRef!;
-                              input.setSelectionRange(
-                                0,
-                                input.value.length - 1
-                              );
-                            }
-                          }
-                        }}
-                        placeholder="1200"
-                        // style={{ marginLeft: 20 , width: 100  }}
-                        fullWidth
-                        type="number"
-                        value={this.width}
-                        onChange={(e) => {
-                          this.width = String(parseInt(e.target.value) || 1200);
-                        }}
-                      />
-                      <div
-                        style={{
-                          position: "absolute",
-                          right: -4,
-                          top: 18,
-                          borderRadius: 100,
-                          display: "flex",
-                          ...(this.loading && {
-                            pointerEvents: "none",
-                            opacity: 0.5,
-                          }),
-                        }}
-                      >
-                        <IconButton
-                          style={{
-                            padding: 5,
-                            color: this.width === "1200" ? "#888" : "#ddd",
-                          }}
-                          onClick={() => (this.width = "1200")}
-                        >
-                          <LaptopMac style={{ fontSize: 14 }} />
-                        </IconButton>
-                        <IconButton
-                          style={{
-                            padding: 5,
-                            color: this.width === "900" ? "#888" : "#ddd",
-                          }}
-                          onClick={() => (this.width = "900")}
-                        >
-                          <TabletMac style={{ fontSize: 14 }} />
-                        </IconButton>
-                        <IconButton
-                          style={{
-                            padding: 5,
-                            color: this.width === "400" ? "#888" : "#ddd",
-                          }}
-                          onClick={() => (this.width = "400")}
-                        >
-                          <PhoneIphone style={{ fontSize: 14 }} />
-                        </IconButton>
-                      </div>
-                    </div>
-
-                    <Tooltip
-                      PopperProps={{
-                        modifiers: { flip: { behavior: ["top"] } },
-                      }}
-                      enterDelay={300}
-                        placement="top"
-                      title={this.getLang().framesPop}
-                    >
-                      <FormControlLabel
-                        value="Use Frames"
-                        disabled={this.loading}
-                        style={{ marginLeft: 20 }}
-                        control={
-                          <Switch
-                            // disabled={this.loading}
-                            size="small"
-                            // style={{ marginLeft: 20 }}
-                            color="primary"
-                            checked={this.useFrames}
-                            onChange={(e) =>
-                              (this.useFrames = e.target.checked)
-                            }
-                          />
-                        }
-                        label={
-                          <span
-                            style={{
-                              fontSize: 12,
-                              opacity: 0.6,
-                              position: "relative",
-                              top: -5,
-                            }}
-                          >
-                            <FormattedMessage
-                              id="frames"
-                              defaultMessage="Frames"
-                            />
-                          </span>
-                        }
-                        labelPlacement="top"
-                      />
-                    </Tooltip>
-                  </div>
-                )}
-              </div>
-              {this.errorMessage && (
-                <div
-                  style={{
-                    color: "#721c24",
-                    backgroundColor: "#f8d7da",
-                    border: "1px solid #f5c6cb",
-                    borderRadius: 4,
-                    padding: ".75rem 1.25rem",
-                    marginTop: 20,
-                  }}
-                >
-                  {this.errorMessage}
-                </div>
-              )}
-              {!this.online && (
-                <div
-                  style={{
-                    color: "#721c24",
-                    backgroundColor: "#f8d7da",
-                    border: "1px solid #f5c6cb",
-                    borderRadius: 4,
-                    padding: ".75rem 1.25rem",
-                    marginTop: 20,
-                  }}
-                  >
-                  <FormattedMessage
-                    id="needOnline"
-                    defaultMessage="You need to be online to use this plugin"
-                  />
-                </div>
-              )}
-              {this.loading ? (
-                <>
-                  <div style={{ margin: "0 auto" }} className="lds-ellipsis">
-                    <div
-                      style={{ background: themeVars.colors.primaryLight }}
-                    />
-                    <div
-                      style={{ background: themeVars.colors.primaryLight }}
-                    />
-                    <div
-                      style={{ background: themeVars.colors.primaryLight }}
-                    />
-                    <div
-                      style={{ background: themeVars.colors.primaryLight }}
-                    />
-                  </div>
-                  <Typography
-                    variant="caption"
-                    style={{
-                      textAlign: "center",
-                      // marginTop: 10,
-                      color: themeVars.colors.primaryLight,
-                      marginBottom: -10,
-                      // fontStyle: "italic"
-                    }}
-                    >
-                    <FormattedMessage
-                      id="processingCode"
-                      defaultMessage="Processing code..."
-                    />
-                    <br />
-                    <FormattedMessage
-                      id="processingCode2"
-                      defaultMessage="This can take a couple minutes..."
-                    />
-                  </Typography>
-                </>
-              ) : (
-                <>
-                  <Button
-                    type="submit"
-                    disabled={Boolean(
-                      this.errorMessage || this.loading || !this.online
-                    )}
-                    style={{ marginTop: 20 }}
-                    fullWidth
-                    color="primary"
-                    variant="outlined"
-                    onClick={this.onCreate}
-                      >
-                    <FormattedMessage
-                      id="import"
-                      defaultMessage="Import"
-                    />
-                  </Button>
-                  <div
-                    style={{
-                      color: "#888",
-                      fontSize: 12,
-                      textAlign: "center",
-                      marginTop: 15,
-                      userSelect: "none",
-                      marginBottom: -10,
-                    }}
-                      >
-                    <FormattedMessage
-                      id="orTry"
-                      defaultMessage="Or try our "
-                    />
-                    <a
-                      style={{
-                        color: themeVars.colors.primary,
-                        cursor: "pointer",
-                        textDecoration: "none",
-                      }}
-                      href="https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim"
-                      target="_blank"
-                        >
-                      <FormattedMessage
-                        id="orTry2"
-                        defaultMessage="chrome extension"
-                      />
-                      </a>
-                      <FormattedMessage
-                        id="orTry3"
-                        defaultMessage=" to capture a page in your browser and"
-                      />
-                    <a
-                      onClick={() => {
-                        const input = document.createElement("input");
-
-                        input.type = "file";
-                        document.body.appendChild(input);
-                        input.style.visibility = "hidden";
-                        input.click();
-
-                        const onFocus = () => {
-                          setTimeout(() => {
-                            if (
-                              input.parentElement &&
-                              (!input.files || input.files.length === 0)
-                            ) {
-                              done();
-                            }
-                          }, 200);
-                        };
-
-                        const done = () => {
-                          input.remove();
-                          this.loading = false;
-                          window.removeEventListener("focus", onFocus);
-                        };
-
-                        window.addEventListener("focus", onFocus);
-
-                        // TODO: parse and upload images!
-                        input.addEventListener("change", (event) => {
-                          const file = (event.target as HTMLInputElement)
-                            .files![0];
-                          if (file) {
-                            this.loading = true;
-                            var reader = new FileReader();
-
-                            // Closure to capture the file information.
-                            reader.onload = (e) => {
-                              const text = (e.target as any).result;
-                              try {
-                                const json = JSON.parse(text);
-                                Promise.all(
-                                  json.layers.map(async (rootLayer: Node) => {
-                                    await traverseLayers(
-                                      rootLayer,
-                                      (layer: any) => {
-                                        if (getImageFills(layer)) {
-                                          return processImages(layer).catch(
-                                            (err) => {
-                                              console.warn(
-                                                "Could not process image",
-                                                err
-                                              );
-                                            }
-                                          );
-                                        }
-                                      }
-                                    );
-                                  })
-                                )
-                                  .then(() => {
-                                    parent.postMessage(
-                                      {
-                                        pluginMessage: {
-                                          type: "import",
-                                          data: json,
-                                        },
-                                      },
-                                      "*"
-                                    );
-                                    setTimeout(() => {
-                                      done();
-                                    }, 1000);
-                                  })
-                                  .catch((err) => {
-                                    done();
-                                    console.error(err);
-                                    alert(err);
-                                  });
-                              } catch (err) {
-                                alert("File read error: " + err);
-                                done();
-                              }
-                            };
-
-                            reader.readAsText(file);
-                          } else {
-                            done();
-                          }
-                        });
-                      }}
-                      style={{
-                        color: themeVars.colors.primary,
-                        cursor: "pointer",
-                      }}
-                        >
-                      <FormattedMessage
-                        id="orTry4"
-                        defaultMessage=" upload here "
-                      />
-                    </a>
-                  </div>
-                </>
-              )}
-            </form>
-          </div>
-          <Divider />
-
-          {useDev && (
             <div
-              onClick={() => {
-                lsSet("builder.env", "production");
-              }}
               style={{
-                padding: 10,
-                color: "rgb(200, 0, 0)",
+                marginTop: 20,
                 textAlign: "center",
+                color: "#999",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 400,
+                fontSize: 9,
+                paddingBottom: 10,
               }}
             >
-              Using dev env. Click here to reset then reload the extension
+              <a
+                style={{
+                  color: "#999",
+                  textDecoration: "none",
+                }}
+                href="https://github.com/BuilderIO/html-to-figma/issues"
+                target="_blank"
+              >
+                <FormattedMessage
+                  id="feedbackFooter"
+                  defaultMessage="Feedback"
+                />
+              </a>
+              <span
+                style={{
+                  display: "inline-block",
+                  height: 10,
+                  width: 1,
+                  background: "#999",
+                  marginTop: 1,
+                  opacity: 0.8,
+                  marginLeft: 5,
+                }}
+              />
+              <a
+                style={{
+                  color: "#999",
+                  textDecoration: "none",
+                  marginLeft: 5,
+                }}
+                href="https://github.com/BuilderIO/html-to-figma"
+                target="_blank"
+              >
+                <FormattedMessage id="source" defaultMessage="Source" />
+              </a>
+              <span
+                style={{
+                  display: "inline-block",
+                  height: 10,
+                  width: 1,
+                  background: "#999",
+                  marginTop: 1,
+                  opacity: 0.8,
+                  marginLeft: 5,
+                }}
+              />
+              <a
+                style={{
+                  color: "#999",
+                  textDecoration: "none",
+                  marginLeft: 5,
+                }}
+                href="https://github.com/BuilderIO/html-to-figma"
+                target="_blank"
+              >
+                <FormattedMessage id="help" defaultMessage="Help" />
+              </a>
             </div>
-          )}
-
-          <div style={{ marginTop: 20, textAlign: "center", color: "#666" }}>
-            <FormattedMessage
-              id="made"
-              defaultMessage="Made with "
-            />
-            <Favorite
-              style={{
-                color: "rgb(236, 55, 88)",
-                fontSize: 16,
-                marginTop: -2,
-                verticalAlign: "middle",
-              }}
-              />
-            <FormattedMessage
-              id="made2"
-              defaultMessage=" by "
-            />
-            <a
-              style={{ color: themeVars.colors.primary }}
-              href="https://www.builder.io?ref=figma"
-              target="_blank"
-            >
-              Builder.io
-            </a>
-          </div>
-
-          <div
-            style={{
-              marginTop: 25,
-              textAlign: "center",
-              color: "#999",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 400,
-              fontSize: 9,
-              paddingBottom: 10,
-            }}
-          >
-            <a
-              style={{
-                color: "#999",
-                textDecoration: "none",
-              }}
-              href="https://github.com/BuilderIO/html-to-figma/issues"
-              target="_blank"
-              >
-              <FormattedMessage
-                id="feedbackFooter"
-                defaultMessage="Feedback"
-              />
-            </a>
-            <span
-              style={{
-                display: "inline-block",
-                height: 10,
-                width: 1,
-                background: "#999",
-                marginTop: 1,
-                opacity: 0.8,
-                marginLeft: 5,
-              }}
-            />
-            <a
-              style={{
-                color: "#999",
-                textDecoration: "none",
-                marginLeft: 5,
-              }}
-              href="https://github.com/BuilderIO/html-to-figma"
-              target="_blank"
-              >
-              <FormattedMessage
-                id="source"
-                defaultMessage="Source"
-              />
-            </a>
-            <span
-              style={{
-                display: "inline-block",
-                height: 10,
-                width: 1,
-                background: "#999",
-                marginTop: 1,
-                opacity: 0.8,
-                marginLeft: 5,
-              }}
-            />
-            <a
-              style={{
-                color: "#999",
-                textDecoration: "none",
-                marginLeft: 5,
-              }}
-              href="https://github.com/BuilderIO/html-to-figma"
-              target="_blank"
-              >
-              <FormattedMessage
-                id="help"
-                defaultMessage="Help"
-              />
-            </a>
           </div>
         </div>
-      </div>
       </IntlProvider>
     );
   }
