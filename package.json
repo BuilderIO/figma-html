@@ -54,7 +54,7 @@
     "@emotion/core": "^10.0.28",
     "@types/lodash": "^4.14.168",
     "@types/pako": "^1.0.1",
-    "lodash": "^4.17.20",
+    "lodash": "^4.17.21",
     "pako": "^1.0.11",
     "react-intl": "^5.17.2",
     "traverse": "^0.6.6"
