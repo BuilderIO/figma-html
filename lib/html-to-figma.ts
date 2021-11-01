@@ -66,7 +66,9 @@ export function htmlToFigma(
       height,
     };
   }
-  function getBoundingClientRect(el: Element): ClientRect {
+  function getBoundingClientRect(
+    el: Element
+  ): Pick<DOMRect, "top" | "left" | "bottom" | "width" | "right" | "height"> {
     const computed = getComputedStyle(el);
     const display = computed.display;
     if (display && display.includes("inline") && el.children.length) {
@@ -183,12 +185,7 @@ export function htmlToFigma(
   function textNodesUnder(el: Element) {
     let n: Node | null = null;
     const a: Node[] = [];
-    const walk = document.createTreeWalker(
-      el,
-      NodeFilter.SHOW_TEXT,
-      null,
-      false
-    );
+    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
 
     while ((n = walk.nextNode())) {
       a.push(n);
@@ -259,9 +256,8 @@ export function htmlToFigma(
     for (const use of Array.from(el.querySelectorAll("use"))) {
       try {
         const symbolSelector = use.href.baseVal;
-        const symbol: SVGSymbolElement | null = document.querySelector(
-          symbolSelector
-        );
+        const symbol: SVGSymbolElement | null =
+          document.querySelector(symbolSelector);
         if (symbol) {
           use.outerHTML = symbol.innerHTML;
         }
@@ -729,7 +725,8 @@ export function htmlToFigma(
               computedStyles.textDecoration === "underline" ||
               computedStyles.textDecoration === "strikethrough"
             ) {
-              textNode.textDecoration = computedStyles.textDecoration.toUpperCase() as any;
+              textNode.textDecoration =
+                computedStyles.textDecoration.toUpperCase() as any;
             }
           }
           if (computedStyles.textAlign) {
@@ -738,7 +735,8 @@ export function htmlToFigma(
                 computedStyles.textAlign
               )
             ) {
-              textNode.textAlignHorizontal = computedStyles.textAlign.toUpperCase() as any;
+              textNode.textAlignHorizontal =
+                computedStyles.textAlign.toUpperCase() as any;
             }
           }
 
@@ -797,7 +795,7 @@ export function htmlToFigma(
         if (err === "DONE") {
           // Do nothing
         } else {
-          console.error(err.message);
+          console.error(err instanceof Error ? err.message : err);
         }
       }
       return response;
