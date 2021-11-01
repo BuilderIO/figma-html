@@ -279,15 +279,8 @@ class App extends SafeComponent {
     intArr: Uint8Array,
     imageHash?: string
   ): Promise<string | null> {
-    let hash = imageHash;
-    if (!hash) {
-      hash = md5.ArrayBuffer.hash(intArr);
-    }
-    const fromCache =
-      hash &&
-      this.clientStorage &&
-      this.clientStorage.imageUrlsByHash &&
-      this.clientStorage.imageUrlsByHash[hash];
+    const hash = imageHash ?? md5.ArrayBuffer.hash(intArr);
+    const fromCache = hash && this.clientStorage?.imageUrlsByHash?.[hash];
 
     if (fromCache) {
       console.debug("Used URL from cache", fromCache);
