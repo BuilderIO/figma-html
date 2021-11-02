@@ -25,7 +25,10 @@ module.exports = (env, argv) => {
       path: path.resolve(__dirname, "dist"),
     },
     plugins: [
-      new webpack.EnvironmentPlugin(["NODE_ENV", "API_ROOT", "API_KEY"]),
+      new webpack.EnvironmentPlugin({
+        NODE_ENV: "production",
+        API_KEY: undefined,
+      }),
     ],
   };
 
