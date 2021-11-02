@@ -12,19 +12,21 @@ module.exports = (env, argv) => {
         { test: /\.tsx?$/, use: "ts-loader", exclude: /node_modules/ },
         {
           test: /\.css$/,
-          loader: [{ loader: "style-loader" }, { loader: "css-loader" }]
+          loader: [{ loader: "style-loader" }, { loader: "css-loader" }],
         },
         {
           test: /\.(png|jpg|gif|webp|svg)$/,
-          loader: [{ loader: "url-loader" }]
-        }
-      ]
+          loader: [{ loader: "url-loader" }],
+        },
+      ],
     },
     resolve: { extensions: [".tsx", ".ts", ".jsx", ".js"] },
     output: {
-      path: path.resolve(__dirname, "dist")
+      path: path.resolve(__dirname, "dist"),
     },
-    plugins: [new webpack.EnvironmentPlugin(["NODE_ENV", "API_ROOT", "API_KEY"])]
+    plugins: [
+      new webpack.EnvironmentPlugin(["NODE_ENV", "API_ROOT", "API_KEY"]),
+    ],
   };
 
   return [
@@ -32,11 +34,11 @@ module.exports = (env, argv) => {
       ...baseConfig,
       entry: {
         ui: "./plugin/ui.tsx", // The entry point for your UI code
-        code: "./plugin/code.ts"
+        code: "./plugin/code.ts",
       },
       output: {
         ...baseConfig.output,
-        filename: "[name].js"
+        filename: "[name].js",
       },
       plugins: [
         ...baseConfig.plugins,
@@ -44,34 +46,34 @@ module.exports = (env, argv) => {
           template: "./plugin/ui.html",
           filename: "ui.html",
           inlineSource: ".(js)$",
-          chunks: ["ui"]
+          chunks: ["ui"],
         }),
-        new HtmlWebpackInlineSourcePlugin()
-      ]
+        new HtmlWebpackInlineSourcePlugin(),
+      ],
     },
     {
       ...baseConfig,
-      entry: "./lib/html-to-figma.ts",
+      entry: "./lib/html-to-figma/index.ts",
       output: {
         ...baseConfig.output,
         library: "htmlToFigma",
         libraryTarget: "var",
-        filename: "browser.js"
-      }
+        filename: "browser.js",
+      },
     },
     {
       ...baseConfig,
       optimization: {
-        minimize: false
+        minimize: false,
       },
-      entry: "./lib/html-to-figma.ts",
+      entry: "./lib/html-to-figma/index.ts",
       output: {
         ...baseConfig.output,
         library: "htmlToFigma",
         libraryExport: "htmlToFigma",
         libraryTarget: "commonjs",
-        filename: "main.js"
-      }
-    }
+        filename: "main.js",
+      },
+    },
   ];
 };
