@@ -15,28 +15,25 @@ export function htmlToFigma(
     if (elements.length === 1) {
       return elements[0];
     }
-    return elements.reduce((memo, value: Element) => {
+    return elements.reduce((memo, value) => {
       if (!memo) {
         return value;
       }
 
+      const valueDirection = getBoundingClientRect(value)[direction];
+      const memoDirection = getBoundingClientRect(memo)[direction];
+
       if (direction === "left" || direction === "top") {
-        if (
-          getBoundingClientRect(value)[direction] <
-          getBoundingClientRect(memo)[direction]
-        ) {
+        if (valueDirection < memoDirection) {
           return value;
         }
       } else {
-        if (
-          getBoundingClientRect(value)[direction] >
-          getBoundingClientRect(memo)[direction]
-        ) {
+        if (valueDirection > memoDirection) {
           return value;
         }
       }
       return memo;
-    }, null as Element | null);
+    }, null as Element | null) as Element;
   }
   function getAggregateRectOfElements(elements: Element[]) {
     if (!elements.length) {
@@ -44,16 +41,16 @@ export function htmlToFigma(
     }
 
     const top = getBoundingClientRect(
-      getDirectionMostOfElements("top", elements)!
+      getDirectionMostOfElements("top", elements)
     ).top;
     const left = getBoundingClientRect(
-      getDirectionMostOfElements("left", elements)!
+      getDirectionMostOfElements("left", elements)
     ).left;
     const bottom = getBoundingClientRect(
-      getDirectionMostOfElements("bottom", elements)!
+      getDirectionMostOfElements("bottom", elements)
     ).bottom;
     const right = getBoundingClientRect(
-      getDirectionMostOfElements("right", elements)!
+      getDirectionMostOfElements("right", elements)
     ).right;
     const width = right - left;
     const height = bottom - top;
@@ -71,7 +68,7 @@ export function htmlToFigma(
   ): Pick<DOMRect, "top" | "left" | "bottom" | "width" | "right" | "height"> {
     const computed = getComputedStyle(el);
     const display = computed.display;
-    if (display && display.includes("inline") && el.children.length) {
+    if (display?.includes("inline") && el.children.length) {
       const elRect = el.getBoundingClientRect();
       const aggregateRect = getAggregateRectOfElements(
         Array.from(el.children)
@@ -378,7 +375,7 @@ export function htmlToFigma(
             if (!rectNode.strokes) {
               const capitalize = (str: string) =>
                 str[0].toUpperCase() + str.substring(1);
-              const directions = ["top", "left", "right", "bottom"];
+              const directions = ["top", "left", "right", "bottom"] as const;
               for (const dir of directions) {
                 const computed =
                   computedStyle[("border" + capitalize(dir)) as any];
