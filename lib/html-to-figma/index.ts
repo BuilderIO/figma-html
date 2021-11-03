@@ -6,10 +6,169 @@ import {
   traverse,
 } from "./helpers/nodes";
 import { fastClone, size } from "./helpers/object";
-import { getRgb, parseUnits } from "./helpers/parsers";
+import { getRgb, parseUnits, parseBoxShadowStr } from "./helpers/parsers";
 import { getAppliedComputedStyles } from "./helpers/styles";
 import { getUrl } from "./helpers/url";
 import { LayerNode, WithRef } from "./types/nodes";
+
+function setData(node: any, key: string, value: string) {
+  if (!node.data) {
+    node.data = {};
+  }
+  node.data[key] = value;
+}
+
+function getParents(node: Element | Node): Element[] {
+  let el: Element | null =
+    node instanceof Node && node.nodeType === Node.TEXT_NODE
+      ? node.parentElement
+      : (node as Element);
+
+  let parents: Element[] = [];
+  while (el && (el = el.parentElement)) {
+    parents.push(el);
+  }
+  return parents;
+}
+
+function getDepth(node: Element | Node) {
+  return getParents(node).length;
+}
+function addConstraints(layers: LayerNode[]) {
+  layers.forEach((layer) => {
+    traverse(layer, (child) => {
+      if (child.type === "SVG") {
+        child.constraints = {
+          horizontal: "CENTER",
+          vertical: "MIN",
+        };
+      } else {
+        const ref = child.ref;
+        if (ref) {
+          const el = ref instanceof HTMLElement ? ref : ref.parentElement;
+          const parent = el && el.parentElement;
+          if (el && parent) {
+            const currentDisplay = el.style.display;
+            el.style.setProperty("display", "none", "!important");
+            let computed = getComputedStyle(el);
+            const hasFixedWidth =
+              computed.width && computed.width.trim().endsWith("px");
+            const hasFixedHeight =
+              computed.height && computed.height.trim().endsWith("px");
+            el.style.display = currentDisplay;
+            const parentStyle = getComputedStyle(parent);
+            let hasAutoMarginLeft = computed.marginLeft === "auto";
+            let hasAutoMarginRight = computed.marginRight === "auto";
+            let hasAutoMarginTop = computed.marginTop === "auto";
+            let hasAutoMarginBottom = computed.marginBottom === "auto";
+
+            computed = getComputedStyle(el);
+
+            if (["absolute", "fixed"].includes(computed.position!)) {
+              setData(child, "position", computed.position!);
+            }
+
+            if (hasFixedHeight) {
+              setData(child, "heightType", "fixed");
+            }
+            if (hasFixedWidth) {
+              setData(child, "widthType", "fixed");
+            }
+
+            const isInline =
+              computed.display && computed.display.includes("inline");
+
+            if (isInline) {
+              const parentTextAlign = parentStyle.textAlign;
+              if (parentTextAlign === "center") {
+                hasAutoMarginLeft = true;
+                hasAutoMarginRight = true;
+              } else if (parentTextAlign === "right") {
+                hasAutoMarginLeft = true;
+              }
+
+              if (computed.verticalAlign === "middle") {
+                hasAutoMarginTop = true;
+                hasAutoMarginBottom = true;
+              } else if (computed.verticalAlign === "bottom") {
+                hasAutoMarginTop = true;
+                hasAutoMarginBottom = false;
+              }
+
+              setData(child, "widthType", "shrink");
+            }
+            const parentJustifyContent =
+              parentStyle.display === "flex" &&
+              ((parentStyle.flexDirection === "row" &&
+                parentStyle.justifyContent) ||
+                (parentStyle.flexDirection === "column" &&
+                  parentStyle.alignItems));
+
+            if (parentJustifyContent === "center") {
+              hasAutoMarginLeft = true;
+              hasAutoMarginRight = true;
+            } else if (
+              parentJustifyContent &&
+              (parentJustifyContent.includes("end") ||
+                parentJustifyContent.includes("right"))
+            ) {
+              hasAutoMarginLeft = true;
+              hasAutoMarginRight = false;
+            }
+
+            const parentAlignItems =
+              parentStyle.display === "flex" &&
+              ((parentStyle.flexDirection === "column" &&
+                parentStyle.justifyContent) ||
+                (parentStyle.flexDirection === "row" &&
+                  parentStyle.alignItems));
+            if (parentAlignItems === "center") {
+              hasAutoMarginTop = true;
+              hasAutoMarginBottom = true;
+            } else if (
+              parentAlignItems &&
+              (parentAlignItems.includes("end") ||
+                parentAlignItems.includes("bottom"))
+            ) {
+              hasAutoMarginTop = true;
+              hasAutoMarginBottom = false;
+            }
+
+            if (child.type === "TEXT") {
+              if (computed.textAlign === "center") {
+                hasAutoMarginLeft = true;
+                hasAutoMarginRight = true;
+              } else if (computed.textAlign === "right") {
+                hasAutoMarginLeft = true;
+                hasAutoMarginRight = false;
+              }
+            }
+
+            child.constraints = {
+              horizontal:
+                hasAutoMarginLeft && hasAutoMarginRight
+                  ? "CENTER"
+                  : hasAutoMarginLeft
+                  ? "MAX"
+                  : "SCALE",
+              vertical:
+                hasAutoMarginBottom && hasAutoMarginTop
+                  ? "CENTER"
+                  : hasAutoMarginTop
+                  ? "MAX"
+                  : "MIN",
+            };
+          }
+        } else {
+          child.constraints = {
+            horizontal: "SCALE",
+            vertical: "MIN",
+          };
+        }
+      }
+    });
+  });
+}
 
 export function htmlToFigma(
   selector: HTMLElement | string = "body",
@@ -284,57 +443,7 @@ export function htmlToFigma(
             }
 
             if (computedStyle.boxShadow && computedStyle.boxShadow !== "none") {
-              interface ParsedBoxShadow {
-                inset: boolean;
-                offsetX: number;
-                offsetY: number;
-                blurRadius: number;
-                spreadRadius: number;
-                color: string;
-              }
-              const LENGTH_REG = /^[0-9]+[a-zA-Z%]+?$/;
-              const toNum = (v: string): number => {
-                // if (!/px$/.test(v) && v !== '0') return v;
-                if (!/px$/.test(v) && v !== "0") return 0;
-                const n = parseFloat(v);
-                // return !isNaN(n) ? n : v;
-                return !isNaN(n) ? n : 0;
-              };
-              const isLength = (v: string) => v === "0" || LENGTH_REG.test(v);
-              const parseValue = (str: string): ParsedBoxShadow => {
-                // TODO: this is broken for multiple box shadows
-                if (str.startsWith("rgb")) {
-                  // Werid computed style thing that puts the color in the front not back
-                  const colorMatch = str.match(/(rgba?\(.+?\))(.+)/);
-                  if (colorMatch) {
-                    str = (colorMatch[2] + " " + colorMatch[1]).trim();
-                  }
-                }
-
-                const PARTS_REG = /\s(?![^(]*\))/;
-                const parts = str.split(PARTS_REG);
-                const inset = parts.includes("inset");
-                const last = parts.slice(-1)[0];
-                const color = !isLength(last) ? last : "rgba(0, 0, 0, 1)";
-
-                const nums = parts
-                  .filter((n) => n !== "inset")
-                  .filter((n) => n !== color)
-                  .map(toNum);
-
-                const [offsetX, offsetY, blurRadius, spreadRadius] = nums;
-
-                return {
-                  inset,
-                  offsetX,
-                  offsetY,
-                  blurRadius,
-                  spreadRadius,
-                  color,
-                };
-              };
-
-              const parsed = parseValue(computedStyle.boxShadow);
+              const parsed = parseBoxShadowStr(computedStyle.boxShadow);
               const color = getRgb(parsed.color);
               if (color) {
                 rectNode.effects = [
@@ -634,22 +743,6 @@ export function htmlToFigma(
         break;
       }
       secondUpdate = false;
-      function getParents(node: Element | Node): Element[] {
-        let el: Element | null =
-          node instanceof Node && node.nodeType === Node.TEXT_NODE
-            ? node.parentElement
-            : (node as Element);
-
-        let parents: Element[] = [];
-        while (el && (el = el.parentElement)) {
-          parents.push(el);
-        }
-        return parents;
-      }
-
-      function getDepth(node: Element | Node) {
-        return getParents(node).length;
-      }
 
       traverse(root, (layer, parent) => {
         if (secondUpdate) {
@@ -763,149 +856,6 @@ export function htmlToFigma(
     layers.concat([root]).forEach((layer) => {
       traverse(layer, (child) => {
         delete child.ref;
-      });
-    });
-  }
-
-  function addConstraints(layers: LayerNode[]) {
-    layers.forEach((layer) => {
-      traverse(layer, (child) => {
-        if (child.type === "SVG") {
-          child.constraints = {
-            horizontal: "CENTER",
-            vertical: "MIN",
-          };
-        } else {
-          const ref = child.ref;
-          if (ref) {
-            const el = ref instanceof HTMLElement ? ref : ref.parentElement;
-            const parent = el && el.parentElement;
-            if (el && parent) {
-              const currentDisplay = el.style.display;
-              el.style.setProperty("display", "none", "!important");
-              let computed = getComputedStyle(el);
-              const hasFixedWidth =
-                computed.width && computed.width.trim().endsWith("px");
-              const hasFixedHeight =
-                computed.height && computed.height.trim().endsWith("px");
-              el.style.display = currentDisplay;
-              const parentStyle = getComputedStyle(parent);
-              let hasAutoMarginLeft = computed.marginLeft === "auto";
-              let hasAutoMarginRight = computed.marginRight === "auto";
-              let hasAutoMarginTop = computed.marginTop === "auto";
-              let hasAutoMarginBottom = computed.marginBottom === "auto";
-
-              computed = getComputedStyle(el);
-
-              function setData(node: any, key: string, value: string) {
-                if (!(node as any).data) {
-                  (node as any).data = {};
-                }
-                (node as any).data[key] = value;
-              }
-
-              if (["absolute", "fixed"].includes(computed.position!)) {
-                setData(child, "position", computed.position!);
-              }
-
-              if (hasFixedHeight) {
-                setData(child, "heightType", "fixed");
-              }
-              if (hasFixedWidth) {
-                setData(child, "widthType", "fixed");
-              }
-
-              const isInline =
-                computed.display && computed.display.includes("inline");
-
-              if (isInline) {
-                const parentTextAlign = parentStyle.textAlign;
-                if (parentTextAlign === "center") {
-                  hasAutoMarginLeft = true;
-                  hasAutoMarginRight = true;
-                } else if (parentTextAlign === "right") {
-                  hasAutoMarginLeft = true;
-                }
-
-                if (computed.verticalAlign === "middle") {
-                  hasAutoMarginTop = true;
-                  hasAutoMarginBottom = true;
-                } else if (computed.verticalAlign === "bottom") {
-                  hasAutoMarginTop = true;
-                  hasAutoMarginBottom = false;
-                }
-
-                setData(child, "widthType", "shrink");
-              }
-              const parentJustifyContent =
-                parentStyle.display === "flex" &&
-                ((parentStyle.flexDirection === "row" &&
-                  parentStyle.justifyContent) ||
-                  (parentStyle.flexDirection === "column" &&
-                    parentStyle.alignItems));
-
-              if (parentJustifyContent === "center") {
-                hasAutoMarginLeft = true;
-                hasAutoMarginRight = true;
-              } else if (
-                parentJustifyContent &&
-                (parentJustifyContent.includes("end") ||
-                  parentJustifyContent.includes("right"))
-              ) {
-                hasAutoMarginLeft = true;
-                hasAutoMarginRight = false;
-              }
-
-              const parentAlignItems =
-                parentStyle.display === "flex" &&
-                ((parentStyle.flexDirection === "column" &&
-                  parentStyle.justifyContent) ||
-                  (parentStyle.flexDirection === "row" &&
-                    parentStyle.alignItems));
-              if (parentAlignItems === "center") {
-                hasAutoMarginTop = true;
-                hasAutoMarginBottom = true;
-              } else if (
-                parentAlignItems &&
-                (parentAlignItems.includes("end") ||
-                  parentAlignItems.includes("bottom"))
-              ) {
-                hasAutoMarginTop = true;
-                hasAutoMarginBottom = false;
-              }
-
-              if (child.type === "TEXT") {
-                if (computed.textAlign === "center") {
-                  hasAutoMarginLeft = true;
-                  hasAutoMarginRight = true;
-                } else if (computed.textAlign === "right") {
-                  hasAutoMarginLeft = true;
-                  hasAutoMarginRight = false;
-                }
-              }
-
-              child.constraints = {
-                horizontal:
-                  hasAutoMarginLeft && hasAutoMarginRight
-                    ? "CENTER"
-                    : hasAutoMarginLeft
-                    ? "MAX"
-                    : "SCALE",
-                vertical:
-                  hasAutoMarginBottom && hasAutoMarginTop
-                    ? "CENTER"
-                    : hasAutoMarginTop
-                    ? "MAX"
-                    : "MIN",
-              };
-            }
-          } else {
-            child.constraints = {
-              horizontal: "SCALE",
-              vertical: "MIN",
-            };
-          }
-        }
       });
     });
   }
