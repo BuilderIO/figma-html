@@ -50,3 +50,20 @@ export function isHidden(element: Element) {
   } while ((el = el.parentElement));
   return false;
 }
+
+export function getParents(node: Element | Node): Element[] {
+  let el: Element | null =
+    node instanceof Node && node.nodeType === Node.TEXT_NODE
+      ? node.parentElement
+      : (node as Element);
+
+  let parents: Element[] = [];
+  while (el && (el = el.parentElement)) {
+    parents.push(el);
+  }
+  return parents;
+}
+
+export function getDepth(node: Element | Node) {
+  return getParents(node).length;
+}
