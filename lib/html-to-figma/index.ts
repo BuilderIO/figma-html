@@ -1,252 +1,29 @@
-export interface SvgNode extends DefaultShapeMixin, ConstraintMixin {
-  type: "SVG";
-  svg: string;
-}
+import { getBoundingClientRect } from "./helpers/dimensions";
+import {
+  hasChildren,
+  isHidden,
+  textNodesUnder,
+  traverse,
+} from "./helpers/nodes";
+import { fastClone, size } from "./helpers/object";
+import { getRgb, parseUnits } from "./helpers/parsers";
+import { getAppliedComputedStyles } from "./helpers/styles";
+import { getUrl } from "./helpers/url";
+import { LayerNode, WithRef } from "./types/nodes";
 
 export function htmlToFigma(
   selector: HTMLElement | string = "body",
   useFrames = false,
   time = false
 ) {
-  function getDirectionMostOfElements(
-    direction: "left" | "right" | "top" | "bottom",
-    elements: Element[]
-  ) {
-    if (elements.length === 1) {
-      return elements[0];
-    }
-    return elements.reduce((memo, value) => {
-      if (!memo) {
-        return value;
-      }
-
-      const valueDirection = getBoundingClientRect(value)[direction];
-      const memoDirection = getBoundingClientRect(memo)[direction];
-
-      if (direction === "left" || direction === "top") {
-        if (valueDirection < memoDirection) {
-          return value;
-        }
-      } else {
-        if (valueDirection > memoDirection) {
-          return value;
-        }
-      }
-      return memo;
-    }, null as Element | null) as Element;
-  }
-  function getAggregateRectOfElements(elements: Element[]) {
-    if (!elements.length) {
-      return null;
-    }
-
-    const top = getBoundingClientRect(
-      getDirectionMostOfElements("top", elements)
-    ).top;
-    const left = getBoundingClientRect(
-      getDirectionMostOfElements("left", elements)
-    ).left;
-    const bottom = getBoundingClientRect(
-      getDirectionMostOfElements("bottom", elements)
-    ).bottom;
-    const right = getBoundingClientRect(
-      getDirectionMostOfElements("right", elements)
-    ).right;
-    const width = right - left;
-    const height = bottom - top;
-    return {
-      top,
-      left,
-      bottom,
-      right,
-      width,
-      height,
-    };
-  }
-  function getBoundingClientRect(
-    el: Element
-  ): Pick<DOMRect, "top" | "left" | "bottom" | "width" | "right" | "height"> {
-    const computed = getComputedStyle(el);
-    const display = computed.display;
-    if (display?.includes("inline") && el.children.length) {
-      const elRect = el.getBoundingClientRect();
-      const aggregateRect = getAggregateRectOfElements(
-        Array.from(el.children)
-      )!;
-
-      if (elRect.width > aggregateRect.width) {
-        return {
-          ...aggregateRect,
-          width: elRect.width,
-          left: elRect.left,
-          right: elRect.right,
-        };
-      }
-      return aggregateRect;
-    }
-
-    return el.getBoundingClientRect();
-  }
-
   if (time) {
     console.time("Parse dom");
   }
-  function getAppliedComputedStyles(
-    element: Element,
-    pseudo?: string
-  ): { [key: string]: string } {
-    if (!(element instanceof HTMLElement || element instanceof SVGElement)) {
-      return {};
-    }
-
-    const styles = getComputedStyle(element, pseudo);
-
-    const list: (keyof React.CSSProperties)[] = [
-      "opacity",
-      "backgroundColor",
-      "border",
-      "borderTop",
-      "borderLeft",
-      "borderRight",
-      "borderBottom",
-      "borderRadius",
-      "backgroundImage",
-      "borderColor",
-      "boxShadow",
-    ];
-
-    const color = styles.color;
-
-    const defaults: any = {
-      transform: "none",
-      opacity: "1",
-      borderRadius: "0px",
-      backgroundImage: "none",
-      backgroundPosition: "0% 0%",
-      backgroundSize: "auto",
-      backgroundColor: "rgba(0, 0, 0, 0)",
-      backgroundAttachment: "scroll",
-      border: "0px none " + color,
-      borderTop: "0px none " + color,
-      borderBottom: "0px none " + color,
-      borderLeft: "0px none " + color,
-      borderRight: "0px none " + color,
-      borderWidth: "0px",
-      borderColor: color,
-      borderStyle: "none",
-      boxShadow: "none",
-      fontWeight: "400",
-      textAlign: "start",
-      justifyContent: "normal",
-      alignItems: "normal",
-      alignSelf: "auto",
-      flexGrow: "0",
-      textDecoration: "none solid " + color,
-      lineHeight: "normal",
-      letterSpacing: "normal",
-      backgroundRepeat: "repeat",
-      zIndex: "auto", // TODO
-    };
-
-    function pick<T extends { [key: string]: V }, V = any>(
-      object: T,
-      paths: (keyof T)[]
-    ) {
-      const newObject: Partial<T> = {};
-      paths.forEach((path) => {
-        if (object[path]) {
-          if (object[path] !== defaults[path]) {
-            newObject[path] = object[path];
-          }
-        }
-      });
-      return newObject;
-    }
-
-    return pick(styles, list as any) as any;
-  }
-  function size(obj: object) {
-    return Object.keys(obj).length;
-  }
-
-  type WithRef<T> = Partial<T> & { ref?: Element | Node };
-
-  type LayerNode = WithRef<RectangleNode | TextNode | FrameNode | SvgNode>;
-
   const layers: LayerNode[] = [];
   const el =
     selector instanceof HTMLElement
       ? selector
       : document.querySelector(selector || "body");
-
-  function textNodesUnder(el: Element) {
-    let n: Node | null = null;
-    const a: Node[] = [];
-    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
-
-    while ((n = walk.nextNode())) {
-      a.push(n);
-    }
-    return a;
-  }
-
-  const getUrl = (url: string) => {
-    if (!url) {
-      return "";
-    }
-    let final = url.trim();
-    if (final.startsWith("//")) {
-      final = "https:" + final;
-    }
-
-    if (final.startsWith("/")) {
-      final = "https://" + location.host + final;
-    }
-
-    return final;
-  };
-
-  interface Unit {
-    unit: "PIXELS";
-    value: number;
-  }
-
-  const parseUnits = (str?: string | null): null | Unit => {
-    if (!str) {
-      return null;
-    }
-    const match = str.match(/([\d\.]+)px/);
-    const val = match && match[1];
-    if (val) {
-      return {
-        unit: "PIXELS",
-        value: parseFloat(val),
-      };
-    }
-    return null;
-  };
-
-  function isHidden(element: Element) {
-    let el: Element | null = element;
-    do {
-      const computed = getComputedStyle(el);
-      if (
-        // computed.opacity === '0' ||
-        computed.display === "none" ||
-        computed.visibility === "hidden"
-      ) {
-        return true;
-      }
-      // Some sites hide things by having overflow: hidden and height: 0, e.g. dropdown menus that animate height in
-      if (
-        computed.overflow !== "visible" &&
-        el.getBoundingClientRect().height < 1
-      ) {
-        return true;
-      }
-    } while ((el = el.parentElement));
-    return false;
-  }
 
   if (el) {
     // Process SVG <use> elements
@@ -609,30 +386,6 @@ export function htmlToFigma(
 
     const textNodes = textNodesUnder(el);
 
-    function getRgb(colorString?: string | null) {
-      if (!colorString) {
-        return null;
-      }
-      const [_1, r, g, b, _2, a] = (colorString!.match(
-        /rgba?\(([\d\.]+), ([\d\.]+), ([\d\.]+)(, ([\d\.]+))?\)/
-      )! || []) as string[];
-
-      const none = a && parseFloat(a) === 0;
-
-      if (r && g && b && !none) {
-        return {
-          r: parseInt(r) / 255,
-          g: parseInt(g) / 255,
-          b: parseInt(b) / 255,
-          a: a ? parseFloat(a) : 1,
-        };
-      }
-      return null;
-    }
-
-    const fastClone = (data: any) =>
-      typeof data === "symbol" ? null : JSON.parse(JSON.stringify(data));
-
     for (const node of textNodes) {
       if (node.textContent && node.textContent.trim().length) {
         const parent = node.parentElement;
@@ -754,24 +507,6 @@ export function htmlToFigma(
   } as WithRef<FrameNode>;
 
   layers.unshift(root);
-
-  const hasChildren = (node: LayerNode): node is ChildrenMixin =>
-    node && Array.isArray((node as ChildrenMixin).children);
-
-  function traverse(
-    layer: LayerNode,
-    cb: (layer: LayerNode, parent?: LayerNode | null) => void,
-    parent?: LayerNode | null
-  ) {
-    if (layer) {
-      cb(layer, parent);
-      if (hasChildren(layer)) {
-        layer.children.forEach((child) =>
-          traverse(child as LayerNode, cb, layer)
-        );
-      }
-    }
-  }
 
   function makeTree() {
     function getParent(layer: LayerNode) {
