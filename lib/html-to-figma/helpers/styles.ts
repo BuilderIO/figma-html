@@ -1,5 +1,6 @@
-import { LayerNode } from "../types/nodes";
+import { LayerNode, WithRef } from "../types/nodes";
 import { traverse } from "./nodes";
+import { parseUnits } from "./parsers";
 
 function setData(
   node: LayerNode & { data?: { [index: string]: string } },
@@ -222,3 +223,32 @@ export function addConstraints(layers: LayerNode[]) {
     });
   });
 }
+
+export const setBorderRadii = ({
+  computedStyle,
+  rectNode,
+}: {
+  computedStyle: CSSStyleDeclaration;
+  rectNode: WithRef<RectangleNode>;
+}) => {
+  const borderTopLeftRadius = parseUnits(computedStyle.borderTopLeftRadius);
+  if (borderTopLeftRadius) {
+    rectNode.topLeftRadius = borderTopLeftRadius.value;
+  }
+  const borderTopRightRadius = parseUnits(computedStyle.borderTopRightRadius);
+  if (borderTopRightRadius) {
+    rectNode.topRightRadius = borderTopRightRadius.value;
+  }
+  const borderBottomRightRadius = parseUnits(
+    computedStyle.borderBottomRightRadius
+  );
+  if (borderBottomRightRadius) {
+    rectNode.bottomRightRadius = borderBottomRightRadius.value;
+  }
+  const borderBottomLeftRadius = parseUnits(
+    computedStyle.borderBottomLeftRadius
+  );
+  if (borderBottomLeftRadius) {
+    rectNode.bottomLeftRadius = borderBottomLeftRadius.value;
+  }
+};

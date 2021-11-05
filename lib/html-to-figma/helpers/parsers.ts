@@ -8,7 +8,7 @@ export const parseUnits = (str?: string | null): null | Unit => {
     return null;
   }
   const match = str.match(/([\d\.]+)px/);
-  const val = match && match[1];
+  const val = match?.[1];
   if (val) {
     return {
       unit: "PIXELS",

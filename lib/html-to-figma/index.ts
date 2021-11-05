@@ -9,9 +9,48 @@ import {
 } from "./helpers/nodes";
 import { fastClone, size } from "./helpers/object";
 import { getRgb, parseUnits, parseBoxShadowStr } from "./helpers/parsers";
-import { addConstraints, getAppliedComputedStyles } from "./helpers/styles";
+import {
+  addConstraints,
+  getAppliedComputedStyles,
+  setBorderRadii,
+} from "./helpers/styles";
 import { getUrl } from "./helpers/url";
 import { LayerNode, WithRef } from "./types/nodes";
+
+const processSvgUseElements = (el: Element) => {
+  // Process SVG <use> elements
+  for (const use of Array.from(el.querySelectorAll("use"))) {
+    try {
+      const symbolSelector = use.href.baseVal;
+      const symbol: SVGSymbolElement | null =
+        document.querySelector(symbolSelector);
+      if (symbol) {
+        use.outerHTML = symbol.innerHTML;
+      }
+    } catch (err) {
+      console.warn("Error querying <use> tag href", err);
+    }
+  }
+};
+
+const generateElements = (el: Element) => {
+  const getShadowEls = (el: Element): Element[] =>
+    Array.from(
+      el.shadowRoot?.querySelectorAll("*") || ([] as Element[])
+    ).reduce((memo, el) => {
+      memo.push(el);
+      memo.push(...getShadowEls(el));
+      return memo;
+    }, [] as Element[]);
+
+  const els = Array.from(el.querySelectorAll("*")).reduce((memo, el) => {
+    memo.push(el);
+    memo.push(...getShadowEls(el));
+    return memo;
+  }, [] as Element[]);
+
+  return els;
+};
 
 export function htmlToFigma(
   selector: HTMLElement | string = "body",
@@ -28,34 +67,9 @@ export function htmlToFigma(
       : document.querySelector(selector || "body");
 
   if (el) {
-    // Process SVG <use> elements
-    for (const use of Array.from(el.querySelectorAll("use"))) {
-      try {
-        const symbolSelector = use.href.baseVal;
-        const symbol: SVGSymbolElement | null =
-          document.querySelector(symbolSelector);
-        if (symbol) {
-          use.outerHTML = symbol.innerHTML;
-        }
-      } catch (err) {
-        console.warn("Error querying <use> tag href", err);
-      }
-    }
+    processSvgUseElements(el);
 
-    const getShadowEls = (el: Element): Element[] =>
-      Array.from(
-        el.shadowRoot?.querySelectorAll("*") || ([] as Element[])
-      ).reduce((memo, el) => {
-        memo.push(el);
-        memo.push(...getShadowEls(el));
-        return memo;
-      }, [] as Element[]);
-
-    const els = Array.from(el.querySelectorAll("*")).reduce((memo, el) => {
-      memo.push(el);
-      memo.push(...getShadowEls(el));
-      return memo;
-    }, [] as Element[]);
+    const els = generateElements(el);
 
     if (els) {
       Array.from(els).forEach((el) => {
@@ -215,7 +229,7 @@ export function htmlToFigma(
               const urlMatch = computedStyle.backgroundImage.match(
                 /url\(['"]?(.*?)['"]?\)/
               );
-              const url = urlMatch && urlMatch[1];
+              const url = urlMatch?.[1];
               if (url) {
                 fills.push({
                   url,
@@ -241,16 +255,20 @@ export function htmlToFigma(
                 } as ImagePaint);
               }
             }
+
+            const baseImagePaint = {
+              type: "IMAGE",
+              // TODO: object fit, position
+              scaleMode: computedStyle.objectFit === "contain" ? "FIT" : "FILL",
+              imageHash: null,
+            };
+
             if (el instanceof HTMLImageElement) {
               const url = el.src;
               if (url) {
                 fills.push({
                   url,
-                  type: "IMAGE",
-                  // TODO: object fit, position
-                  scaleMode:
-                    computedStyle.objectFit === "contain" ? "FIT" : "FILL",
-                  imageHash: null,
+                  ...baseImagePaint,
                 } as ImagePaint);
               }
             }
@@ -262,11 +280,7 @@ export function htmlToFigma(
                 if (src) {
                   fills.push({
                     url: src,
-                    type: "IMAGE",
-                    // TODO: object fit, position
-                    scaleMode:
-                      computedStyle.objectFit === "contain" ? "FIT" : "FILL",
-                    imageHash: null,
+                    ...baseImagePaint,
                   } as ImagePaint);
                 }
               }
@@ -276,11 +290,7 @@ export function htmlToFigma(
               if (url) {
                 fills.push({
                   url,
-                  type: "IMAGE",
-                  // TODO: object fit, position
-                  scaleMode:
-                    computedStyle.objectFit === "contain" ? "FIT" : "FILL",
-                  imageHash: null,
+                  ...baseImagePaint,
                 } as ImagePaint);
               }
             }
@@ -305,30 +315,7 @@ export function htmlToFigma(
               }
             }
 
-            const borderTopLeftRadius = parseUnits(
-              computedStyle.borderTopLeftRadius
-            );
-            if (borderTopLeftRadius) {
-              rectNode.topLeftRadius = borderTopLeftRadius.value;
-            }
-            const borderTopRightRadius = parseUnits(
-              computedStyle.borderTopRightRadius
-            );
-            if (borderTopRightRadius) {
-              rectNode.topRightRadius = borderTopRightRadius.value;
-            }
-            const borderBottomRightRadius = parseUnits(
-              computedStyle.borderBottomRightRadius
-            );
-            if (borderBottomRightRadius) {
-              rectNode.bottomRightRadius = borderBottomRightRadius.value;
-            }
-            const borderBottomLeftRadius = parseUnits(
-              computedStyle.borderBottomLeftRadius
-            );
-            if (borderBottomLeftRadius) {
-              rectNode.bottomLeftRadius = borderBottomLeftRadius.value;
-            }
+            setBorderRadii({ computedStyle, rectNode });
 
             layers.push(rectNode);
           }
