@@ -1,6 +1,6 @@
 import { LayerNode, WithRef } from "../types/nodes";
 import { traverse } from "./nodes";
-import { parseUnits } from "./parsers";
+import { getRgb, parseBoxShadowStr, parseUnits } from "./parsers";
 
 function setData(
   node: LayerNode & { data?: { [index: string]: string } },
@@ -251,4 +251,118 @@ export const setBorderRadii = ({
   if (borderBottomLeftRadius) {
     rectNode.bottomLeftRadius = borderBottomLeftRadius.value;
   }
+};
+
+const capitalize = (str: string) => str[0].toUpperCase() + str.substring(1);
+
+export function addStrokesFromIndividualBorders({
+  dir,
+  rect,
+  computedStyle,
+  layers,
+  el,
+}: {
+  dir: "top" | "left" | "right" | "bottom";
+  rect: Pick<DOMRect, "top" | "left" | "right" | "bottom" | "width" | "height">;
+  computedStyle: CSSStyleDeclaration;
+  layers: LayerNode[];
+  el: Element;
+}) {
+  const computed = computedStyle[("border" + capitalize(dir)) as any];
+  if (computed) {
+    const parsed = computed.match(/^([\d\.]+)px\s*(\w+)\s*(.*)$/);
+    if (parsed) {
+      let [_match, borderWidth, type, color] = parsed;
+      if (borderWidth && borderWidth !== "0" && type !== "none" && color) {
+        const rgb = getRgb(color);
+        if (rgb) {
+          const width = ["top", "bottom"].includes(dir)
+            ? rect.width
+            : parseFloat(borderWidth);
+          const height = ["left", "right"].includes(dir)
+            ? rect.height
+            : parseFloat(borderWidth);
+          layers.push({
+            ref: el,
+            type: "RECTANGLE",
+            x:
+              dir === "left"
+                ? rect.left - width
+                : dir === "right"
+                ? rect.right
+                : rect.left,
+            y:
+              dir === "top"
+                ? rect.top - height
+                : dir === "bottom"
+                ? rect.bottom
+                : rect.top,
+            width,
+            height,
+            fills: [
+              {
+                type: "SOLID",
+                color: { r: rgb.r, b: rgb.b, g: rgb.g },
+                opacity: rgb.a || 1,
+              } as SolidPaint,
+            ] as any,
+          } as WithRef<RectangleNode>);
+        }
+      }
+    }
+  }
+}
+
+export const addStrokesFromBorder = ({
+  computedStyle: { border },
+  rectNode,
+}: {
+  computedStyle: CSSStyleDeclaration;
+  rectNode: WithRef<RectangleNode>;
+}) => {
+  if (border) {
+    const parsed = border.match(/^([\d\.]+)px\s*(\w+)\s*(.*)$/);
+    if (parsed) {
+      let [_match, width, type, color] = parsed;
+      if (width && width !== "0" && type !== "none" && color) {
+        const rgb = getRgb(color);
+        if (rgb) {
+          rectNode.strokes = [
+            {
+              type: "SOLID",
+              color: { r: rgb.r, b: rgb.b, g: rgb.g },
+              opacity: rgb.a || 1,
+            },
+          ];
+          rectNode.strokeWeight = Math.round(parseFloat(width));
+        }
+      }
+    }
+  }
+};
+export const getShadowEffects = ({
+  computedStyle: { boxShadow },
+}: {
+  computedStyle: CSSStyleDeclaration;
+}) => {
+  if (boxShadow && boxShadow !== "none") {
+    const parsed = parseBoxShadowStr(boxShadow);
+    const color = getRgb(parsed.color);
+    if (color) {
+      const shadowEffect: ShadowEffect = {
+        color,
+        type: "DROP_SHADOW",
+        radius: parsed.blurRadius,
+        blendMode: "NORMAL",
+        visible: true,
+        offset: {
+          x: parsed.offsetX,
+          y: parsed.offsetY,
+        },
+      };
+      return [shadowEffect];
+    }
+  }
+
+  return undefined;
 };
