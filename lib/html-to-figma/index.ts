@@ -11,35 +11,21 @@ import {
   getShadowEffects,
   setBorderRadii,
 } from "./helpers/styles";
+import { createSvgLayer, processSvgUseElements } from "./helpers/svg";
 import { buildTextNode } from "./helpers/text";
 import { makeTree } from "./helpers/tree";
 import { LayerNode, WithRef } from "./types/nodes";
 
-const processSvgUseElements = (el: Element) => {
-  // Process SVG <use> elements
-  for (const use of Array.from(el.querySelectorAll("use"))) {
-    try {
-      const symbolSelector = use.href.baseVal;
-      const symbol: SVGSymbolElement | null =
-        document.querySelector(symbolSelector);
-      if (symbol) {
-        use.outerHTML = symbol.innerHTML;
-      }
-    } catch (err) {
-      console.warn("Error querying <use> tag href", err);
-    }
-  }
-};
-
 const generateElements = (el: Element) => {
   const getShadowEls = (el: Element): Element[] =>
-    Array.from(
-      el.shadowRoot?.querySelectorAll("*") || ([] as Element[])
-    ).reduce((memo, el) => {
-      memo.push(el);
-      memo.push(...getShadowEls(el));
-      return memo;
-    }, [] as Element[]);
+    Array.from(el.shadowRoot?.querySelectorAll("*") || []).reduce(
+      (memo, el) => {
+        memo.push(el);
+        memo.push(...getShadowEls(el));
+        return memo;
+      },
+      [] as Element[]
+    );
 
   const els = Array.from(el.querySelectorAll("*")).reduce((memo, el) => {
     memo.push(el);
@@ -89,19 +75,7 @@ export function htmlToFigma(
           return;
         }
         if (el instanceof SVGSVGElement) {
-          const rect = el.getBoundingClientRect();
-
-          // TODO: pull in CSS/computed styles
-          // TODO: may need to pull in layer styles too like shadow, bg color, etc
-          layers.push({
-            type: "SVG",
-            ref: el,
-            svg: el.outerHTML,
-            x: Math.round(rect.left),
-            y: Math.round(rect.top),
-            width: Math.round(rect.width),
-            height: Math.round(rect.height),
-          });
+          layers.push(createSvgLayer(el));
           return;
         }
         // Sub SVG Eleemnt
@@ -109,10 +83,7 @@ export function htmlToFigma(
           return;
         }
 
-        if (
-          el.parentElement &&
-          el.parentElement instanceof HTMLPictureElement
-        ) {
+        if (el.parentElement instanceof HTMLPictureElement) {
           return;
         }
 
@@ -134,7 +105,7 @@ export function htmlToFigma(
             const color = getRgb(computedStyle.backgroundColor);
 
             if (color) {
-              fills.push({
+              const solidPaint: SolidPaint = {
                 type: "SOLID",
                 color: {
                   r: color.r,
@@ -142,18 +113,19 @@ export function htmlToFigma(
                   b: color.b,
                 },
                 opacity: color.a || 1,
-              } as SolidPaint);
+              };
+              fills.push(solidPaint);
             }
 
-            const rectNode = {
+            const rectNode: WithRef<RectangleNode> = {
               type: "RECTANGLE",
               ref: el,
               x: Math.round(rect.left),
               y: Math.round(rect.top),
               width: Math.round(rect.width),
               height: Math.round(rect.height),
-              fills: fills as any,
-            } as WithRef<RectangleNode>;
+              fills,
+            };
 
             addStrokesFromBorder({ computedStyle, rectNode });
 
@@ -192,14 +164,14 @@ export function htmlToFigma(
   }
 
   // TODO: send frame: { children: []}
-  const root = {
+  const root: WithRef<FrameNode> = {
     type: "FRAME",
     width: Math.round(window.innerWidth),
     height: Math.round(document.documentElement.scrollHeight),
     x: 0,
     y: 0,
     ref: document.body,
-  } as WithRef<FrameNode>;
+  };
 
   layers.unshift(root);
 
