@@ -27,7 +27,7 @@ module.exports = (env, argv) => {
     plugins: [
       new webpack.EnvironmentPlugin({
         NODE_ENV: "production",
-        API_KEY: undefined,
+        API_KEY: null,
       }),
     ],
   };
