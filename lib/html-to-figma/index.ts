@@ -1,5 +1,5 @@
 import { getBoundingClientRect } from "./helpers/dimensions";
-import { addImagePaintLayer } from "./helpers/image";
+import { getImagePaintWithUrl } from "./helpers/image";
 import { isHidden, textNodesUnder, traverse } from "./helpers/nodes";
 import { size } from "./helpers/object";
 import { getRgb } from "./helpers/parsers";
@@ -142,7 +142,11 @@ export function htmlToFigma(
                 }
               }
             }
-            addImagePaintLayer({ computedStyle, fills, el });
+            const imagePaint = getImagePaintWithUrl({ computedStyle, el });
+
+            if (imagePaint) {
+              fills.push(imagePaint);
+            }
 
             const shadowEffects = getShadowEffects({ computedStyle });
 
