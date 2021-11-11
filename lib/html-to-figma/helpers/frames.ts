@@ -1,6 +1,7 @@
 import { LayerNode, WithRef } from "../types/nodes";
 import { getBoundingClientRect } from "./dimensions";
 import { hasChildren, getDepth, getParents, traverse } from "./nodes";
+import { addConstraints } from "./styles";
 
 const getParent = ({
   layer,
@@ -32,7 +33,7 @@ const getParent = ({
   return response;
 };
 
-export const makeTree = ({
+const makeTree = ({
   root,
   layers,
 }: {
@@ -242,4 +243,19 @@ export const makeTree = ({
       }
     }
   });
+};
+
+export const getLayersForFrames = ({
+  root,
+  layers,
+}: {
+  root: WithRef<FrameNode>;
+  layers: LayerNode[];
+}) => {
+  (root as any).children = layers.slice(1);
+  makeTree({ root, layers });
+  const framesLayers = [root];
+  addConstraints(framesLayers);
+
+  return framesLayers;
 };

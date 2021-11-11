@@ -4,7 +4,6 @@ import { isHidden, textNodesUnder, traverse } from "./helpers/nodes";
 import { size } from "./helpers/object";
 import { getRgb } from "./helpers/parsers";
 import {
-  addConstraints,
   addStrokesFromBorder,
   getStrokesRectangle,
   getAppliedComputedStyles,
@@ -13,7 +12,7 @@ import {
 } from "./helpers/styles";
 import { createSvgLayer, processSvgUseElements } from "./helpers/svg";
 import { buildTextNode } from "./helpers/text";
-import { makeTree } from "./helpers/tree";
+import { getLayersForFrames } from "./helpers/frames";
 import { LayerNode, WithRef } from "./types/nodes";
 
 const generateElements = (el: Element) => {
@@ -185,24 +184,16 @@ export function htmlToFigma(
 
   layers.unshift(root);
 
-  if (useFrames) {
-    (root as any).children = layers.slice(1);
-    makeTree({ root, layers });
-    addConstraints([root]);
-    removeRefs({ layers: [root], root });
-    if (time) {
-      console.info("\n");
-      console.timeEnd("Parse dom");
-    }
-    return [root];
-  }
+  const framesLayers = useFrames
+    ? getLayersForFrames({ layers, root })
+    : layers;
 
-  removeRefs({ layers, root });
+  removeRefs({ layers: framesLayers, root });
 
   if (time) {
     console.info("\n");
     console.timeEnd("Parse dom");
   }
 
-  return layers;
+  return framesLayers;
 }
