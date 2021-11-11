@@ -31,18 +31,18 @@ function getAggregateRectOfElements(elements: Element[]) {
     return null;
   }
 
-  const top = getBoundingClientRect(
+  const { top } = getBoundingClientRect(
     getDirectionMostOfElements("top", elements)
-  ).top;
-  const left = getBoundingClientRect(
+  );
+  const { left } = getBoundingClientRect(
     getDirectionMostOfElements("left", elements)
-  ).left;
-  const bottom = getBoundingClientRect(
+  );
+  const { bottom } = getBoundingClientRect(
     getDirectionMostOfElements("bottom", elements)
-  ).bottom;
-  const right = getBoundingClientRect(
+  );
+  const { right } = getBoundingClientRect(
     getDirectionMostOfElements("right", elements)
-  ).right;
+  );
   const width = right - left;
   const height = bottom - top;
   return {
@@ -54,12 +54,13 @@ function getAggregateRectOfElements(elements: Element[]) {
     height,
   };
 }
+
 export function getBoundingClientRect(
   el: Element
 ): Pick<DOMRect, "top" | "left" | "bottom" | "width" | "right" | "height"> {
   const computed = getComputedStyle(el);
   const display = computed.display;
-  if (display?.includes("inline") && el.children.length) {
+  if (display.includes("inline") && el.children.length) {
     const elRect = el.getBoundingClientRect();
     const aggregateRect = getAggregateRectOfElements(Array.from(el.children))!;
 
