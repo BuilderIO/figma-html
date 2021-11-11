@@ -66,6 +66,7 @@ export const getImagePaintWithUrl = ({
   // can this be true _and_ one of the previous IFs?
   // i.e. could an element have a computed bg image and be an SVG/img/picture/video element?
   // probably not, we can likely avoid returning this fill _and_ the previous ones.
+  // TO-DO: what happens if this is in the fills array, along with something else e.g. an img?
   if (
     computedStyle.backgroundImage &&
     computedStyle.backgroundImage !== "none"
