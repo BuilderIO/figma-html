@@ -13,6 +13,20 @@ function setData(
   node.data[key] = value;
 }
 
+const list: (keyof React.CSSProperties)[] = [
+  "opacity",
+  "backgroundColor",
+  "border",
+  "borderTop",
+  "borderLeft",
+  "borderRight",
+  "borderBottom",
+  "borderRadius",
+  "backgroundImage",
+  "borderColor",
+  "boxShadow",
+];
+
 export function getAppliedComputedStyles(
   element: Element,
   pseudo?: string
@@ -22,20 +36,6 @@ export function getAppliedComputedStyles(
   }
 
   const styles = getComputedStyle(element, pseudo);
-
-  const list: (keyof React.CSSProperties)[] = [
-    "opacity",
-    "backgroundColor",
-    "border",
-    "borderTop",
-    "borderLeft",
-    "borderRight",
-    "borderBottom",
-    "borderRadius",
-    "backgroundImage",
-    "borderColor",
-    "boxShadow",
-  ];
 
   const color = styles.color;
 
