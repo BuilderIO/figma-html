@@ -1,7 +1,6 @@
-function getDirectionMostOfElements(
-  direction: "left" | "right" | "top" | "bottom",
-  elements: Element[]
-) {
+export type Direction = "left" | "right" | "top" | "bottom";
+
+function getDirectionMostOfElements(direction: Direction, elements: Element[]) {
   if (elements.length === 1) {
     return elements[0];
   }
@@ -55,9 +54,13 @@ function getAggregateRectOfElements(elements: Element[]) {
   };
 }
 
-export function getBoundingClientRect(
-  el: Element
-): Pick<DOMRect, "top" | "left" | "bottom" | "width" | "right" | "height"> {
+export interface Dimensions
+  extends Pick<
+    DOMRect,
+    "top" | "left" | "bottom" | "width" | "right" | "height"
+  > {}
+
+export function getBoundingClientRect(el: Element): Dimensions {
   const computed = getComputedStyle(el);
   const display = computed.display;
   if (display.includes("inline") && el.children.length) {

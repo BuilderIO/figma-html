@@ -1,4 +1,5 @@
 import { LayerNode, WithRef } from "../types/nodes";
+import { Dimensions, Direction } from "./dimensions";
 import { traverse } from "./nodes";
 import { getRgb, parseBoxShadowStr, parseUnits } from "./parsers";
 
@@ -100,15 +101,13 @@ export function addConstraints(layers: LayerNode[]) {
         const ref = child.ref;
         if (ref) {
           const el = ref instanceof HTMLElement ? ref : ref.parentElement;
-          const parent = el && el.parentElement;
+          const parent = el?.parentElement;
           if (el && parent) {
             const currentDisplay = el.style.display;
             el.style.setProperty("display", "none", "!important");
             let computed = getComputedStyle(el);
-            const hasFixedWidth =
-              computed.width && computed.width.trim().endsWith("px");
-            const hasFixedHeight =
-              computed.height && computed.height.trim().endsWith("px");
+            const hasFixedWidth = computed?.width.trim().endsWith("px");
+            const hasFixedHeight = computed?.height.trim().endsWith("px");
             el.style.display = currentDisplay;
             const parentStyle = getComputedStyle(parent);
             let hasAutoMarginLeft = computed.marginLeft === "auto";
@@ -253,14 +252,25 @@ export const getBorderRadii = ({
 
 const capitalize = (str: string) => str[0].toUpperCase() + str.substring(1);
 
+const hasBorder = ({
+  borderWidth,
+  borderType,
+  borderColor,
+}: {
+  borderWidth: string;
+  borderType: string;
+  borderColor: string;
+}) =>
+  borderWidth && borderWidth !== "0" && borderType !== "none" && borderColor;
+
 export function getStrokesRectangle({
   dir,
   rect,
   computedStyle,
   el,
 }: {
-  dir: "top" | "left" | "right" | "bottom";
-  rect: Pick<DOMRect, "top" | "left" | "right" | "bottom" | "width" | "height">;
+  dir: Direction;
+  rect: Dimensions;
   computedStyle: CSSStyleDeclaration;
   el: Element;
 }): WithRef<RectangleNode> | undefined {
@@ -268,9 +278,9 @@ export function getStrokesRectangle({
   if (computed) {
     const parsed = computed.match(/^([\d\.]+)px\s*(\w+)\s*(.*)$/);
     if (parsed) {
-      let [_match, borderWidth, type, color] = parsed;
-      if (borderWidth && borderWidth !== "0" && type !== "none" && color) {
-        const rgb = getRgb(color);
+      const [_match, borderWidth, borderType, borderColor] = parsed;
+      if (hasBorder({ borderWidth, borderType, borderColor })) {
+        const rgb = getRgb(borderColor);
         if (rgb) {
           const width = ["top", "bottom"].includes(dir)
             ? rect.width
@@ -320,9 +330,9 @@ export const addStrokesFromBorder = ({
   if (border) {
     const parsed = border.match(/^([\d\.]+)px\s*(\w+)\s*(.*)$/);
     if (parsed) {
-      let [_match, width, type, color] = parsed;
-      if (width && width !== "0" && type !== "none" && color) {
-        const rgb = getRgb(color);
+      const [_match, borderWidth, borderType, borderColor] = parsed;
+      if (hasBorder({ borderWidth, borderType, borderColor })) {
+        const rgb = getRgb(borderColor);
         if (rgb) {
           return {
             strokes: [
@@ -332,7 +342,7 @@ export const addStrokesFromBorder = ({
                 opacity: rgb.a || 1,
               },
             ],
-            strokeWeight: Math.round(parseFloat(width)),
+            strokeWeight: Math.round(parseFloat(borderWidth)),
           };
         }
       }
