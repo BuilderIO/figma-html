@@ -9,6 +9,9 @@ export const addImagePaintLayer = ({
   fills: Paint[];
   el: Element;
 }) => {
+  // can this be true _and_ one of the subsequent IFs?
+  // i.e. could an element have a computed bg image and be an SVG/img/picture/video element?
+  // probably not, we can likely if-else here
   if (
     computedStyle.backgroundImage &&
     computedStyle.backgroundImage !== "none"
@@ -40,44 +43,42 @@ export const addImagePaintLayer = ({
         imageHash: null,
       } as ImagePaint);
     }
-  }
+  } else {
+    const baseImagePaint = {
+      type: "IMAGE",
+      // TODO: object fit, position
+      scaleMode: computedStyle.objectFit === "contain" ? "FIT" : "FILL",
+      imageHash: null,
+    };
 
-  const baseImagePaint = {
-    type: "IMAGE",
-    // TODO: object fit, position
-    scaleMode: computedStyle.objectFit === "contain" ? "FIT" : "FILL",
-    imageHash: null,
-  };
-
-  if (el instanceof HTMLImageElement) {
-    const url = el.src;
-    if (url) {
-      fills.push({
-        url,
-        ...baseImagePaint,
-      } as ImagePaint);
-    }
-  }
-  if (el instanceof HTMLPictureElement) {
-    const firstSource = el.querySelector("source");
-    if (firstSource) {
-      const src = getUrl(firstSource.srcset.split(/[,\s]+/g)[0]);
-      // TODO: if not absolute
-      if (src) {
+    if (el instanceof HTMLImageElement) {
+      const url = el.src;
+      if (url) {
         fills.push({
-          url: src,
+          url,
           ...baseImagePaint,
         } as ImagePaint);
       }
-    }
-  }
-  if (el instanceof HTMLVideoElement) {
-    const url = el.poster;
-    if (url) {
-      fills.push({
-        url,
-        ...baseImagePaint,
-      } as ImagePaint);
+    } else if (el instanceof HTMLPictureElement) {
+      const firstSource = el.querySelector("source");
+      if (firstSource) {
+        const src = getUrl(firstSource.srcset.split(/[,\s]+/g)[0]);
+        // TODO: if not absolute
+        if (src) {
+          fills.push({
+            url: src,
+            ...baseImagePaint,
+          } as ImagePaint);
+        }
+      }
+    } else if (el instanceof HTMLVideoElement) {
+      const url = el.poster;
+      if (url) {
+        fills.push({
+          url,
+          ...baseImagePaint,
+        } as ImagePaint);
+      }
     }
   }
 };

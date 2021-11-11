@@ -224,50 +224,46 @@ export function addConstraints(layers: LayerNode[]) {
   });
 }
 
-export const setBorderRadii = ({
+export const getBorderRadii = ({
   computedStyle,
-  rectNode,
 }: {
   computedStyle: CSSStyleDeclaration;
-  rectNode: WithRef<RectangleNode>;
-}) => {
-  const borderTopLeftRadius = parseUnits(computedStyle.borderTopLeftRadius);
-  if (borderTopLeftRadius) {
-    rectNode.topLeftRadius = borderTopLeftRadius.value;
-  }
-  const borderTopRightRadius = parseUnits(computedStyle.borderTopRightRadius);
-  if (borderTopRightRadius) {
-    rectNode.topRightRadius = borderTopRightRadius.value;
-  }
-  const borderBottomRightRadius = parseUnits(
-    computedStyle.borderBottomRightRadius
-  );
-  if (borderBottomRightRadius) {
-    rectNode.bottomRightRadius = borderBottomRightRadius.value;
-  }
-  const borderBottomLeftRadius = parseUnits(
-    computedStyle.borderBottomLeftRadius
-  );
-  if (borderBottomLeftRadius) {
-    rectNode.bottomLeftRadius = borderBottomLeftRadius.value;
-  }
+}): Partial<
+  Pick<
+    RectangleNode,
+    | "topLeftRadius"
+    | "topRightRadius"
+    | "bottomLeftRadius"
+    | "bottomRightRadius"
+  >
+> => {
+  const topLeft = parseUnits(computedStyle.borderTopLeftRadius);
+  const topRight = parseUnits(computedStyle.borderTopRightRadius);
+  const bottomRight = parseUnits(computedStyle.borderBottomRightRadius);
+  const bottomLeft = parseUnits(computedStyle.borderBottomLeftRadius);
+
+  const borderRadii = {
+    ...(topLeft ? { topLeftRadius: topLeft.value } : {}),
+    ...(topRight ? { topRightRadius: topRight.value } : {}),
+    ...(bottomRight ? { bottomRightRadius: bottomRight.value } : {}),
+    ...(bottomLeft ? { bottomLeftRadius: bottomLeft.value } : {}),
+  };
+  return borderRadii;
 };
 
 const capitalize = (str: string) => str[0].toUpperCase() + str.substring(1);
 
-export function addStrokesFromIndividualBorders({
+export function getStrokesRectangle({
   dir,
   rect,
   computedStyle,
-  layers,
   el,
 }: {
   dir: "top" | "left" | "right" | "bottom";
   rect: Pick<DOMRect, "top" | "left" | "right" | "bottom" | "width" | "height">;
   computedStyle: CSSStyleDeclaration;
-  layers: LayerNode[];
   el: Element;
-}) {
+}): WithRef<RectangleNode> | undefined {
   const computed = computedStyle[("border" + capitalize(dir)) as any];
   if (computed) {
     const parsed = computed.match(/^([\d\.]+)px\s*(\w+)\s*(.*)$/);
@@ -282,7 +278,12 @@ export function addStrokesFromIndividualBorders({
           const height = ["left", "right"].includes(dir)
             ? rect.height
             : parseFloat(borderWidth);
-          layers.push({
+          const fill: SolidPaint = {
+            type: "SOLID",
+            color: { r: rgb.r, b: rgb.b, g: rgb.g },
+            opacity: rgb.a || 1,
+          };
+          const layer: WithRef<RectangleNode> = {
             ref: el,
             type: "RECTANGLE",
             x:
@@ -299,27 +300,23 @@ export function addStrokesFromIndividualBorders({
                 : rect.top,
             width,
             height,
-            fills: [
-              {
-                type: "SOLID",
-                color: { r: rgb.r, b: rgb.b, g: rgb.g },
-                opacity: rgb.a || 1,
-              } as SolidPaint,
-            ] as any,
-          } as WithRef<RectangleNode>);
+            fills: [fill],
+          };
+
+          return layer;
         }
       }
     }
   }
+
+  return undefined;
 }
 
 export const addStrokesFromBorder = ({
   computedStyle: { border },
-  rectNode,
 }: {
   computedStyle: CSSStyleDeclaration;
-  rectNode: WithRef<RectangleNode>;
-}) => {
+}): Pick<RectangleNode, "strokes" | "strokeWeight"> | undefined => {
   if (border) {
     const parsed = border.match(/^([\d\.]+)px\s*(\w+)\s*(.*)$/);
     if (parsed) {
@@ -327,18 +324,21 @@ export const addStrokesFromBorder = ({
       if (width && width !== "0" && type !== "none" && color) {
         const rgb = getRgb(color);
         if (rgb) {
-          rectNode.strokes = [
-            {
-              type: "SOLID",
-              color: { r: rgb.r, b: rgb.b, g: rgb.g },
-              opacity: rgb.a || 1,
-            },
-          ];
-          rectNode.strokeWeight = Math.round(parseFloat(width));
+          return {
+            strokes: [
+              {
+                type: "SOLID",
+                color: { r: rgb.r, b: rgb.b, g: rgb.g },
+                opacity: rgb.a || 1,
+              },
+            ],
+            strokeWeight: Math.round(parseFloat(width)),
+          };
         }
       }
     }
   }
+  return undefined;
 };
 export const getShadowEffects = ({
   computedStyle: { boxShadow },

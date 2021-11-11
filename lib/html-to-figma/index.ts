@@ -6,10 +6,10 @@ import { getRgb } from "./helpers/parsers";
 import {
   addConstraints,
   addStrokesFromBorder,
-  addStrokesFromIndividualBorders,
+  getStrokesRectangle,
   getAppliedComputedStyles,
   getShadowEffects,
-  setBorderRadii,
+  getBorderRadii,
 } from "./helpers/styles";
 import { createSvgLayer, processSvgUseElements } from "./helpers/svg";
 import { buildTextNode } from "./helpers/text";
@@ -19,19 +19,14 @@ import { LayerNode, WithRef } from "./types/nodes";
 const generateElements = (el: Element) => {
   const getShadowEls = (el: Element): Element[] =>
     Array.from(el.shadowRoot?.querySelectorAll("*") || []).reduce(
-      (memo, el) => {
-        memo.push(el);
-        memo.push(...getShadowEls(el));
-        return memo;
-      },
+      (memo, el) => [...memo, el, ...getShadowEls(el)],
       [] as Element[]
     );
 
-  const els = Array.from(el.querySelectorAll("*")).reduce((memo, el) => {
-    memo.push(el);
-    memo.push(...getShadowEls(el));
-    return memo;
-  }, [] as Element[]);
+  const els = Array.from(el.querySelectorAll("*")).reduce(
+    (memo, el) => [...memo, el, ...getShadowEls(el)],
+    [] as Element[]
+  );
 
   return els;
 };
@@ -127,17 +122,24 @@ export function htmlToFigma(
               fills,
             };
 
-            addStrokesFromBorder({ computedStyle, rectNode });
+            const strokes = addStrokesFromBorder({ computedStyle });
+
+            if (strokes) {
+              Object.assign(rectNode, strokes);
+            }
 
             if (!rectNode.strokes) {
               for (const dir of ["top", "left", "right", "bottom"] as const) {
-                addStrokesFromIndividualBorders({
+                const strokesLayer = getStrokesRectangle({
                   dir,
                   rect,
                   computedStyle,
-                  layers,
                   el,
                 });
+
+                if (strokesLayer) {
+                  layers.push(strokesLayer);
+                }
               }
             }
             addImagePaintLayer({ computedStyle, fills, el });
@@ -148,7 +150,8 @@ export function htmlToFigma(
               rectNode.effects = shadowEffects;
             }
 
-            setBorderRadii({ computedStyle, rectNode });
+            const borderRadii = getBorderRadii({ computedStyle });
+            Object.assign(rectNode, borderRadii);
 
             layers.push(rectNode);
           }
