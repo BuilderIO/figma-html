@@ -1,25 +1,23 @@
-import { LayerNode, WithRef } from "../types/nodes";
+import { WithRef } from "../types/nodes";
 import { isHidden } from "./nodes";
 import { fastClone } from "./object";
 import { parseUnits, getRgb } from "./parsers";
 
 export const buildTextNode = ({
   node,
-  layers,
 }: {
   node: Node;
-  layers: LayerNode[];
-}) => {
+}): WithRef<TextNode> | undefined => {
   const trimmedText = node.textContent?.trim() || "";
 
   if (!trimmedText.length) {
-    return;
+    return undefined;
   }
 
   const parent = node.parentElement;
   if (parent) {
     if (isHidden(parent)) {
-      return;
+      return undefined;
     }
     const computedStyles = getComputedStyle(parent);
     const range = document.createRange();
@@ -33,7 +31,7 @@ export const buildTextNode = ({
       rect.height = lineHeight.value;
     }
     if (rect.height < 1 || rect.width < 1) {
-      return;
+      return undefined;
     }
 
     const textNode: WithRef<TextNode> = {
@@ -114,6 +112,6 @@ export const buildTextNode = ({
         computedStyles.textAlign.toUpperCase() as any;
     }
 
-    layers.push(textNode);
+    return textNode;
   }
 };

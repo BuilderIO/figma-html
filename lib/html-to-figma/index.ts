@@ -162,7 +162,10 @@ export function htmlToFigma(
     const textNodes = textNodesUnder(el);
 
     for (const node of textNodes) {
-      buildTextNode({ node, layers });
+      const textNode = buildTextNode({ node });
+      if (textNode) {
+        layers.push(textNode);
+      }
     }
   }
 
