@@ -81,7 +81,9 @@ export function htmlToFigma(
           return;
         }
 
+        // TO-DO: what does `appliedStyles` do here? All we do is check that it's non-empty
         const appliedStyles = getAppliedComputedStyles(el);
+
         const computedStyle = getComputedStyle(el);
 
         if (
