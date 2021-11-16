@@ -44,21 +44,22 @@ function removeRefs({
   });
 }
 
-const getLayersForElement = (layers: LayerNode[]) => (el: Element) => {
+const getLayersForElement = (el: Element) => {
+  const elementLayers: LayerNode[] = [];
   if (isHidden(el)) {
-    return;
+    return [];
   }
   if (el instanceof SVGSVGElement) {
-    layers.push(createSvgLayer(el));
-    return;
+    elementLayers.push(createSvgLayer(el));
+    return elementLayers;
   }
   // Sub SVG Eleemnt
   else if (el instanceof SVGElement) {
-    return;
+    return [];
   }
 
   if (el.parentElement instanceof HTMLPictureElement) {
-    return;
+    return [];
   }
 
   // TO-DO: what does `appliedStyles` do here? All we do is check that it's non-empty
@@ -119,7 +120,7 @@ const getLayersForElement = (layers: LayerNode[]) => (el: Element) => {
           });
 
           if (strokesLayer) {
-            layers.push(strokesLayer);
+            elementLayers.push(strokesLayer);
           }
         }
       }
@@ -138,9 +139,11 @@ const getLayersForElement = (layers: LayerNode[]) => (el: Element) => {
       const borderRadii = getBorderRadii({ computedStyle });
       Object.assign(rectNode, borderRadii);
 
-      layers.push(rectNode);
+      elementLayers.push(rectNode);
     }
   }
+
+  return elementLayers;
 };
 
 export function htmlToFigma(
@@ -163,7 +166,10 @@ export function htmlToFigma(
     const els = generateElements(el);
 
     if (els) {
-      Array.from(els).forEach(getLayersForElement(layers));
+      Array.from(els).forEach((el) => {
+        const elLayers = getLayersForElement(el);
+        layers.push(...elLayers);
+      });
     }
 
     const textNodes = textNodesUnder(el);
