@@ -15,15 +15,13 @@ export const getImagePaintWithUrl = ({
     const url = `data:image/svg+xml,${encodeURIComponent(
       el.outerHTML.replace(/\s+/g, " ")
     )}`;
-    if (url) {
-      return {
-        url,
-        type: "IMAGE",
-        // TODO: object fit, position
-        scaleMode: "FILL",
-        imageHash: null,
-      };
-    }
+    return {
+      url,
+      type: "IMAGE",
+      // TODO: object fit, position
+      scaleMode: "FILL",
+      imageHash: null,
+    };
   } else {
     const baseImagePaint: ImagePaint = {
       type: "IMAGE",

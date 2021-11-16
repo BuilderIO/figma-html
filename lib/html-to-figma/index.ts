@@ -44,6 +44,105 @@ function removeRefs({
   });
 }
 
+const getLayersForElement = (layers: LayerNode[]) => (el: Element) => {
+  if (isHidden(el)) {
+    return;
+  }
+  if (el instanceof SVGSVGElement) {
+    layers.push(createSvgLayer(el));
+    return;
+  }
+  // Sub SVG Eleemnt
+  else if (el instanceof SVGElement) {
+    return;
+  }
+
+  if (el.parentElement instanceof HTMLPictureElement) {
+    return;
+  }
+
+  // TO-DO: what does `appliedStyles` do here? All we do is check that it's non-empty
+  const appliedStyles = getAppliedComputedStyles(el);
+
+  const computedStyle = getComputedStyle(el);
+
+  if (
+    (size(appliedStyles) ||
+      el instanceof HTMLImageElement ||
+      el instanceof HTMLPictureElement ||
+      el instanceof HTMLVideoElement) &&
+    computedStyle.display !== "none"
+  ) {
+    const rect = getBoundingClientRect(el);
+
+    if (rect.width >= 1 && rect.height >= 1) {
+      const fills: Paint[] = [];
+
+      const color = getRgb(computedStyle.backgroundColor);
+
+      if (color) {
+        const solidPaint: SolidPaint = {
+          type: "SOLID",
+          color: {
+            r: color.r,
+            g: color.g,
+            b: color.b,
+          },
+          opacity: color.a || 1,
+        };
+        fills.push(solidPaint);
+      }
+
+      const rectNode: WithRef<RectangleNode> = {
+        type: "RECTANGLE",
+        ref: el,
+        x: Math.round(rect.left),
+        y: Math.round(rect.top),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        fills,
+      };
+
+      const strokes = addStrokesFromBorder({ computedStyle });
+
+      if (strokes) {
+        Object.assign(rectNode, strokes);
+      }
+
+      if (!rectNode.strokes) {
+        for (const dir of ["top", "left", "right", "bottom"] as const) {
+          const strokesLayer = getStrokesRectangle({
+            dir,
+            rect,
+            computedStyle,
+            el,
+          });
+
+          if (strokesLayer) {
+            layers.push(strokesLayer);
+          }
+        }
+      }
+      const imagePaint = getImagePaintWithUrl({ computedStyle, el });
+
+      if (imagePaint) {
+        fills.push(imagePaint);
+      }
+
+      const shadowEffects = getShadowEffects({ computedStyle });
+
+      if (shadowEffects) {
+        rectNode.effects = shadowEffects;
+      }
+
+      const borderRadii = getBorderRadii({ computedStyle });
+      Object.assign(rectNode, borderRadii);
+
+      layers.push(rectNode);
+    }
+  }
+};
+
 export function htmlToFigma(
   selector: HTMLElement | string = "body",
   useFrames = false,
@@ -64,104 +163,7 @@ export function htmlToFigma(
     const els = generateElements(el);
 
     if (els) {
-      Array.from(els).forEach((el) => {
-        if (isHidden(el)) {
-          return;
-        }
-        if (el instanceof SVGSVGElement) {
-          layers.push(createSvgLayer(el));
-          return;
-        }
-        // Sub SVG Eleemnt
-        else if (el instanceof SVGElement) {
-          return;
-        }
-
-        if (el.parentElement instanceof HTMLPictureElement) {
-          return;
-        }
-
-        // TO-DO: what does `appliedStyles` do here? All we do is check that it's non-empty
-        const appliedStyles = getAppliedComputedStyles(el);
-
-        const computedStyle = getComputedStyle(el);
-
-        if (
-          (size(appliedStyles) ||
-            el instanceof HTMLImageElement ||
-            el instanceof HTMLPictureElement ||
-            el instanceof HTMLVideoElement) &&
-          computedStyle.display !== "none"
-        ) {
-          const rect = getBoundingClientRect(el);
-
-          if (rect.width >= 1 && rect.height >= 1) {
-            const fills: Paint[] = [];
-
-            const color = getRgb(computedStyle.backgroundColor);
-
-            if (color) {
-              const solidPaint: SolidPaint = {
-                type: "SOLID",
-                color: {
-                  r: color.r,
-                  g: color.g,
-                  b: color.b,
-                },
-                opacity: color.a || 1,
-              };
-              fills.push(solidPaint);
-            }
-
-            const rectNode: WithRef<RectangleNode> = {
-              type: "RECTANGLE",
-              ref: el,
-              x: Math.round(rect.left),
-              y: Math.round(rect.top),
-              width: Math.round(rect.width),
-              height: Math.round(rect.height),
-              fills,
-            };
-
-            const strokes = addStrokesFromBorder({ computedStyle });
-
-            if (strokes) {
-              Object.assign(rectNode, strokes);
-            }
-
-            if (!rectNode.strokes) {
-              for (const dir of ["top", "left", "right", "bottom"] as const) {
-                const strokesLayer = getStrokesRectangle({
-                  dir,
-                  rect,
-                  computedStyle,
-                  el,
-                });
-
-                if (strokesLayer) {
-                  layers.push(strokesLayer);
-                }
-              }
-            }
-            const imagePaint = getImagePaintWithUrl({ computedStyle, el });
-
-            if (imagePaint) {
-              fills.push(imagePaint);
-            }
-
-            const shadowEffects = getShadowEffects({ computedStyle });
-
-            if (shadowEffects) {
-              rectNode.effects = shadowEffects;
-            }
-
-            const borderRadii = getBorderRadii({ computedStyle });
-            Object.assign(rectNode, borderRadii);
-
-            layers.push(rectNode);
-          }
-        }
-      });
+      Array.from(els).forEach(getLayersForElement(layers));
     }
 
     const textNodes = textNodesUnder(el);

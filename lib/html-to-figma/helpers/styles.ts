@@ -354,7 +354,7 @@ export const getShadowEffects = ({
   computedStyle: { boxShadow },
 }: {
   computedStyle: CSSStyleDeclaration;
-}) => {
+}): ShadowEffect[] | undefined => {
   if (boxShadow && boxShadow !== "none") {
     const parsed = parseBoxShadowStr(boxShadow);
     const color = getRgb(parsed.color);
