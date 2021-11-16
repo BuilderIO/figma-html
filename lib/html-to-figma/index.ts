@@ -165,12 +165,10 @@ export function htmlToFigma(
 
     const els = generateElements(el);
 
-    if (els) {
-      Array.from(els).forEach((el) => {
-        const elLayers = getLayersForElement(el);
-        layers.push(...elLayers);
-      });
-    }
+    els.forEach((el) => {
+      const elLayers = getLayersForElement(el);
+      layers.push(...elLayers);
+    });
 
     const textNodes = textNodesUnder(el);
 
