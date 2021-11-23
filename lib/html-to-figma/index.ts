@@ -58,7 +58,13 @@ const getLayersForElement = (el: Element) => {
     return [];
   }
 
-  if (el.parentElement instanceof HTMLPictureElement) {
+  // for `picture`, we only need the `image` element. We can ignore the parent `picture` and
+  // `source` sibling elements.
+  if (
+    (el.parentElement instanceof HTMLPictureElement &&
+      el instanceof HTMLSourceElement) ||
+    el instanceof HTMLPictureElement
+  ) {
     return [];
   }
 
@@ -70,7 +76,6 @@ const getLayersForElement = (el: Element) => {
   if (
     (size(appliedStyles) ||
       el instanceof HTMLImageElement ||
-      el instanceof HTMLPictureElement ||
       el instanceof HTMLVideoElement) &&
     computedStyle.display !== "none"
   ) {

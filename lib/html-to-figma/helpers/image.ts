@@ -31,7 +31,9 @@ export const getImagePaintWithUrl = ({
     };
 
     if (el instanceof HTMLImageElement) {
-      const url = el.src;
+      // we use `currentSrc` instead of `src` as that will be the accurate value in dynamic contexts:
+      // when the img is a child of a picture element, or it has `sizes`/`srcSet` attributes, etc.
+      const url = el.currentSrc;
       if (url) {
         return {
           url,
