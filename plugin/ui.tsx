@@ -35,6 +35,7 @@ import { SafeComponent } from "./classes/safe-component";
 import { settings } from "./constants/settings";
 import { theme as themeVars } from "./constants/theme";
 import { fastClone } from "./functions/fast-clone";
+import { transformWebpToPNG } from "./functions/encode-images";
 import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
 import { IntlProvider, FormattedMessage } from "react-intl";
@@ -224,7 +225,16 @@ async function processImages(layer: Node) {
           } else {
             const intArr = new Uint8Array(arrayBuffer);
             delete image.url;
-            image.intArr = intArr;
+
+            if (
+              type &&
+              (type.ext.includes("webp") || type.mime.includes("image/webp"))
+            ) {
+              const pngArr = await transformWebpToPNG(intArr);
+              image.intArr = pngArr;
+            } else {
+              image.intArr = intArr;
+            }
           }
         }
       } catch (err) {
