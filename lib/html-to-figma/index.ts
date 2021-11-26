@@ -133,6 +133,7 @@ const getLayersForElement = (el: Element) => {
 
       if (imagePaint) {
         fills.push(imagePaint);
+        rectNode.name = "IMAGE";
       }
 
       const shadowEffects = getShadowEffects({ computedStyle });
