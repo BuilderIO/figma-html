@@ -166,66 +166,64 @@ async function processImages(layer: Node) {
       layer.fills = layer.fills.filter((item) => item.type !== "IMAGE");
     }
   };
-  return images
-    ? Promise.all(
-        images.map(async (image: any) => {
-          try {
-            if (image) {
-              const url = image.url;
-              if (url.startsWith("data:")) {
-                const type = url.split(/[:,;]/)[1];
-                if (type.includes("svg")) {
-                  const svgValue = decodeURIComponent(url.split(",")[1]);
-                  convertToSvg(svgValue);
-                  return Promise.resolve();
-                } else {
-                  if (url.includes(BASE64_MARKER)) {
-                    image.intArr = convertDataURIToBinary(url);
-                    delete image.url;
-                  } else {
-                    console.info(
-                      "Found data url that could not be converted",
-                      url
-                    );
-                  }
-                  return;
-                }
-              }
+  if (!images) {
+    return Promise.resolve([]);
+  }
 
-              const isSvg = url.endsWith(".svg");
+  return Promise.all(
+    images.map(async (image: any) => {
+      try {
+        if (!image) {
+          return;
+        }
 
-              // Proxy returned content through Builder so we can access cross origin for
-              // pulling in photos, etc
-              const res = await fetch(
-                `${apiHost}/api/v1/proxy-api?url=${encodeURIComponent(url)}`
-              );
-
-              const contentType = res.headers.get("content-type");
-              if (isSvg || (contentType && contentType.includes("svg"))) {
-                const text = await res.text();
-                convertToSvg(text);
-              } else {
-                const arrayBuffer = await res.arrayBuffer();
-                const type = fileType(arrayBuffer);
-                if (
-                  type &&
-                  (type.ext.includes("svg") || type.mime.includes("svg"))
-                ) {
-                  convertToSvg(await res.text());
-                  return;
-                } else {
-                  const intArr = new Uint8Array(arrayBuffer);
-                  delete image.url;
-                  image.intArr = intArr;
-                }
-              }
+        const url = image.url;
+        if (url.startsWith("data:")) {
+          const type = url.split(/[:,;]/)[1];
+          if (type.includes("svg")) {
+            const svgValue = decodeURIComponent(url.split(",")[1]);
+            convertToSvg(svgValue);
+            return Promise.resolve();
+          } else {
+            if (url.includes(BASE64_MARKER)) {
+              image.intArr = convertDataURIToBinary(url);
+              delete image.url;
+            } else {
+              console.info("Found data url that could not be converted", url);
             }
-          } catch (err) {
-            console.warn("Could not fetch image", layer, err);
+            return;
           }
-        })
-      )
-    : Promise.resolve([]);
+        }
+
+        const isSvg = url.endsWith(".svg");
+
+        // Proxy returned content through Builder so we can access cross origin for
+        // pulling in photos, etc
+        const res = await fetch(
+          `${apiHost}/api/v1/proxy-api?url=${encodeURIComponent(url)}`
+        );
+
+        const contentType = res.headers.get("content-type");
+        if (isSvg || (contentType && contentType.includes("svg"))) {
+          const text = await res.text();
+          convertToSvg(text);
+        } else {
+          const arrayBuffer = await res.arrayBuffer();
+          const type = fileType(arrayBuffer);
+          if (type && (type.ext.includes("svg") || type.mime.includes("svg"))) {
+            convertToSvg(await res.text());
+            return;
+          } else {
+            const intArr = new Uint8Array(arrayBuffer);
+            delete image.url;
+            image.intArr = intArr;
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch image", layer, err);
+      }
+    })
+  );
 }
 
 export type Component = "row" | "stack" | "absolute";
