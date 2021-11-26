@@ -43,6 +43,9 @@ import { en, ru } from "./localize/i18n";
 // Simple debug flag - flip when needed locally
 const useDev = false;
 
+// https://stackoverflow.com/a/46634877
+type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+
 const apiHost = useDev ? "http://localhost:5000" : "https://builder.io";
 
 const selectionToBuilder = async (
@@ -170,10 +173,15 @@ async function processImages(layer: Node) {
     return Promise.resolve([]);
   }
 
+  type AugmentedImagePaint = Writeable<ImagePaint> & {
+    intArr?: Uint8Array;
+    url?: string;
+  };
+
   return Promise.all(
-    images.map(async (image: any) => {
+    images.map(async (image: AugmentedImagePaint) => {
       try {
-        if (!image) {
+        if (!image || !image.url) {
           return;
         }
 
@@ -204,7 +212,7 @@ async function processImages(layer: Node) {
         );
 
         const contentType = res.headers.get("content-type");
-        if (isSvg || (contentType && contentType.includes("svg"))) {
+        if (isSvg || contentType?.includes("svg")) {
           const text = await res.text();
           convertToSvg(text);
         } else {
@@ -225,15 +233,6 @@ async function processImages(layer: Node) {
     })
   );
 }
-
-export type Component = "row" | "stack" | "absolute";
-
-export type SizeType = "shrink" | "expand" | "fixed";
-
-export const sizeTypes: SizeType[] = ["expand", "shrink", "fixed"];
-
-const invalidOptionString = "...";
-type InvalidComponentOption = typeof invalidOptionString;
 
 @observer
 class App extends SafeComponent {
@@ -273,6 +272,7 @@ class App extends SafeComponent {
   editorScriptAdded = false;
   dataToPost: any;
 
+  // TODO: THIS IS UNUSED
   async getImageUrl(
     intArr: Uint8Array,
     imageHash?: string
