@@ -990,7 +990,7 @@ class App extends SafeComponent {
                       href={this.displayFiddleUrl}
                       target="_blank"
                     >
-                      <FormattedMessage id="done" defaultMessage="Click here" />
+                      <FormattedMessage id="clickHere" defaultMessage="Click here" />
                     </a>
                     <FormattedMessage
                       id="clickHere2"
