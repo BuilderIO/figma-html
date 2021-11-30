@@ -406,7 +406,6 @@ async function checkIfCanGetCode() {
   const invalidLayers: SceneNode[] = [];
 
   await traverseLayers(selected, (node: SceneNode) => {
-    debugger;
     if (!hasInvisibleParent(node) && isNotImportable(node)) {
       invalidLayers.push(node);
     }
