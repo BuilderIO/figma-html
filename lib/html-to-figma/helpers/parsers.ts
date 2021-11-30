@@ -1,4 +1,4 @@
-interface Unit {
+export interface Unit {
   unit: "PIXELS";
   value: number;
 }

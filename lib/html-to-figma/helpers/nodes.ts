@@ -57,7 +57,7 @@ export function getParents(node: Element | Node): Element[] {
       ? node.parentElement
       : (node as Element);
 
-  let parents: Element[] = [];
+  const parents: Element[] = [];
   while (el && (el = el.parentElement)) {
     parents.push(el);
   }

@@ -1,37 +1,31 @@
 import { getBoundingClientRect } from "./helpers/dimensions";
-import { addImagePaintLayer } from "./helpers/image";
+import { getImagePaintWithUrl } from "./helpers/image";
 import { isHidden, textNodesUnder, traverse } from "./helpers/nodes";
 import { size } from "./helpers/object";
 import { getRgb } from "./helpers/parsers";
 import {
-  addConstraints,
   addStrokesFromBorder,
-  addStrokesFromIndividualBorders,
+  getStrokesRectangle,
   getAppliedComputedStyles,
   getShadowEffects,
-  setBorderRadii,
+  getBorderRadii,
 } from "./helpers/styles";
 import { createSvgLayer, processSvgUseElements } from "./helpers/svg";
 import { buildTextNode } from "./helpers/text";
-import { makeTree } from "./helpers/tree";
+import { getLayersForFrames } from "./helpers/frames";
 import { LayerNode, WithRef } from "./types/nodes";
 
 const generateElements = (el: Element) => {
   const getShadowEls = (el: Element): Element[] =>
     Array.from(el.shadowRoot?.querySelectorAll("*") || []).reduce(
-      (memo, el) => {
-        memo.push(el);
-        memo.push(...getShadowEls(el));
-        return memo;
-      },
+      (memo, el) => [...memo, el, ...getShadowEls(el)],
       [] as Element[]
     );
 
-  const els = Array.from(el.querySelectorAll("*")).reduce((memo, el) => {
-    memo.push(el);
-    memo.push(...getShadowEls(el));
-    return memo;
-  }, [] as Element[]);
+  const els = Array.from(el.querySelectorAll("*")).reduce(
+    (memo, el) => [...memo, el, ...getShadowEls(el)],
+    [] as Element[]
+  );
 
   return els;
 };
@@ -49,6 +43,114 @@ function removeRefs({
     });
   });
 }
+
+const getLayersForElement = (el: Element) => {
+  const elementLayers: LayerNode[] = [];
+  if (isHidden(el)) {
+    return [];
+  }
+  if (el instanceof SVGSVGElement) {
+    elementLayers.push(createSvgLayer(el));
+    return elementLayers;
+  }
+  // Sub SVG Eleemnt
+  else if (el instanceof SVGElement) {
+    return [];
+  }
+
+  // for `picture`, we only need the `image` element. We can ignore the parent `picture` and
+  // `source` sibling elements.
+  if (
+    (el.parentElement instanceof HTMLPictureElement &&
+      el instanceof HTMLSourceElement) ||
+    el instanceof HTMLPictureElement
+  ) {
+    return [];
+  }
+
+  // TO-DO: what does `appliedStyles` do here? All we do is check that it's non-empty
+  const appliedStyles = getAppliedComputedStyles(el);
+
+  const computedStyle = getComputedStyle(el);
+
+  if (
+    (size(appliedStyles) ||
+      el instanceof HTMLImageElement ||
+      el instanceof HTMLVideoElement) &&
+    computedStyle.display !== "none"
+  ) {
+    const rect = getBoundingClientRect(el);
+
+    if (rect.width >= 1 && rect.height >= 1) {
+      const fills: Paint[] = [];
+
+      const color = getRgb(computedStyle.backgroundColor);
+
+      if (color) {
+        const solidPaint: SolidPaint = {
+          type: "SOLID",
+          color: {
+            r: color.r,
+            g: color.g,
+            b: color.b,
+          },
+          opacity: color.a || 1,
+        };
+        fills.push(solidPaint);
+      }
+
+      const rectNode: WithRef<RectangleNode> = {
+        type: "RECTANGLE",
+        ref: el,
+        x: Math.round(rect.left),
+        y: Math.round(rect.top),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        fills,
+      };
+
+      const strokes = addStrokesFromBorder({ computedStyle });
+
+      if (strokes) {
+        Object.assign(rectNode, strokes);
+      }
+
+      if (!rectNode.strokes) {
+        for (const dir of ["top", "left", "right", "bottom"] as const) {
+          const strokesLayer = getStrokesRectangle({
+            dir,
+            rect,
+            computedStyle,
+            el,
+          });
+
+          if (strokesLayer) {
+            elementLayers.push(strokesLayer);
+          }
+        }
+      }
+      const imagePaint = getImagePaintWithUrl({ computedStyle, el });
+
+      if (imagePaint) {
+        fills.push(imagePaint);
+        rectNode.name = "IMAGE";
+      }
+
+      const shadowEffects = getShadowEffects({ computedStyle });
+
+      if (shadowEffects) {
+        rectNode.effects = shadowEffects;
+      }
+
+      const borderRadii = getBorderRadii({ computedStyle });
+      Object.assign(rectNode, borderRadii);
+
+      elementLayers.push(rectNode);
+    }
+  }
+
+  return elementLayers;
+};
 
 export function htmlToFigma(
   selector: HTMLElement | string = "body",
@@ -69,97 +171,18 @@ export function htmlToFigma(
 
     const els = generateElements(el);
 
-    if (els) {
-      Array.from(els).forEach((el) => {
-        if (isHidden(el)) {
-          return;
-        }
-        if (el instanceof SVGSVGElement) {
-          layers.push(createSvgLayer(el));
-          return;
-        }
-        // Sub SVG Eleemnt
-        else if (el instanceof SVGElement) {
-          return;
-        }
-
-        if (el.parentElement instanceof HTMLPictureElement) {
-          return;
-        }
-
-        const appliedStyles = getAppliedComputedStyles(el);
-        const computedStyle = getComputedStyle(el);
-
-        if (
-          (size(appliedStyles) ||
-            el instanceof HTMLImageElement ||
-            el instanceof HTMLPictureElement ||
-            el instanceof HTMLVideoElement) &&
-          computedStyle.display !== "none"
-        ) {
-          const rect = getBoundingClientRect(el);
-
-          if (rect.width >= 1 && rect.height >= 1) {
-            const fills: Paint[] = [];
-
-            const color = getRgb(computedStyle.backgroundColor);
-
-            if (color) {
-              const solidPaint: SolidPaint = {
-                type: "SOLID",
-                color: {
-                  r: color.r,
-                  g: color.g,
-                  b: color.b,
-                },
-                opacity: color.a || 1,
-              };
-              fills.push(solidPaint);
-            }
-
-            const rectNode: WithRef<RectangleNode> = {
-              type: "RECTANGLE",
-              ref: el,
-              x: Math.round(rect.left),
-              y: Math.round(rect.top),
-              width: Math.round(rect.width),
-              height: Math.round(rect.height),
-              fills,
-            };
-
-            addStrokesFromBorder({ computedStyle, rectNode });
-
-            if (!rectNode.strokes) {
-              for (const dir of ["top", "left", "right", "bottom"] as const) {
-                addStrokesFromIndividualBorders({
-                  dir,
-                  rect,
-                  computedStyle,
-                  layers,
-                  el,
-                });
-              }
-            }
-            addImagePaintLayer({ computedStyle, fills, el });
-
-            const shadowEffects = getShadowEffects({ computedStyle });
-
-            if (shadowEffects) {
-              rectNode.effects = shadowEffects;
-            }
-
-            setBorderRadii({ computedStyle, rectNode });
-
-            layers.push(rectNode);
-          }
-        }
-      });
-    }
+    els.forEach((el) => {
+      const elLayers = getLayersForElement(el);
+      layers.push(...elLayers);
+    });
 
     const textNodes = textNodesUnder(el);
 
     for (const node of textNodes) {
-      buildTextNode({ node, layers });
+      const textNode = buildTextNode({ node });
+      if (textNode) {
+        layers.push(textNode);
+      }
     }
   }
 
@@ -175,24 +198,16 @@ export function htmlToFigma(
 
   layers.unshift(root);
 
-  if (useFrames) {
-    (root as any).children = layers.slice(1);
-    makeTree({ root, layers });
-    addConstraints([root]);
-    removeRefs({ layers: [root], root });
-    if (time) {
-      console.info("\n");
-      console.timeEnd("Parse dom");
-    }
-    return [root];
-  }
+  const framesLayers = useFrames
+    ? getLayersForFrames({ layers, root })
+    : layers;
 
-  removeRefs({ layers, root });
+  removeRefs({ layers: framesLayers, root });
 
   if (time) {
     console.info("\n");
     console.timeEnd("Parse dom");
   }
 
-  return layers;
+  return framesLayers;
 }

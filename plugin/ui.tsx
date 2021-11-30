@@ -35,6 +35,7 @@ import { SafeComponent } from "./classes/safe-component";
 import { settings } from "./constants/settings";
 import { theme as themeVars } from "./constants/theme";
 import { fastClone } from "./functions/fast-clone";
+import { transformWebpToPNG } from "./functions/encode-images";
 import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
 import { IntlProvider, FormattedMessage } from "react-intl";
@@ -42,6 +43,9 @@ import { en, ru } from "./localize/i18n";
 
 // Simple debug flag - flip when needed locally
 const useDev = false;
+
+// https://stackoverflow.com/a/46634877
+type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
 const apiHost = useDev ? "http://localhost:5000" : "https://builder.io";
 
@@ -166,76 +170,79 @@ async function processImages(layer: Node) {
       layer.fills = layer.fills.filter((item) => item.type !== "IMAGE");
     }
   };
-  return images
-    ? Promise.all(
-        images.map(async (image: any) => {
-          try {
-            if (image) {
-              const url = image.url;
-              if (url.startsWith("data:")) {
-                const type = url.split(/[:,;]/)[1];
-                if (type.includes("svg")) {
-                  const svgValue = decodeURIComponent(url.split(",")[1]);
-                  convertToSvg(svgValue);
-                  return Promise.resolve();
-                } else {
-                  if (url.includes(BASE64_MARKER)) {
-                    image.intArr = convertDataURIToBinary(url);
-                    delete image.url;
-                  } else {
-                    console.info(
-                      "Found data url that could not be converted",
-                      url
-                    );
-                  }
-                  return;
-                }
-              }
+  if (!images) {
+    return Promise.resolve([]);
+  }
 
-              const isSvg = url.endsWith(".svg");
+  type AugmentedImagePaint = Writeable<ImagePaint> & {
+    intArr?: Uint8Array;
+    url?: string;
+  };
 
-              // Proxy returned content through Builder so we can access cross origin for
-              // pulling in photos, etc
-              const res = await fetch(
-                `${apiHost}/api/v1/proxy-api?url=${encodeURIComponent(url)}`
-              );
+  return Promise.all(
+    images.map(async (image: AugmentedImagePaint) => {
+      try {
+        if (!image || !image.url) {
+          return;
+        }
 
-              const contentType = res.headers.get("content-type");
-              if (isSvg || (contentType && contentType.includes("svg"))) {
-                const text = await res.text();
-                convertToSvg(text);
-              } else {
-                const arrayBuffer = await res.arrayBuffer();
-                const type = fileType(arrayBuffer);
-                if (
-                  type &&
-                  (type.ext.includes("svg") || type.mime.includes("svg"))
-                ) {
-                  convertToSvg(await res.text());
-                  return;
-                } else {
-                  const intArr = new Uint8Array(arrayBuffer);
-                  delete image.url;
-                  image.intArr = intArr;
-                }
-              }
+        const url = image.url;
+        if (url.startsWith("data:")) {
+          const type = url.split(/[:,;]/)[1];
+          if (type.includes("svg")) {
+            const svgValue = decodeURIComponent(url.split(",")[1]);
+            convertToSvg(svgValue);
+            return Promise.resolve();
+          } else {
+            if (url.includes(BASE64_MARKER)) {
+              image.intArr = convertDataURIToBinary(url);
+              delete image.url;
+            } else {
+              console.info("Found data url that could not be converted", url);
             }
-          } catch (err) {
-            console.warn("Could not fetch image", layer, err);
+            return;
           }
-        })
-      )
-    : Promise.resolve([]);
+        }
+
+        const isSvg = url.endsWith(".svg");
+
+        // Proxy returned content through Builder so we can access cross origin for
+        // pulling in photos, etc
+        const res = await fetch(
+          `${apiHost}/api/v1/proxy-api?url=${encodeURIComponent(url)}`
+        );
+
+        const contentType = res.headers.get("content-type");
+        if (isSvg || contentType?.includes("svg")) {
+          const text = await res.text();
+          convertToSvg(text);
+        } else {
+          const arrayBuffer = await res.arrayBuffer();
+          const type = fileType(arrayBuffer);
+          if (type && (type.ext.includes("svg") || type.mime.includes("svg"))) {
+            convertToSvg(await res.text());
+            return;
+          } else {
+            const intArr = new Uint8Array(arrayBuffer);
+            delete image.url;
+
+            if (
+              type &&
+              (type.ext.includes("webp") || type.mime.includes("image/webp"))
+            ) {
+              const pngArr = await transformWebpToPNG(intArr);
+              image.intArr = pngArr;
+            } else {
+              image.intArr = intArr;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch image", layer, err);
+      }
+    })
+  );
 }
-
-export type Component = "row" | "stack" | "absolute";
-
-export type SizeType = "shrink" | "expand" | "fixed";
-
-export const sizeTypes: SizeType[] = ["expand", "shrink", "fixed"];
-
-const invalidOptionString = "...";
-type InvalidComponentOption = typeof invalidOptionString;
 
 @observer
 class App extends SafeComponent {
@@ -275,6 +282,7 @@ class App extends SafeComponent {
   editorScriptAdded = false;
   dataToPost: any;
 
+  // TODO: THIS IS UNUSED
   async getImageUrl(
     intArr: Uint8Array,
     imageHash?: string
