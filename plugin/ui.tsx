@@ -89,10 +89,6 @@ interface ClientStorage {
 }
 
 const apiKey = process.env.API_KEY || null;
-const apiRoot =
-  process.env.API_ROOT && process.env.NODE_ENV !== "production"
-    ? process.env.API_ROOT
-    : "https://builder.io";
 
 const WIDTH_LS_KEY = "builder.widthSetting";
 const FRAMES_LS_KEY = "builder.useFramesSetting";
@@ -201,8 +197,7 @@ async function processImages(layer: Node) {
               // Proxy returned content through Builder so we can access cross origin for
               // pulling in photos, etc
               const res = await fetch(
-                "https://builder.io/api/v1/proxy-api?url=" +
-                  encodeURIComponent(url)
+                `${apiHost}/api/v1/proxy-api?url=${encodeURIComponent(url)}`
               );
 
               const contentType = res.headers.get("content-type");
@@ -250,7 +245,6 @@ class App extends SafeComponent {
   // TODO: lsget/set?
   @observable lipsum = false; //  process.env.NODE_ENV !== "production";
   @observable loadingGenerate = false;
-  @observable apiRoot = apiRoot;
   @observable clientStorage: ClientStorage | null = null;
   @observable errorMessage = "";
 
@@ -285,15 +279,8 @@ class App extends SafeComponent {
     intArr: Uint8Array,
     imageHash?: string
   ): Promise<string | null> {
-    let hash = imageHash;
-    if (!hash) {
-      hash = md5.ArrayBuffer.hash(intArr);
-    }
-    const fromCache =
-      hash &&
-      this.clientStorage &&
-      this.clientStorage.imageUrlsByHash &&
-      this.clientStorage.imageUrlsByHash[hash];
+    const hash = imageHash ?? md5.ArrayBuffer.hash(intArr);
+    const fromCache = hash && this.clientStorage?.imageUrlsByHash?.[hash];
 
     if (fromCache) {
       console.debug("Used URL from cache", fromCache);
@@ -304,7 +291,7 @@ class App extends SafeComponent {
       return null;
     }
 
-    return fetch(`${apiRoot}/api/v1/upload?apiKey=${apiKey}`, {
+    return fetch(`${apiHost}/api/v1/upload?apiKey=${apiKey}`, {
       method: "POST",
       body: JSON.stringify({
         image: arrayBufferToBase64(intArr),
@@ -672,8 +659,6 @@ class App extends SafeComponent {
       this.width = widthString;
       lsSet(WIDTH_LS_KEY, widthString);
 
-      const apiRoot = this.apiRoot || "https://builder.io";
-
       const encocedUrl = encodeURIComponent(this.urlValue);
 
       lsSet(FRAMES_LS_KEY, this.useFrames);
@@ -681,7 +666,7 @@ class App extends SafeComponent {
       // We need to run the code to process DOM through a backend to run it in a headless browser.
       // Builder.io provides this for the Figma plugin for free.
       fetch(
-        `${apiRoot}/api/v1/url-to-figma?url=${encocedUrl}&width=${width}&useFrames=${this.useFrames}`
+        `${apiHost}/api/v1/url-to-figma?url=${encocedUrl}&width=${width}&useFrames=${this.useFrames}`
       )
         .then((res) => {
           if (!res.ok) {
