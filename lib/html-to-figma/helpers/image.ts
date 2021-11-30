@@ -1,5 +1,3 @@
-import { getUrl } from "./url";
-
 interface ImagePaintWithUrl extends ImagePaint {
   url: string;
 }
@@ -39,18 +37,6 @@ export const getImagePaintWithUrl = ({
           url,
           ...baseImagePaint,
         };
-      }
-    } else if (el instanceof HTMLPictureElement) {
-      const firstSource = el.querySelector("source");
-      if (firstSource) {
-        const src = getUrl(firstSource.srcset.split(/[,\s]+/g)[0]);
-        // TODO: if not absolute
-        if (src) {
-          return {
-            url: src,
-            ...baseImagePaint,
-          };
-        }
       }
     } else if (el instanceof HTMLVideoElement) {
       const url = el.poster;
