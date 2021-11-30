@@ -387,7 +387,7 @@ const getAbsolutePositionRelativeToRootLayer = (
 const hasInvisibleParent = (node: SceneNode): boolean => {
   let parent: SceneNode | null = node;
   do {
-    if (!parent.visible) {
+    if (parent.visible === false) {
       return true;
     }
   } while ((parent = parent.parent as SceneNode | null));
@@ -406,6 +406,7 @@ async function checkIfCanGetCode() {
   const invalidLayers: SceneNode[] = [];
 
   await traverseLayers(selected, (node: SceneNode) => {
+    debugger;
     if (!hasInvisibleParent(node) && isNotImportable(node)) {
       invalidLayers.push(node);
     }
