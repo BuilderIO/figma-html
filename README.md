@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  Convert Figma designs into high quality HTML, React, Vue, Svelte, Angular, Solid, etc code via <a href="https://github.com/BuilderIO/jsx-lite">JSX Lite</a>
+  Convert Figma designs into high quality HTML, React, Vue, Svelte, Angular, Solid, etc code via <a href="https://github.com/BuilderIO/mitosis">mitosis</a>
 </p>
 
 <br />
@@ -21,7 +21,7 @@
 3. Click the "get code" button to launch into the Builder.io editor
 4. Make any final adjustments, and click "get code" at the top of Builder to view code output, or copy and paste it to content of a Builder account to publish live
 
-<img height="300" alt="JSX Lite diagram" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2Fa74df82e1eaf47c6b73c8a1fdeb5853d" />
+<img height="300" alt="mitosis diagram" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2Fa74df82e1eaf47c6b73c8a1fdeb5853d" />
 
 ### Import webpages to Figma designs
 
@@ -70,7 +70,7 @@ If you find any issues or have feedback at all please [make an issue](https://gi
 
 ## TODO
 
-- Support code import from [JSX Lite](https://github.com/BuilderIO/jsx-lite)
+- Support code import from [mitosis](https://github.com/BuilderIO/mitosis)
 - Support Figma components
 
 <br />
