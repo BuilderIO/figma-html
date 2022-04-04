@@ -55,12 +55,16 @@ const layers = htmlToFigma(document.body);
 // E.g. send these to the REST API, or generate a .figma.json file that can be uploaded through the Figma plugin
 ```
 
+## Auto-layout Vectors
+When exporting Figma to Builder, the plugin requires all elements to be in auto-layout. However, it's not possible to auto-layout a vector. The alternative here is to use Figma's `rasterize selection` command on your vector. If the output of that is too low-resolution, then you can try this plugin: https://www.figma.com/community/plugin/837846252158418235/Flatten-Selection-to-Bitmap.
+
+If you want the Builder end-result to have a vector, then consider this rasterized selection as a placeholder, and swap it back with an SVG in the Builder editor.
+
 ## Limitations
 
 Importing HTML layers to Figma is a best-effort process. Even getting 90% there can save you a ton of time, only having to clean up a few things.
 
 A few known limitations:
-
 - not all element types are supported (e.g. iframe, pseudoelements)
 - not all CSS properties are supported or fully supported
 - not all types of media are supported (video, animated gifs, etc)
