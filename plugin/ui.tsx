@@ -1510,7 +1510,7 @@ class App extends SafeComponent {
               <FormattedMessage id="made2" defaultMessage=" by " />
               <a
                 style={{ color: themeVars.colors.primary }}
-                href="https://www.builder.io?ref=figma"
+                href="https://www.builder.io?utm_source=figma"
                 target="_blank"
               >
                 Builder.io

@@ -144,7 +144,7 @@ export default class Popup extends React.Component<AppProps, AppState> {
           by{" "}
           <a
             style={{ color: theme.colors.primary }}
-            href="https://www.builder.io?ref=figma-chrome-extension"
+            href="https://www.builder.io?utm_source=figma-chrome-extension"
             target="_blank"
           >
             Builder.io
