@@ -56,6 +56,7 @@ const layers = htmlToFigma(document.body);
 ```
 
 ## Auto-layout Vectors
+
 When exporting Figma to Builder, the plugin requires all elements to be in auto-layout. However, it's not possible to auto-layout a vector. The alternative here is to use Figma's `rasterize selection` command on your vector. If the output of that is too low-resolution, then you can try this plugin: https://www.figma.com/community/plugin/837846252158418235/Flatten-Selection-to-Bitmap.
 
 If you want the Builder end-result to have a vector, then consider this rasterized selection as a placeholder, and swap it back with an SVG in the Builder editor.
@@ -65,6 +66,7 @@ If you want the Builder end-result to have a vector, then consider this rasteriz
 Importing HTML layers to Figma is a best-effort process. Even getting 90% there can save you a ton of time, only having to clean up a few things.
 
 A few known limitations:
+
 - not all element types are supported (e.g. iframe, pseudoelements)
 - not all CSS properties are supported or fully supported
 - not all types of media are supported (video, animated gifs, etc)
@@ -81,3 +83,36 @@ If you find any issues or have feedback at all please [make an issue](https://gi
 <p align="center">
   Made with ❤️ by <a target="_blank" href="https://builder.io/">Builder.io</a>
 </p>
+
+## Architecture
+
+- `builder.io/api/v1/html-to-figma`: API endpoint that converts a URL's layout to a Figma design. The logic of that endpoint lives in this repo, under [./lib/html-to-figma](./lib/html-to-figma).
+- `builder.io/api/v1/figma-to-builder`: API endpoint that converts a Figma design to a Builder content JSON. The logic of that endpoint lives in Builder's API.
+
+## DEVELOP - Figma plugin
+
+### Setup local development plugin
+
+- install the Figma desktop app through https://www.figma.com/
+
+- Right click Plugins -> Development -> Import plugin from manifest
+  <img src="./assets/dev-import.png" />
+
+- Choose `manifest.json` in this repo
+
+- Now you can access/test the local plugin code in this repo by navigating to: Right click Plugins -> Development -> HTML <> Figma
+  <img src="./assets/dev-use.png" />
+
+### Develop
+
+```bash
+# install
+npm install
+
+# run tsc server
+npm run dev
+```
+
+NOTE: make sure to enable this boolean:
+
+https://github.com/BuilderIO/figma-html/blob/db81565798c2989f701ae2b6b0aeaff175b9108b/plugin/ui.tsx#L45
