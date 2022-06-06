@@ -47,7 +47,7 @@ const useDev = false;
 // https://stackoverflow.com/a/46634877
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
-const apiHost = useDev ? "http://localhost:5000" : "https://builder.io";
+const apiHost = useDev ? "http://localhost:4000" : "https://builder.io";
 
 const selectionToBuilder = async (
   selection: SceneNode[]
@@ -990,7 +990,10 @@ class App extends SafeComponent {
                       href={this.displayFiddleUrl}
                       target="_blank"
                     >
-                      <FormattedMessage id="clickHere" defaultMessage="Click here" />
+                      <FormattedMessage
+                        id="clickHere"
+                        defaultMessage="Click here"
+                      />
                     </a>
                     <FormattedMessage
                       id="clickHere2"
