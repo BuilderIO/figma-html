@@ -89,30 +89,6 @@ If you find any issues or have feedback at all please [make an issue](https://gi
 - `builder.io/api/v1/html-to-figma`: API endpoint that converts a URL's layout to a Figma design. The logic of that endpoint lives in this repo, under [./lib/html-to-figma](./lib/html-to-figma).
 - `builder.io/api/v1/figma-to-builder`: API endpoint that converts a Figma design to a Builder content JSON. The logic of that endpoint lives in Builder's API.
 
-## DEVELOP - Figma plugin
+## DEVELOP
 
-### Setup local development plugin
-
-- install the Figma desktop app through https://www.figma.com/
-
-- Right click Plugins -> Development -> Import plugin from manifest
-  <img src="./assets/dev-import.png" />
-
-- Choose `manifest.json` in this repo
-
-- Now you can access/test the local plugin code in this repo by navigating to: Right click Plugins -> Development -> HTML <> Figma
-  <img src="./assets/dev-use.png" />
-
-### Develop
-
-```bash
-# install
-npm install
-
-# run tsc server
-npm run dev
-```
-
-NOTE: make sure to enable this boolean:
-
-https://github.com/BuilderIO/figma-html/blob/db81565798c2989f701ae2b6b0aeaff175b9108b/plugin/ui.tsx#L45
+Read [DEVELOP.md](./DEVELOP.md)
