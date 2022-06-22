@@ -154,9 +154,9 @@ function convertDataURIToBinary(dataURI: string) {
 function getImageFills(layer: Node) {
   const images =
     Array.isArray(layer.fills) &&
-    layer.fills.filter(
-      (item) => item.type === "IMAGE" && item.visible && item.opacity
-    );
+    layer.fills
+      .filter((item) => item.type === "IMAGE" && item.visible && item.opacity)
+      .sort((a, b) => b.opacity - a.opacity);
   return images;
 }
 
