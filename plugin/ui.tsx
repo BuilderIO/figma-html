@@ -154,7 +154,9 @@ function convertDataURIToBinary(dataURI: string) {
 function getImageFills(layer: Node) {
   const images =
     Array.isArray(layer.fills) &&
-    layer.fills.filter((item) => item.type === "IMAGE");
+    layer.fills
+      .filter((item) => item.type === "IMAGE" && item.visible && item.opacity)
+      .sort((a, b) => b.opacity - a.opacity);
   return images;
 }
 
@@ -440,29 +442,32 @@ class App extends SafeComponent {
     for (const layer of this.selectionWithImages as SceneNode[]) {
       traverseLayers(layer, (node) => {
         const imageFills = getImageFills(node as Node);
-        const image = imageFills && imageFills[0];
-        if ((image as any)?.intArr) {
-          imagesPromises.push(
-            (async () => {
-              const { id } = await fetch(`${apiHost}/api/v1/stage-image`, {
-                method: "POST",
-                body: JSON.stringify({
-                  image: arrayBufferToBase64((image as any).intArr),
-                }),
-                headers: {
-                  "content-type": "application/json",
-                },
-              }).then((res) => {
-                if (!res.ok) {
-                  console.error("Image upload failed", res);
-                  throw new Error("Image upload failed");
-                }
-                return res.json();
-              });
-              delete (node as any).intArr;
-              imageMap[node.id] = id;
-            })()
-          );
+        if (Array.isArray(imageFills) && imageFills.length) {
+          imageFills.forEach((image) => {
+            if ((image as any)?.intArr) {
+              imagesPromises.push(
+                (async () => {
+                  const { id } = await fetch(`${apiHost}/api/v1/stage-image`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                      image: arrayBufferToBase64((image as any).intArr),
+                    }),
+                    headers: {
+                      "content-type": "application/json",
+                    },
+                  }).then((res) => {
+                    if (!res.ok) {
+                      console.error("Image upload failed", res);
+                      throw new Error("Image upload failed");
+                    }
+                    return res.json();
+                  });
+                  delete (node as any).intArr;
+                  imageMap[node.id] = id;
+                })()
+              );
+            }
+          });
         }
       });
     }
