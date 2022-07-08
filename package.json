@@ -5,6 +5,11 @@
   "main": "dist/main.js",
   "browser": "dist/browser.js",
   "types": "dist/lib/html-to-figma.d.ts",
+  "exports": {
+    ".": "./dist/main.js",
+    "./main": "./dist/main.js",
+    "./browser": "./dist/browser.js"
+  },
   "files": [
     "dist"
   ],
