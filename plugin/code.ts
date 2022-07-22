@@ -331,6 +331,7 @@ const importableLayerTypes = new Set<NodeType>([
   "TEXT",
   "COMPONENT",
   "LINE",
+  "INSTANCE",
 ]);
 
 const isNotImportable = (node: SceneNode) =>
