@@ -17,7 +17,6 @@ import {
   withStyles,
   Tabs,
   Tab,
-  Checkbox,
   Box,
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
@@ -155,14 +154,6 @@ const StyledButton = withStyles({
     justifyContent: "center",
   },
 })(MenuItem);
-
-const StyledCheckbox = withStyles({
-  root: {
-    width: 25,
-    height: 25,
-    transform: "scale(0.75)",
-  },
-})(Checkbox);
 
 const BASE64_MARKER = ";base64,";
 function convertDataURIToBinary(dataURI: string) {
@@ -1153,30 +1144,26 @@ class App extends SafeComponent {
                             defaultMessage="Prep your Figma file for export"
                           />
                         </div>
-                        {this.figmaCheckList.results?.map((item) => {
-                          if (item.data.type === "before") {
-                            return (
-                              <div
-                                key={item.id}
-                                style={{
-                                  display: "flex",
-                                  fontSize: 11,
-                                }}
-                              >
-                                <StyledCheckbox color="primary" />
-                                <p
-                                  style={{
-                                    marginTop: "auto",
-                                    marginBottom: "auto",
-                                    opacity: 0.8,
-                                  }}
-                                >
-                                  {item.data.textContent}
-                                </p>
-                              </div>
-                            );
-                          }
-                        })}
+                        <ul style={{ paddingLeft: 20, margin: 0 }}>
+                          {this.figmaCheckList.results?.map((item) => {
+                            if (item.data.type === "before") {
+                              return (
+                                <li key={item.id}>
+                                  <p
+                                    style={{
+                                      marginTop: "auto",
+                                      marginBottom: "auto",
+                                      fontSize: 11,
+                                      opacity: 0.8,
+                                    }}
+                                  >
+                                    {item.data.textContent}
+                                  </p>
+                                </li>
+                              );
+                            }
+                          })}
+                        </ul>
                         <div
                           style={{
                             fontWeight: "bold",
@@ -1189,30 +1176,26 @@ class App extends SafeComponent {
                             defaultMessage="What you will need to do after import"
                           />
                         </div>
-                        {this.figmaCheckList.results?.map((item) => {
-                          if (item.data.type === "after") {
-                            return (
-                              <div
-                                key={item.id}
-                                style={{
-                                  display: "flex",
-                                  fontSize: 11,
-                                }}
-                              >
-                                <StyledCheckbox color="primary" />
-                                <p
-                                  style={{
-                                    marginTop: "auto",
-                                    marginBottom: "auto",
-                                    opacity: 0.8,
-                                  }}
-                                >
-                                  {item.data.textContent}
-                                </p>
-                              </div>
-                            );
-                          }
-                        })}
+                        <ul style={{ paddingLeft: 20, margin: 0 }}>
+                          {this.figmaCheckList.results?.map((item) => {
+                            if (item.data.type === "after") {
+                              return (
+                                <li key={item.id}>
+                                  <p
+                                    style={{
+                                      marginTop: "auto",
+                                      marginBottom: "auto",
+                                      fontSize: 11,
+                                      opacity: 0.8,
+                                    }}
+                                  >
+                                    {item.data.textContent}
+                                  </p>
+                                </li>
+                              );
+                            }
+                          })}
+                        </ul>
                       </div>
                     )}
 
@@ -1226,10 +1209,10 @@ class App extends SafeComponent {
                     }}
                   >
                     <p style={{ margin: 2, fontSize: 12, opacity: 0.8 }}>
-                      <span style={{ fontWeight: "bold" }}>Warning!</span> This
-                      plugin is not magic. Not every detail of your design will
-                      be perfectly imported, and you will need to make final
-                      adjustments after import to make it production-ready.
+                      This plugin is not magic and attempts to import your
+                      design as best as possible. You may need to make final
+                      adjustments after import, including layout, responsiveness
+                      and styling.
                     </p>
                   </Box>
 
