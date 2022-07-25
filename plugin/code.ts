@@ -424,7 +424,11 @@ async function checkIfCanGetCode() {
     for (const invalidLayer of invalidLayers) {
       const errorLayer = figma.createRectangle();
       errorLayer.setPluginData(isImportErrorsKey, "true");
-      errorLayer.name = `"${invalidLayer.name}" needs to use autolayout or be a rasterized image`;
+      if (invalidLayer.type === "VECTOR") {
+        errorLayer.name = `"${invalidLayer.name}" needs to be a rasterized image`;
+      } else {
+        errorLayer.name = `"${invalidLayer.name}" needs to use autolayout`;
+      }
       const { x, y } = getAbsolutePositionRelativeToRootLayer(
         invalidLayer,
         absolutePosition

@@ -877,6 +877,11 @@ class App extends SafeComponent {
                           defaultMessage="autolayout"
                         />
                       </a>
+                      <br />
+                      <FormattedMessage
+                        id="importLayerHelp2"
+                        defaultMessage="Vectors should be rasterized"
+                      />
                     </div>
                     <div>
                       <Button
