@@ -880,8 +880,21 @@ class App extends SafeComponent {
                       <br />
                       <FormattedMessage
                         id="importLayerHelp2"
-                        defaultMessage="Vectors should be rasterized"
+                        defaultMessage="Vectors should be "
                       />
+                      <a
+                        style={{
+                          color: themeVars.colors.primary,
+                        }}
+                        href="https://github.com/BuilderIO/figma-html/#auto-layout-vectors"
+                        target="_blank"
+                        rel="noopenner"
+                      >
+                        <FormattedMessage
+                          id="rasterizeVectors"
+                          defaultMessage="rasterized"
+                        />
+                      </a>
                     </div>
                     <div>
                       <Button

@@ -37,6 +37,8 @@ export const en = {
   selectLayerPop: "Select a layer to get code for",
   width: "Width",
   framesPop: "Nest layers in frames",
+  rasterizeVectors: "rasterized",
+  importLayerHelp2: "Vectors should be ",
 };
 
 export const ru = {
