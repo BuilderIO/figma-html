@@ -1,5 +1,7 @@
 export const en = {
   title: "Export Figma to code ",
+  description:
+    "Convert your Figma designs into responsive code. No sign up required.",
   initExport: "Initializing for export, this can take about a minute...",
   processing: "Processing...",
   processing2: "This can take about a minute...",
@@ -13,7 +15,7 @@ export const en = {
   done: "Done! ",
   clickHere: "Click here",
   clickHere2: " to open your content in Builder.io and choose 'get code'",
-  downloadJson: "Download json",
+  downloadJson: "Download JSON",
   feedback: "This feature is in beta. Please send ",
   feedback2: "feedback",
   importDesigns: "Import website to Figma",
@@ -39,6 +41,8 @@ export const en = {
   framesPop: "Nest layers in frames",
   rasterizeVectors: "rasterized",
   importLayerHelp2: "Vectors should be ",
+  contentListBeforeImport: "Here’s how to prep your Figma file for export:",
+  contentListAfterImport: "Here’s what you will need to do afterwards:",
 };
 
 export const ru = {
