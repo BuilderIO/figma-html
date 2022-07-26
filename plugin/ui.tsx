@@ -846,6 +846,7 @@ class App extends SafeComponent {
             style={{
               minHeight: "auto",
               backgroundColor: "#F9F9F9",
+              flexShrink: 0,
             }}
             value={this.tabIndex}
             onChange={this.switchTab}
