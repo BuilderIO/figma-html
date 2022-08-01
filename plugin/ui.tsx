@@ -1,7 +1,6 @@
 import { BuilderElement } from "@builder.io/sdk";
 import {
   Button,
-  CircularProgress,
   createMuiTheme,
   CssBaseline,
   Divider,
@@ -21,10 +20,8 @@ import {
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
 import { HelpOutline } from "@material-ui/icons";
+import SvgIcon from "@material-ui/core/SvgIcon";
 import Favorite from "@material-ui/icons/Favorite";
-import LaptopMac from "@material-ui/icons/LaptopMac";
-import PhoneIphone from "@material-ui/icons/PhoneIphone";
-import TabletMac from "@material-ui/icons/TabletMac";
 import * as fileType from "file-type";
 import { action, computed, observable, when } from "mobx";
 import { observer } from "mobx-react";
@@ -43,6 +40,11 @@ import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
 import { IntlProvider, FormattedMessage } from "react-intl";
 import { en, ru } from "./localize/i18n";
+import { Loading } from "./components/Loading";
+import { CheckListContent } from "./constants/utils";
+import { MobileIcon } from "./components/Icons/MobileIcon";
+import { TabletIcon } from "./components/Icons/TabletIcon";
+import { DesktopIcon } from "./components/Icons/DesktopIcon";
 
 // Simple debug flag - flip when needed locally
 const useDev = false;
@@ -93,15 +95,6 @@ const selectionToBuilder = async (
 
 interface ClientStorage {
   imageUrlsByHash: { [hash: string]: string | null } | undefined;
-}
-
-interface CheckListContent {
-  id: string;
-  data: {
-    type: string;
-    textContent: string;
-    helplink?: string;
-  };
 }
 
 interface TabPanelProps {
@@ -274,6 +267,37 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+const LoadingEllipsis: React.FC<{}> = () => (
+  <>
+    <div style={{ margin: "0 auto" }} className="lds-ellipsis">
+      <div style={{ background: themeVars.colors.primaryLight }} />
+      <div style={{ background: themeVars.colors.primaryLight }} />
+      <div style={{ background: themeVars.colors.primaryLight }} />
+      <div style={{ background: themeVars.colors.primaryLight }} />
+    </div>
+    <div style={{ textAlign: "center" }}>
+      <Typography
+        variant="caption"
+        style={{
+          textAlign: "center",
+          color: themeVars.colors.primaryLight,
+          marginBottom: -10,
+        }}
+      >
+        <FormattedMessage
+          id="processingCode"
+          defaultMessage="Processing code..."
+        />
+        <br />
+        <FormattedMessage
+          id="processingCode2"
+          defaultMessage="This can take a couple minutes..."
+        />
+      </Typography>
+    </div>
+  </>
+);
+
 @observer
 class App extends SafeComponent {
   editorRef: HTMLIFrameElement | null = null;
@@ -322,8 +346,6 @@ class App extends SafeComponent {
       },
     },
   ];
-  @observable intervalId: number = 0;
-  @observable loaderContentIndex: number = 0;
 
   editorScriptAdded = false;
   dataToPost: any;
@@ -413,18 +435,6 @@ class App extends SafeComponent {
     this.saveUpdates();
   }
 
-  setLoadingBoxContent() {
-    const interval = setInterval(() => {
-      if (this.loaderContentIndex < this.loaderContent.length - 1) {
-        this.loaderContentIndex += 1;
-      } else {
-        clearInterval(this.intervalId);
-      }
-    }, 5000);
-
-    this.intervalId = interval;
-  }
-
   form: HTMLFormElement | null = null;
   urlInputRef: HTMLInputElement | null = null;
   iframeRef: HTMLIFrameElement | null = null;
@@ -470,7 +480,6 @@ class App extends SafeComponent {
         "*"
       );
 
-      this.setLoadingBoxContent();
       this.generatingCode = true;
 
       await when(() => !!this.selectionWithImages);
@@ -940,12 +949,14 @@ class App extends SafeComponent {
 
               {!this.initialized ? (
                 <div>
-                  <div style={{ display: "flex", padding: 20 }}>
-                    <CircularProgress
-                      size={30}
-                      disableShrink
-                      style={{ margin: "auto" }}
-                    />
+                  <div
+                    style={{
+                      display: "flex",
+                      padding: 20,
+                      flexDirection: "column",
+                    }}
+                  >
+                    <LoadingEllipsis />
                   </div>
                   <div
                     style={{
@@ -972,32 +983,7 @@ class App extends SafeComponent {
                     marginTop: 10,
                   }}
                 >
-                  <div style={{ display: "flex", padding: 10 }}>
-                    <CircularProgress
-                      size={30}
-                      disableShrink
-                      style={{ margin: "auto", color: "#1A73E8" }}
-                    />
-                  </div>
-                  <Typography
-                    variant="caption"
-                    style={{
-                      textAlign: "center",
-                      marginTop: 10,
-                      color: "#1A73E8",
-                      marginBottom: -10,
-                      fontStyle: "italic",
-                    }}
-                  >
-                    {this.loaderContent.length && (
-                      <p>
-                        {
-                          this.loaderContent[this.loaderContentIndex].data
-                            .textContent
-                        }
-                      </p>
-                    )}
-                  </Typography>
+                  <Loading content={this.loaderContent} />
                 </Box>
               ) : (
                 <>
@@ -1300,10 +1286,9 @@ class App extends SafeComponent {
                 flexDirection: "column",
                 position: "relative",
                 zIndex: 3,
-                padding: 15,
-                backgroundColor: "#f8f8f8",
                 maxWidth: settings.ui.baseWidth,
                 fontWeight: 400,
+                marginBottom: 10,
               }}
             >
               <form
@@ -1312,7 +1297,7 @@ class App extends SafeComponent {
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  // marginTop: 20
+                  marginBottom: -10,
                 }}
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -1321,8 +1306,7 @@ class App extends SafeComponent {
               >
                 <div
                   style={{
-                    fontSize: 12,
-                    paddingBottom: 18,
+                    margin: 10,
                     fontWeight: "bold",
                   }}
                 >
@@ -1331,15 +1315,47 @@ class App extends SafeComponent {
                     defaultMessage="Import designs from the web"
                   />
                 </div>
-                <div style={{ display: "flex", flexDirection: "column" }}>
+
+                <div
+                  style={{
+                    margin: "0 10 10",
+                    fontSize: 12,
+                    opacity: 0.8,
+                  }}
+                >
+                  <FormattedMessage
+                    id="importDescription"
+                    defaultMessage="Convert website to figma design"
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    margin: "0 10 10",
+                  }}
+                >
                   <div style={{ display: "flex", position: "relative" }}>
                     <TextField
                       inputProps={{
                         style: {
-                          fontSize: 13,
+                          fontSize: 12,
                         },
                       }}
-                      label={this.getLang().urlToImport}
+                      label={
+                        <span
+                          style={{
+                            fontWeight: "bold",
+                            color: "#000000",
+                          }}
+                        >
+                          <FormattedMessage
+                            id="urlToImport"
+                            defaultMessage="Url to import"
+                          />
+                        </span>
+                      }
                       fullWidth
                       inputRef={(ref) => (this.urlInputRef = ref)}
                       disabled={this.loading}
@@ -1379,7 +1395,19 @@ class App extends SafeComponent {
                     >
                       <div style={{ position: "relative", flexGrow: 1 }}>
                         <TextField
-                          label={this.getLang().width}
+                          label={
+                            <span
+                              style={{
+                                fontWeight: "bold",
+                                color: "#000000",
+                              }}
+                            >
+                              <FormattedMessage
+                                id="width"
+                                defaultMessage="Width"
+                              />
+                            </span>
+                          }
                           required
                           inputProps={{
                             min: "200",
@@ -1434,29 +1462,30 @@ class App extends SafeComponent {
                           <IconButton
                             style={{
                               padding: 5,
-                              color: this.width === "1200" ? "#888" : "#ddd",
+                              color: this.width === "1200" ? "#000" : "#888",
                             }}
                             onClick={() => (this.width = "1200")}
                           >
-                            <LaptopMac style={{ fontSize: 14 }} />
+                            <DesktopIcon />
                           </IconButton>
+
                           <IconButton
                             style={{
                               padding: 5,
-                              color: this.width === "900" ? "#888" : "#ddd",
+                              color: this.width === "900" ? "#000" : "#888",
                             }}
                             onClick={() => (this.width = "900")}
                           >
-                            <TabletMac style={{ fontSize: 14 }} />
+                            <TabletIcon />
                           </IconButton>
                           <IconButton
                             style={{
                               padding: 5,
-                              color: this.width === "400" ? "#888" : "#ddd",
+                              color: this.width === "400" ? "#000" : "#888",
                             }}
                             onClick={() => (this.width = "400")}
                           >
-                            <PhoneIphone style={{ fontSize: 14 }} />
+                            <MobileIcon />
                           </IconButton>
                         </div>
                       </div>
@@ -1489,8 +1518,8 @@ class App extends SafeComponent {
                             <span
                               style={{
                                 fontSize: 12,
-                                opacity: 0.6,
                                 position: "relative",
+                                fontWeight: "bold",
                                 top: -5,
                               }}
                             >
@@ -1538,190 +1567,207 @@ class App extends SafeComponent {
                   </div>
                 )}
                 {this.loading ? (
-                  <>
-                    <div style={{ margin: "0 auto" }} className="lds-ellipsis">
-                      <div
-                        style={{ background: themeVars.colors.primaryLight }}
-                      />
-                      <div
-                        style={{ background: themeVars.colors.primaryLight }}
-                      />
-                      <div
-                        style={{ background: themeVars.colors.primaryLight }}
-                      />
-                      <div
-                        style={{ background: themeVars.colors.primaryLight }}
-                      />
-                    </div>
-                    <Typography
-                      variant="caption"
-                      style={{
-                        textAlign: "center",
-                        // marginTop: 10,
-                        color: themeVars.colors.primaryLight,
-                        marginBottom: -10,
-                        // fontStyle: "italic"
-                      }}
-                    >
-                      <FormattedMessage
-                        id="processingCode"
-                        defaultMessage="Processing code..."
-                      />
-                      <br />
-                      <FormattedMessage
-                        id="processingCode2"
-                        defaultMessage="This can take a couple minutes..."
-                      />
-                    </Typography>
-                  </>
+                  <div style={{ margin: 10 }}>
+                    <Loading content={this.loaderContent} />
+                  </div>
                 ) : (
                   <>
-                    <Button
-                      type="submit"
-                      disabled={Boolean(
-                        this.errorMessage || this.loading || !this.online
-                      )}
-                      style={{ marginTop: 20, textTransform: "none" }}
-                      fullWidth
-                      color="primary"
-                      variant="outlined"
-                      onClick={this.onCreate}
-                    >
-                      <FormattedMessage id="import" defaultMessage="Import" />
-                    </Button>
-                    <div
+                    <Box
                       style={{
-                        color: "#888",
-                        fontSize: 12,
-                        textAlign: "center",
-                        marginTop: 15,
-                        userSelect: "none",
-                        marginBottom: -10,
+                        padding: 5,
+                        backgroundColor: "#F9F9F9",
+                        borderRadius: 4,
+                        border: "1px solid #D3D3D3",
+                        margin: "5 10",
                       }}
                     >
-                      <FormattedMessage
-                        id="orTry"
-                        defaultMessage="Or try our "
-                      />
-                      <a
+                      <p style={{ margin: 2, fontSize: 12, opacity: 0.8 }}>
+                        This plugin is not magic. For best results, you may need
+                        to do some cleanup afterwards to make it
+                        production-ready.
+                      </p>
+                    </Box>
+                    <div style={{ margin: "0 10" }}>
+                      <Button
+                        type="submit"
+                        size="small"
+                        disabled={Boolean(
+                          this.errorMessage || this.loading || !this.online
+                        )}
                         style={{
-                          color: themeVars.colors.primary,
-                          cursor: "pointer",
-                          textDecoration: "none",
+                          marginTop: 10,
+                          marginBottom: 10,
+                          textTransform: "none",
                         }}
-                        href="https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim"
-                        target="_blank"
+                        fullWidth
+                        color="primary"
+                        variant="contained"
+                        onClick={this.onCreate}
+                      >
+                        <FormattedMessage id="import" defaultMessage="Import" />
+                      </Button>
+                    </div>
+
+                    <Divider />
+                    <div
+                      style={{
+                        backgroundColor: "#F9F9F9",
+                        padding: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: "bold",
+                        }}
                       >
                         <FormattedMessage
-                          id="orTry2"
-                          defaultMessage="chrome extension"
+                          id="chromeExtension"
+                          defaultMessage="Chrome Extension"
                         />
-                      </a>
-                      <FormattedMessage
-                        id="orTry3"
-                        defaultMessage=" to capture a page in your browser and"
-                      />
-                      <a
-                        onClick={() => {
-                          const input = document.createElement("input");
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                        }}
+                      >
+                        <p
+                          style={{
+                            margin: "10 0",
+                            opacity: 0.8,
+                          }}
+                        >
+                          Want to capture a page that you need to navigate to or
+                          is behind an auth wall? Then the Chrome Extension is
+                          for you!
+                        </p>
 
-                          input.type = "file";
-                          document.body.appendChild(input);
-                          input.style.visibility = "hidden";
-                          input.click();
+                        <p style={{ margin: "5 0" }}>
+                          <span style={{ fontWeight: "bold" }}>Step 1: </span>
+                          Use our
+                          <a
+                            style={{
+                              color: themeVars.colors.primary,
+                              cursor: "pointer",
+                              textDecoration: "none",
+                            }}
+                            href="https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim"
+                            target="_blank"
+                          >
+                            <FormattedMessage
+                              id="chromeExtensionLink"
+                              defaultMessage="chrome extension"
+                            />
+                          </a>
+                        </p>
 
-                          const onFocus = () => {
-                            setTimeout(() => {
-                              if (
-                                input.parentElement &&
-                                (!input.files || input.files.length === 0)
-                              ) {
-                                done();
-                              }
-                            }, 200);
-                          };
+                        <p style={{ margin: "5 0" }}>
+                          <span style={{ fontWeight: "bold" }}>Step 2: </span>
+                          Upload the figma.json file
+                          <a
+                            onClick={() => {
+                              const input = document.createElement("input");
 
-                          const done = () => {
-                            input.remove();
-                            this.loading = false;
-                            window.removeEventListener("focus", onFocus);
-                          };
+                              input.type = "file";
+                              document.body.appendChild(input);
+                              input.style.visibility = "hidden";
+                              input.click();
 
-                          window.addEventListener("focus", onFocus);
+                              const onFocus = () => {
+                                setTimeout(() => {
+                                  if (
+                                    input.parentElement &&
+                                    (!input.files || input.files.length === 0)
+                                  ) {
+                                    done();
+                                  }
+                                }, 200);
+                              };
 
-                          // TODO: parse and upload images!
-                          input.addEventListener("change", (event) => {
-                            const file = (event.target as HTMLInputElement)
-                              .files![0];
-                            if (file) {
-                              this.loading = true;
-                              var reader = new FileReader();
+                              const done = () => {
+                                input.remove();
+                                this.loading = false;
+                                window.removeEventListener("focus", onFocus);
+                              };
 
-                              // Closure to capture the file information.
-                              reader.onload = (e) => {
-                                const text = (e.target as any).result;
-                                try {
-                                  const json = JSON.parse(text);
-                                  Promise.all(
-                                    json.layers.map(async (rootLayer: Node) => {
-                                      await traverseLayers(
-                                        rootLayer,
-                                        (layer: any) => {
-                                          if (getImageFills(layer)) {
-                                            return processImages(layer).catch(
-                                              (err) => {
-                                                console.warn(
-                                                  "Could not process image",
-                                                  err
-                                                );
+                              window.addEventListener("focus", onFocus);
+
+                              // TODO: parse and upload images!
+                              input.addEventListener("change", (event) => {
+                                const file = (event.target as HTMLInputElement)
+                                  .files![0];
+                                if (file) {
+                                  this.loading = true;
+                                  var reader = new FileReader();
+
+                                  // Closure to capture the file information.
+                                  reader.onload = (e) => {
+                                    const text = (e.target as any).result;
+                                    try {
+                                      const json = JSON.parse(text);
+                                      Promise.all(
+                                        json.layers.map(
+                                          async (rootLayer: Node) => {
+                                            await traverseLayers(
+                                              rootLayer,
+                                              (layer: any) => {
+                                                if (getImageFills(layer)) {
+                                                  return processImages(
+                                                    layer
+                                                  ).catch((err) => {
+                                                    console.warn(
+                                                      "Could not process image",
+                                                      err
+                                                    );
+                                                  });
+                                                }
                                               }
                                             );
                                           }
-                                        }
-                                      );
-                                    })
-                                  )
-                                    .then(() => {
-                                      parent.postMessage(
-                                        {
-                                          pluginMessage: {
-                                            type: "import",
-                                            data: json,
-                                          },
-                                        },
-                                        "*"
-                                      );
-                                      setTimeout(() => {
-                                        done();
-                                      }, 1000);
-                                    })
-                                    .catch((err) => {
+                                        )
+                                      )
+                                        .then(() => {
+                                          parent.postMessage(
+                                            {
+                                              pluginMessage: {
+                                                type: "import",
+                                                data: json,
+                                              },
+                                            },
+                                            "*"
+                                          );
+                                          setTimeout(() => {
+                                            done();
+                                          }, 1000);
+                                        })
+                                        .catch((err) => {
+                                          done();
+                                          console.error(err);
+                                          alert(err);
+                                        });
+                                    } catch (err) {
+                                      alert("File read error: " + err);
                                       done();
-                                      console.error(err);
-                                      alert(err);
-                                    });
-                                } catch (err) {
-                                  alert("File read error: " + err);
+                                    }
+                                  };
+
+                                  reader.readAsText(file);
+                                } else {
                                   done();
                                 }
-                              };
-
-                              reader.readAsText(file);
-                            } else {
-                              done();
-                            }
-                          });
-                        }}
-                        style={{
-                          color: themeVars.colors.primary,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <FormattedMessage
-                          id="orTry4"
-                          defaultMessage=" upload here "
-                        />
-                      </a>
+                              });
+                            }}
+                            style={{
+                              color: themeVars.colors.primary,
+                              cursor: "pointer",
+                            }}
+                          >
+                            <FormattedMessage
+                              id="uploadLink"
+                              defaultMessage=" upload here "
+                            />
+                          </a>
+                        </p>
+                      </div>
                     </div>
                   </>
                 )}
@@ -1774,6 +1820,7 @@ class App extends SafeComponent {
           <div
             style={{
               marginTop: 5,
+              marginBottom: 20,
               textAlign: "center",
               color: "#666",
               fontSize: 12,
@@ -1825,22 +1872,24 @@ class App extends SafeComponent {
             </Select>
           </div> */}
 
+          <Divider />
           <div
             style={{
-              marginTop: 20,
               textAlign: "center",
-              color: "#999",
+              backgroundColor: "#F9F9F9",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 400,
-              fontSize: 9,
-              paddingBottom: 10,
+              justifyContent: "space-around",
+              fontWeight: 500,
+              fontSize: 12,
+              padding: 10,
+              marginTop: "auto",
             }}
           >
             <a
               style={{
-                color: "#999",
+                color: "#000000",
+                opacity: 0.7,
                 textDecoration: "none",
               }}
               href="https://github.com/BuilderIO/html-to-figma/issues"
@@ -1848,20 +1897,10 @@ class App extends SafeComponent {
             >
               <FormattedMessage id="feedbackFooter" defaultMessage="Feedback" />
             </a>
-            <span
-              style={{
-                display: "inline-block",
-                height: 10,
-                width: 1,
-                background: "#999",
-                marginTop: 1,
-                opacity: 0.8,
-                marginLeft: 5,
-              }}
-            />
             <a
               style={{
-                color: "#999",
+                color: "#000000",
+                opacity: 0.7,
                 textDecoration: "none",
                 marginLeft: 5,
               }}
@@ -1870,20 +1909,10 @@ class App extends SafeComponent {
             >
               <FormattedMessage id="source" defaultMessage="Source" />
             </a>
-            <span
-              style={{
-                display: "inline-block",
-                height: 10,
-                width: 1,
-                background: "#999",
-                marginTop: 1,
-                opacity: 0.8,
-                marginLeft: 5,
-              }}
-            />
             <a
               style={{
-                color: "#999",
+                color: "#000000",
+                opacity: 0.7,
                 textDecoration: "none",
                 marginLeft: 5,
               }}
