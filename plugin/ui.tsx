@@ -166,7 +166,10 @@ function getImageFills(layer: Node) {
   const images =
     Array.isArray(layer.fills) &&
     layer.fills
-      .filter((item) => item.type === "IMAGE" && item.visible && item.opacity)
+      .filter(
+        (item) =>
+          item.type === "IMAGE" && item.visible !== false && item.opacity !== 0
+      )
       .sort((a, b) => b.opacity - a.opacity);
   return images;
 }
