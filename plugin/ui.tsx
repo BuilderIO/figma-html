@@ -45,7 +45,7 @@ import { CheckListContent } from "./constants/utils";
 import { MobileIcon } from "./components/Icons/MobileIcon";
 import { TabletIcon } from "./components/Icons/TabletIcon";
 import { DesktopIcon } from "./components/Icons/DesktopIcon";
-import * as amplitude from "@amplitude/analytics-browser";
+import * as amplitude from "./functions/track";
 import { v4 as uuid } from "uuid";
 
 // Simple debug flag - flip when needed locally
@@ -55,7 +55,7 @@ const useDev = false;
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
 const apiHost = useDev ? "http://localhost:4000" : "https://builder.io";
-amplitude.init("cef436f480b80001e09b06b6da3d3db5");
+amplitude.initialize();
 
 const selectionToBuilder = async (
   selection: SceneNode[]
@@ -621,7 +621,7 @@ class App extends SafeComponent {
           this.generatingCode = false;
           this.selectionWithImages = null;
           this.showRequestFailedError = true;
-          amplitude.track("export error");
+          amplitude.track("fiddle creation failed");
 
           throw err;
         });
@@ -631,10 +631,8 @@ class App extends SafeComponent {
       }
       this.generatingCode = false;
       this.selectionWithImages = null;
-      const identifyObj = new amplitude.Identify();
-      identifyObj.add("exportToBuilderCount", 1);
-      amplitude.identify(identifyObj);
 
+      amplitude.incrementUserProps("export_count");
       amplitude.track("export to builder", {
         url: this.displayFiddleUrl,
         type: "fiddle",
@@ -654,9 +652,7 @@ class App extends SafeComponent {
 
       this.generatingCode = false;
       this.selectionWithImages = null;
-      const identifyObj = new amplitude.Identify();
-      identifyObj.add("exportToBuilderCount", 1);
-      amplitude.identify(identifyObj);
+      amplitude.incrementUserProps("export_count");
       amplitude.track("export to builder", {
         type: "json",
       });
@@ -817,9 +813,7 @@ class App extends SafeComponent {
             amplitude.track("import error");
             throw new Error("Url-to-figma failed");
           }
-          const identifyObj = new amplitude.Identify();
-          identifyObj.add("importToBuilderCount", 1);
-          amplitude.identify(identifyObj);
+          amplitude.incrementUserProps("import_count");
           amplitude.track("import to figma", {
             url: this.urlValue,
             type: "url",
@@ -1783,13 +1777,9 @@ class App extends SafeComponent {
                                             },
                                             "*"
                                           );
-                                          const identifyObj =
-                                            new amplitude.Identify();
-                                          identifyObj.add(
-                                            "importToBuilderCount",
-                                            1
+                                          amplitude.incrementUserProps(
+                                            "import_count"
                                           );
-                                          amplitude.identify(identifyObj);
                                           amplitude.track("import to figma", {
                                             type: "chrome-extension",
                                           });
