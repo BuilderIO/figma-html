@@ -45,6 +45,8 @@ import { CheckListContent } from "./constants/utils";
 import { MobileIcon } from "./components/Icons/MobileIcon";
 import { TabletIcon } from "./components/Icons/TabletIcon";
 import { DesktopIcon } from "./components/Icons/DesktopIcon";
+import * as amplitude from "./functions/track";
+import { v4 as uuid } from "uuid";
 
 // Simple debug flag - flip when needed locally
 const useDev = false;
@@ -53,6 +55,7 @@ const useDev = false;
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
 const apiHost = useDev ? "http://localhost:4000" : "https://builder.io";
+amplitude.initialize();
 
 const selectionToBuilder = async (
   selection: SceneNode[]
@@ -86,6 +89,9 @@ const selectionToBuilder = async (
   }).then((res) => {
     if (!res.ok) {
       console.error("Figma-to-builder request failed", res);
+      amplitude.track("export error", {
+        message: "Figma-to-builder request failed",
+      });
       throw new Error("Figma-to-builder request failed");
     }
     return res.json();
@@ -94,7 +100,8 @@ const selectionToBuilder = async (
 };
 
 interface ClientStorage {
-  imageUrlsByHash: { [hash: string]: string | null } | undefined;
+  imageUrlsByHash?: { [hash: string]: string | null } | undefined;
+  userId: string | undefined;
 }
 
 interface TabPanelProps {
@@ -503,6 +510,7 @@ class App extends SafeComponent {
       this.loadingGenerate = false;
       this.generatingCode = false;
       this.showRequestFailedError = true;
+      amplitude.track("export error");
       throw err;
     });
 
@@ -546,6 +554,7 @@ class App extends SafeComponent {
       this.loadingGenerate = false;
       this.generatingCode = false;
       this.showRequestFailedError = true;
+      amplitude.track("export error");
       throw err;
     });
 
@@ -586,6 +595,7 @@ class App extends SafeComponent {
       this.generatingCode = false;
       this.isValidImport = null;
       this.showImportInvalidError = true;
+      amplitude.track("import error");
       return;
     }
     this.isValidImport = null;
@@ -611,6 +621,7 @@ class App extends SafeComponent {
           this.generatingCode = false;
           this.selectionWithImages = null;
           this.showRequestFailedError = true;
+          amplitude.track("fiddle creation failed");
 
           throw err;
         });
@@ -620,6 +631,12 @@ class App extends SafeComponent {
       }
       this.generatingCode = false;
       this.selectionWithImages = null;
+
+      amplitude.incrementUserProps("export_count");
+      amplitude.track("export to builder", {
+        url: this.displayFiddleUrl,
+        type: "fiddle",
+      });
     } else {
       const blob = new Blob([json], {
         type: "application/json",
@@ -635,6 +652,10 @@ class App extends SafeComponent {
 
       this.generatingCode = false;
       this.selectionWithImages = null;
+      amplitude.incrementUserProps("export_count");
+      amplitude.track("export to builder", {
+        type: "json",
+      });
     }
   }
 
@@ -663,7 +684,7 @@ class App extends SafeComponent {
         this.loading = false;
       }
       if (data.type === "storage") {
-        this.clientStorage = data.data || {};
+        this.clientStorage = data.data;
       }
     });
 
@@ -729,6 +750,18 @@ class App extends SafeComponent {
       () => {
         if (this.clientStorage) {
           this.updateStorage();
+        } else if (this.clientStorage === undefined) {
+          this.clientStorage = { userId: uuid() };
+        }
+      }
+    );
+
+    this.safeReaction(
+      () => this.clientStorage?.userId,
+      (userId) => {
+        if (userId) {
+          amplitude.setUserId(userId);
+          amplitude.track("figma plugin started");
         }
       }
     );
@@ -777,8 +810,14 @@ class App extends SafeComponent {
         .then((res) => {
           if (!res.ok) {
             console.error("Url-to-figma failed", res);
+            amplitude.track("import error");
             throw new Error("Url-to-figma failed");
           }
+          amplitude.incrementUserProps("import_count");
+          amplitude.track("import to figma", {
+            url: this.urlValue,
+            type: "url",
+          });
           return res.json();
         })
         .then((data) => {
@@ -1738,6 +1777,13 @@ class App extends SafeComponent {
                                             },
                                             "*"
                                           );
+                                          amplitude.incrementUserProps(
+                                            "import_count"
+                                          );
+                                          amplitude.track("import to figma", {
+                                            type: "chrome-extension",
+                                          });
+
                                           setTimeout(() => {
                                             done();
                                           }, 1000);
