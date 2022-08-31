@@ -4,7 +4,6 @@ import CheckCircle from "@material-ui/icons/CheckCircleOutline";
 import Heart from "@material-ui/icons/Favorite";
 import { observer } from "mobx-react";
 import { observable } from "mobx";
-import "./Popup.scss";
 import { theme } from "../constants/theme";
 const logo = require("../../assets/logo.png");
 
@@ -55,6 +54,7 @@ export default class Popup extends React.Component<AppProps, AppState> {
           flexDirection: "column"
         }}
       >
+        <style>{`body { margin: 0 }`}</style>
         <img
           style={{
             height: 61,

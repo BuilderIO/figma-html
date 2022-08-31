@@ -1,9 +1,9 @@
 {
   "manifest_version": 2,
 
-  "name": "HTML <> Figma",
+  "name": "HTML to Figma - by Builder.io",
   "description": "Import a web page to Figma layers",
-  "version": "0.0.5",
+  "version": "0.0.6",
 
   "browser_action": {
     "default_icon": "icon16.png",

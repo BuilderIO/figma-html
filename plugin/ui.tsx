@@ -1871,8 +1871,8 @@ class App extends SafeComponent {
                 Builder.io{" "}
               </a>{" "}
               <span style={{ opacity: 0.8 }}>
-                is the only Visual CMS that lets you drag and drop to create
-                pages and content on your tech stack, using your code
+                is a Visual CMS that lets you drag and drop to create
+                pages and content on your tech stack, using your
                 components.
               </span>
             </p>
