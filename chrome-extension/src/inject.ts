@@ -1,9 +1,10 @@
 import { htmlToFigma } from "@builder.io/html-to-figma";
 
-const layers = htmlToFigma('body', location.hash.includes('useFrames=true'));
+const layers = htmlToFigma("body", location.hash.includes("useFrames=true"));
+
 var json = JSON.stringify({ layers });
 var blob = new Blob([json], {
-  type: "application/json"
+  type: "application/json",
 });
 
 const link = document.createElement("a");

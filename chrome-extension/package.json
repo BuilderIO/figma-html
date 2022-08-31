@@ -8,6 +8,7 @@
     "watch": "webpack -w --config webpack.dev.js",
     "lint": "tslint 'src/**/*.{ts, tsx}'"
   },
+  "main": "dist/main.js",
   "typings": "dist/main.d.ts",
   "author": "Steve Sewell",
   "license": "MIT",
