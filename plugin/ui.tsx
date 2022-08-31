@@ -1016,36 +1016,38 @@ class App extends SafeComponent {
                   </div>
                 </div>
               ) : this.generatingCode ? (
-                <> <Box
-                style={{
-                  padding: 5,
-                  backgroundColor: "#F9F9F9",
-                  borderRadius: 4,
-                  border: "1px solid #D3D3D3",
-                  marginTop: 10,
-                }}
-              >
-                <p style={{ margin: 2, fontSize: 12, opacity: 0.8 }}>
-                  <span style={{ fontWeight: "bold" }}>
-                    Note: this plugin is not magic.
-                  </span>{' '}
-                  We attempt to import your design as best possible. You
-                  may need to make final adjustments after import,
-                  including layout, responsiveness and styling.
-                </p>
-              </Box>
-                <Box
-                  border={1}
-                  style={{
-                    padding: 5,
-                    backgroundColor: "#F4F8FF",
-                    borderRadius: 4,
-                    borderColor: "#F4F8FF",
-                    marginTop: 10,
-                  }}
-                >
-                  <Loading content={this.loaderContent} />
-                </Box>
+                <>
+                  {" "}
+                  <Box
+                    style={{
+                      padding: 5,
+                      backgroundColor: "#F9F9F9",
+                      borderRadius: 4,
+                      border: "1px solid #D3D3D3",
+                      marginTop: 10,
+                    }}
+                  >
+                    <p style={{ margin: 2, fontSize: 12, opacity: 0.8 }}>
+                      <span style={{ fontWeight: "bold" }}>
+                        Note: this plugin is not magic.
+                      </span>{" "}
+                      We attempt to import your design as best possible. You may
+                      need to make final adjustments after import, including
+                      layout, responsiveness and styling.
+                    </p>
+                  </Box>
+                  <Box
+                    border={1}
+                    style={{
+                      padding: 5,
+                      backgroundColor: "#F4F8FF",
+                      borderRadius: 4,
+                      borderColor: "#F4F8FF",
+                      marginTop: 10,
+                    }}
+                  >
+                    <Loading content={this.loaderContent} />
+                  </Box>
                 </>
               ) : (
                 <>
@@ -1179,7 +1181,7 @@ class App extends SafeComponent {
                   )}
 
                   {this.figmaCheckList &&
-                    Object.keys(this.figmaCheckList).length && (
+                    Boolean(Object.keys(this.figmaCheckList).length) && (
                       <div>
                         <div
                           style={{
@@ -1251,8 +1253,6 @@ class App extends SafeComponent {
                         </ul>
                       </div>
                     )}
-
-
 
                   <Tooltip
                     disableHoverListener={Boolean(this.selection.length)}
@@ -1623,7 +1623,7 @@ class App extends SafeComponent {
                         backgroundColor: "#F9F9F9",
                         borderRadius: 4,
                         border: "1px solid #D3D3D3",
-                        marginBottom: 10
+                        marginBottom: 10,
                       }}
                     >
                       <p style={{ margin: 2, fontSize: 12, opacity: 0.8 }}>
@@ -1871,9 +1871,8 @@ class App extends SafeComponent {
                 Builder.io{" "}
               </a>{" "}
               <span style={{ opacity: 0.8 }}>
-                is a Visual CMS that lets you drag and drop to create
-                pages and content on your tech stack, using your
-                components.
+                is a Visual CMS that lets you drag and drop to create pages and
+                content on your tech stack, using your components.
               </span>
             </p>
           </div>
