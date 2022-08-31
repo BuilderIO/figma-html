@@ -937,10 +937,11 @@ class App extends SafeComponent {
               }
             />
           </Tabs>
+          <Divider />
           <TabPanel value={this.tabIndex} index={0}>
             <div
               style={{
-                padding: 10,
+                padding: 15,
               }}
             >
               <div
@@ -1015,6 +1016,24 @@ class App extends SafeComponent {
                   </div>
                 </div>
               ) : this.generatingCode ? (
+                <> <Box
+                style={{
+                  padding: 5,
+                  backgroundColor: "#F9F9F9",
+                  borderRadius: 4,
+                  border: "1px solid #D3D3D3",
+                  marginTop: 10,
+                }}
+              >
+                <p style={{ margin: 2, fontSize: 12, opacity: 0.8 }}>
+                  <span style={{ fontWeight: "bold" }}>
+                    Note: this plugin is not magic.
+                  </span>{' '}
+                  We attempt to import your design as best possible. You
+                  may need to make final adjustments after import,
+                  including layout, responsiveness and styling.
+                </p>
+              </Box>
                 <Box
                   border={1}
                   style={{
@@ -1027,6 +1046,7 @@ class App extends SafeComponent {
                 >
                   <Loading content={this.loaderContent} />
                 </Box>
+                </>
               ) : (
                 <>
                   {this.showImportInvalidError && (
@@ -1164,8 +1184,8 @@ class App extends SafeComponent {
                         <div
                           style={{
                             fontWeight: "bold",
-                            margin: "5 0 5",
                             fontSize: 12,
+                            marginTop: 15,
                           }}
                         >
                           <FormattedMessage
@@ -1179,15 +1199,17 @@ class App extends SafeComponent {
                               return (
                                 <li key={item.id}>
                                   <p
+                                    className="rich-text"
                                     style={{
                                       marginTop: "auto",
                                       marginBottom: "auto",
                                       fontSize: 11,
                                       opacity: 0.8,
                                     }}
-                                  >
-                                    {item.data.textContent}
-                                  </p>
+                                    dangerouslySetInnerHTML={{
+                                      __html: item.data.textContent,
+                                    }}
+                                  />
                                 </li>
                               );
                             }
@@ -1196,7 +1218,7 @@ class App extends SafeComponent {
                         <div
                           style={{
                             fontWeight: "bold",
-                            margin: "5 0 5",
+                            marginTop: 15,
                             fontSize: 12,
                           }}
                         >
@@ -1211,15 +1233,17 @@ class App extends SafeComponent {
                               return (
                                 <li key={item.id}>
                                   <p
+                                    className="rich-text"
                                     style={{
                                       marginTop: "auto",
                                       marginBottom: "auto",
                                       fontSize: 11,
                                       opacity: 0.8,
                                     }}
-                                  >
-                                    {item.data.textContent}
-                                  </p>
+                                    dangerouslySetInnerHTML={{
+                                      __html: item.data.textContent,
+                                    }}
+                                  />
                                 </li>
                               );
                             }
@@ -1228,22 +1252,7 @@ class App extends SafeComponent {
                       </div>
                     )}
 
-                  <Box
-                    style={{
-                      padding: 5,
-                      backgroundColor: "#F9F9F9",
-                      borderRadius: 4,
-                      border: "1px solid #D3D3D3",
-                      marginTop: 10,
-                    }}
-                  >
-                    <p style={{ margin: 2, fontSize: 12, opacity: 0.8 }}>
-                      This plugin is not magic and attempts to import your
-                      design as best as possible. You may need to make final
-                      adjustments after import, including layout, responsiveness
-                      and styling.
-                    </p>
-                  </Box>
+
 
                   <Tooltip
                     disableHoverListener={Boolean(this.selection.length)}
@@ -1253,7 +1262,7 @@ class App extends SafeComponent {
                       <Button
                         fullWidth
                         size="small"
-                        style={{ marginTop: 10, textTransform: "none" }}
+                        style={{ marginTop: 20, textTransform: "none" }}
                         variant="contained"
                         onClick={(e) => {
                           this.getCode(true);
@@ -1331,6 +1340,7 @@ class App extends SafeComponent {
                 maxWidth: settings.ui.baseWidth,
                 fontWeight: 400,
                 marginBottom: 10,
+                padding: 5,
               }}
             >
               <form
@@ -1478,7 +1488,6 @@ class App extends SafeComponent {
                             }
                           }}
                           placeholder="1200"
-                          // style={{ marginLeft: 20 , width: 100  }}
                           fullWidth
                           type="number"
                           value={this.width}
@@ -1546,9 +1555,7 @@ class App extends SafeComponent {
                           style={{ marginLeft: 20 }}
                           control={
                             <Switch
-                              // disabled={this.loading}
                               size="small"
-                              // style={{ marginLeft: 20 }}
                               color="primary"
                               checked={this.useFrames}
                               onChange={(e) =>
@@ -1610,26 +1617,29 @@ class App extends SafeComponent {
                 )}
                 {this.loading ? (
                   <div style={{ margin: 10 }}>
-                    <Loading content={this.loaderContent} />
-                  </div>
-                ) : (
-                  <>
                     <Box
                       style={{
                         padding: 5,
                         backgroundColor: "#F9F9F9",
                         borderRadius: 4,
                         border: "1px solid #D3D3D3",
-                        margin: "5 10",
+                        marginBottom: 10
                       }}
                     >
                       <p style={{ margin: 2, fontSize: 12, opacity: 0.8 }}>
-                        This plugin is not magic. For best results, you may need
-                        to do some cleanup afterwards to make it
-                        production-ready.
+                        <span style={{ fontWeight: "bold" }}>
+                          Note: this plugin is not magic.
+                        </span>{" "}
+                        For best results, you may need to do some cleanup
+                        afterwards to make it production-ready.
                       </p>
                     </Box>
-                    <div style={{ margin: "0 10" }}>
+
+                    <Loading content={this.loaderContent} />
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ margin: "0 15" }}>
                       <Button
                         type="submit"
                         size="small"
@@ -1637,7 +1647,7 @@ class App extends SafeComponent {
                           this.errorMessage || this.loading || !this.online
                         )}
                         style={{
-                          marginTop: 10,
+                          marginTop: 5,
                           marginBottom: 10,
                           textTransform: "none",
                         }}
@@ -1650,11 +1660,12 @@ class App extends SafeComponent {
                       </Button>
                     </div>
 
-                    <Divider />
+                    <Divider style={{ margin: "0 -5" }} />
                     <div
                       style={{
                         backgroundColor: "#F9F9F9",
-                        padding: 10,
+                        padding: 15,
+                        margin: "0 -5 -5",
                       }}
                     >
                       <div
@@ -1844,7 +1855,6 @@ class App extends SafeComponent {
             <p
               style={{
                 margin: 10,
-                opacity: 0.8,
                 fontSize: 12,
                 textAlign: "center",
               }}
@@ -1858,11 +1868,13 @@ class App extends SafeComponent {
                 href="https://www.builder.io?utm_source=figma"
                 target="_blank"
               >
-                Builder{" "}
+                Builder.io{" "}
               </a>{" "}
-              is the only headless CMS with a visual editor that allows users to
-              drag and drop to create pages and content with your code
-              components.
+              <span style={{ opacity: 0.8 }}>
+                is the only Visual CMS that lets you drag and drop to create
+                pages and content on your tech stack, using your code
+                components.
+              </span>
             </p>
           </div>
 
@@ -1894,34 +1906,7 @@ class App extends SafeComponent {
             </a>
           </div>
 
-          {/* Translation */}
-
-          {/* <div
-            style={{
-              marginTop: 10,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Select
-              style={{
-                opacity: 0.3,
-                fontSize: "11px",
-                fontWeight: 600,
-              }}
-              id="demo-simple-select"
-              value={this.currentLanguage}
-              onChange={(e) =>
-                (this.currentLanguage = (e.target as HTMLInputElement).value)
-              }
-            >
-              <StyledButton value="en">EN</StyledButton>
-              <StyledButton value="ru">RU</StyledButton>
-            </Select>
-          </div> */}
-
-          <Divider />
+          <Divider style={{ marginTop: "auto" }} />
           <div
             style={{
               textAlign: "center",
@@ -1932,7 +1917,6 @@ class App extends SafeComponent {
               fontWeight: 500,
               fontSize: 12,
               padding: 10,
-              marginTop: "auto",
             }}
           >
             <a

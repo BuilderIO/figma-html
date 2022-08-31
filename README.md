@@ -20,7 +20,7 @@
 
 1. [Install the plugin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma)
 2. Ensure all layers you want to import use autolayout as described [here](https://www.builder.io/c/docs/import-from-figma)
-3. Click the "get code" button to launch into the Builder.io editor
+3. Click the "get code" button to launch into the [Builder.io](https://www.builder.io) editor
 4. Make any final adjustments, and click "get code" at the top of Builder to view code output, or copy and paste it to content of a Builder account to publish live
 
 ### Import webpages to Figma designs

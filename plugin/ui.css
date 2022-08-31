@@ -4,6 +4,10 @@ body {
   font-weight: 400;
 }
 
+.rich-text p {
+  margin: 0;
+}
+
 /* Loading animation */
 .lds-ellipsis {
   display: inline-block;

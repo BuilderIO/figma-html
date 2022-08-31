@@ -96,7 +96,11 @@ export function Loading(props: { content?: CheckListContent[] | undefined }) {
           }}
         >
           {props.content && (
-            <p>{props.content[contentIndex].data.textContent}</p>
+            <p
+              dangerouslySetInnerHTML={{
+                __html: props.content[contentIndex].data.textContent,
+              }}
+            />
           )}
         </Typography>
       </div>
