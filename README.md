@@ -1,9 +1,11 @@
+# Builder.io for Figma: Figma to HTML, React, and more
+
 <p align="center">
-  <img alt="Figma to HTML title" height="400" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2F7fbe481d20d74cee827ee7256b37a736" />
+  <img alt="Figma to HTML title" src="https://cdn.builder.io/api/v1/image/assets%2F1acd978ac4f64052bbfa787026e93509%2F7339cf0681b9413caab81aeed125cb85" />
 </p>
 
 <p align="center">
-  Convert Figma designs into high quality HTML, React, Vue, Svelte, Angular, Solid, etc code via <a href="https://github.com/BuilderIO/mitosis">mitosis</a>
+  Convert Figma designs into high quality HTML, React, Vue, Svelte, Angular, Solid, etc code via <a href="https://github.com/BuilderIO/mitosis">Mitosis</a>. Additionally, import sites to Figma as well!
 </p>
 
 <br />
@@ -21,17 +23,11 @@
 3. Click the "get code" button to launch into the Builder.io editor
 4. Make any final adjustments, and click "get code" at the top of Builder to view code output, or copy and paste it to content of a Builder account to publish live
 
-<img height="300" alt="mitosis diagram" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2Fa74df82e1eaf47c6b73c8a1fdeb5853d" />
-
 ### Import webpages to Figma designs
 
 1. [Install the plugin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma)
 2. In Figma, open a new or existing document, then hit cmd+/ and search "html figma" and hit enter
 3. Enter a URL you want to import
-
-<a href="https://github.com/builderio/jsx-lite">
-  <img src="https://i.imgur.com/YNDD9dH.gif" alt="Plugin demo" width="480" />
-</a>
 
 ## Why?
 
@@ -43,8 +39,6 @@
 ## Chrome Extension
 
 Want to capture a page behind an auth wall, or in a specific state you need to navigate to? Then the [chrome extension](https://chrome.google.com/webstore/detail/efjcmgblfpkhbjpkpopkgeomfkokpaim) is for you!
-
-<img src="https://imgur.com/ARz16KC.gif" alt="Chrome extension demo" width="480" />
 
 ## Using the library
 
