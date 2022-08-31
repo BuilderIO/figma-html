@@ -3,7 +3,7 @@
 
   "name": "HTML to Figma - by Builder.io",
   "description": "Import a web page to Figma layers",
-  "version": "0.0.6",
+  "version": "0.0.7",
 
   "browser_action": {
     "default_icon": "icon16.png",
