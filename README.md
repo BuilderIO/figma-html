@@ -71,8 +71,6 @@ If you find any issues or have feedback at all please [make an issue](https://gi
 
 Read [DEVELOP.md](./DEVELOP.md)
 
-<br><br>
-
 <p align="center">
    <a href="https://www.builder.io/m/developers">
       <picture>
