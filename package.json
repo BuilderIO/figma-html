@@ -14,8 +14,8 @@
   ],
   "scripts": {
     "dev:lib": "tsc -w",
-    "dev": "NODE_ENV=development webpack --mode=development --watch",
-    "build": "NODE_ENV=production tsc && webpack --mode=production",
+    "dev": "NODE_OPTIONS=--openssl-legacy-provider NODE_ENV=development webpack --mode=development --watch",
+    "build": "NODE_OPTIONS=--openssl-legacy-provider NODE_ENV=production tsc && webpack --mode=production",
     "release:patch": "npm version patch && npm run build && npm publish",
     "release:dev": "npm version prerelease && npm run build && npm publish --tag dev"
   },

@@ -1,11 +1,13 @@
-# Architecture
+# Developing
+
+## Architecture
 
 - `builder.io/api/v1/html-to-figma`: API endpoint that converts a URL's layout to a Figma design. The logic of that endpoint lives in _this_ repo, under [./lib/html-to-figma](./lib/html-to-figma).
 - `builder.io/api/v1/figma-to-builder`: API endpoint that converts a Figma design to a Builder content JSON. The logic of that endpoint lives in Builder's API codebase.
 
-# Developing the Figma plugin
+## Developing the Figma plugin
 
-## Setup plugin for local dev
+### Setup plugin for local dev
 
 - install the Figma desktop app through https://www.figma.com/
 
@@ -19,7 +21,7 @@
 
 PS: the local plugin will be in a different menu from the published plugin, which can be accessed from `Plugins` -> `Figma to HTML, CSS, React & More` (notice the names are different too).
 
-## Develop
+### Develop
 
 ```bash
 # install
@@ -33,9 +35,9 @@ NOTE: make sure to enable this boolean:
 
 https://github.com/BuilderIO/figma-html/blob/db81565798c2989f701ae2b6b0aeaff175b9108b/plugin/ui.tsx#L45
 
-## `Figma -> Builder` workflow
+### `Figma -> Builder` workflow
 
-### General workflow
+#### General workflow
 
 When the user clicks on `Generate Code` or `Download JSON` buttons in the Figma UI, the following will happen:
 
@@ -43,7 +45,7 @@ When the user clicks on `Generate Code` or `Download JSON` buttons in the Figma 
 - in `plugin/code.ts`, the code will serialize the selected elements and pass them back to the UI iframe.
 - in `plugin/ui.tsx`, once the elements are received, it will POST them to the `api/v1/figma-to-builder` API endpoint.
 
-## How to test & develop
+### How to test & develop
 
 The best way to test & develop is to open a Figma project with a few elements, that has the bug you're trying to fix.
 

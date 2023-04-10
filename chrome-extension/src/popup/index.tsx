@@ -1,7 +1,7 @@
 import {
   createMuiTheme,
   CssBaseline,
-  MuiThemeProvider
+  MuiThemeProvider,
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
 import * as React from "react";
@@ -13,11 +13,17 @@ const theme = createMuiTheme({
   typography: themeVars.typography,
   palette: {
     primary: { main: themeVars.colors.primary },
-    secondary: green
-  }
+    secondary: green,
+  },
+  props: {
+    MuiButtonBase: {
+      // The properties to apply
+      disableRipple: true, // No more ripple, on the whole application 💣!
+    },
+  },
 });
 
-chrome.tabs.query({ active: true, currentWindow: true }, tab => {
+chrome.tabs.query({ active: true, currentWindow: true }, (tab) => {
   ReactDOM.render(
     <MuiThemeProvider theme={theme}>
       <>

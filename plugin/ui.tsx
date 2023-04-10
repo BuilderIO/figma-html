@@ -47,6 +47,7 @@ import { TabletIcon } from "./components/Icons/TabletIcon";
 import { DesktopIcon } from "./components/Icons/DesktopIcon";
 import * as amplitude from "./functions/track";
 import { v4 as uuid } from "uuid";
+import { AiImport } from "./components/ai-import";
 
 // Simple debug flag - flip when needed locally
 const useDev = false;
@@ -141,6 +142,12 @@ const theme = createMuiTheme({
   palette: {
     primary: { main: themeVars.colors.primary },
     secondary: green,
+  },
+  props: {
+    MuiButtonBase: {
+      // The properties to apply
+      disableRipple: true, // No more ripple, on the whole application 💣!
+    },
   },
 });
 
@@ -895,9 +902,12 @@ class App extends SafeComponent {
           <Tabs
             variant="fullWidth"
             style={{
-              minHeight: "auto",
+              minHeight: 40,
               backgroundColor: "#F9F9F9",
               flexShrink: 0,
+            }}
+            TabIndicatorProps={{
+              style: { transition: "none" },
             }}
             value={this.tabIndex}
             onChange={this.switchTab}
@@ -906,7 +916,7 @@ class App extends SafeComponent {
           >
             <Tab
               style={{
-                minHeight: "auto",
+                minHeight: 40,
               }}
               label={
                 <span
@@ -922,7 +932,7 @@ class App extends SafeComponent {
             />
             <Tab
               style={{
-                minHeight: "auto",
+                minHeight: 40,
               }}
               label={
                 <span
@@ -932,7 +942,23 @@ class App extends SafeComponent {
                     textTransform: "none",
                   }}
                 >
-                  Import to Figma
+                  Generate with AI
+                </span>
+              }
+            />
+            <Tab
+              style={{
+                minHeight: 40,
+              }}
+              label={
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: "bold",
+                    textTransform: "none",
+                  }}
+                >
+                  Import from web
                 </span>
               }
             />
@@ -1329,8 +1355,12 @@ class App extends SafeComponent {
             </div>
           </TabPanel>
 
-          {/* Import to Figma */}
           <TabPanel value={this.tabIndex} index={1}>
+            <AiImport />
+          </TabPanel>
+
+          {/* Import to Figma */}
+          <TabPanel value={this.tabIndex} index={2}>
             <div
               style={{
                 display: "flex",
@@ -1663,7 +1693,6 @@ class App extends SafeComponent {
                     <Divider style={{ margin: "0 -5" }} />
                     <div
                       style={{
-                        backgroundColor: "#F9F9F9",
                         padding: 15,
                         margin: "0 -5 -5",
                       }}
@@ -1834,7 +1863,7 @@ class App extends SafeComponent {
               </form>
             </div>
           </TabPanel>
-          <Divider />
+          <Divider style={{ marginTop: "auto" }} />
 
           {useDev && (
             <div
@@ -1851,12 +1880,33 @@ class App extends SafeComponent {
             </div>
           )}
 
-          <div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              backgroundColor: "#F9F9F9",
+            }}
+          >
+            <a
+              style={{ display: "flex" }}
+              href="https://www.builder.io?utm_source=figma"
+              target="_blank"
+            >
+              <img
+                style={{
+                  margin: "20px auto 10px",
+                  maxWidth: 170,
+                  width: "100%",
+                }}
+                src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2F2dee283279f244c1a731330a3aa96166"
+              />
+            </a>
             <p
               style={{
-                margin: 10,
                 fontSize: 12,
                 textAlign: "center",
+                margin: "5px auto 10px",
+                maxWidth: 240,
               }}
             >
               <a
@@ -1870,89 +1920,63 @@ class App extends SafeComponent {
               >
                 Builder.io{" "}
               </a>{" "}
-              <span style={{ opacity: 0.8 }}>
-                is a Visual CMS that lets you drag and drop to create pages and
-                content on your tech stack, using your components.
+              <span style={{ opacity: 0.9 }}>
+                is a headless CMS that lets you drag & drop with your
+                components.
               </span>
             </p>
-          </div>
 
-          <div
-            style={{
-              marginTop: 5,
-              marginBottom: 20,
-              textAlign: "center",
-              color: "#666",
-              fontSize: 12,
-            }}
-          >
-            <FormattedMessage id="made" defaultMessage="Made with " />
-            <Favorite
+            <div
               style={{
-                color: "rgb(236, 55, 88)",
-                fontSize: 16,
-                marginTop: -2,
-                verticalAlign: "middle",
+                textAlign: "center",
+                display: "flex",
+                alignItems: "center",
+                fontWeight: 500,
+                fontSize: 12,
+                padding: 10,
+                gap: 10,
+                margin: "0 auto",
               }}
-            />
-            <FormattedMessage id="made2" defaultMessage=" by " />
-            <a
-              style={{ color: themeVars.colors.primary }}
-              href="https://www.builder.io?utm_source=figma"
-              target="_blank"
             >
-              Builder.io
-            </a>
-          </div>
-
-          <Divider style={{ marginTop: "auto" }} />
-          <div
-            style={{
-              textAlign: "center",
-              backgroundColor: "#F9F9F9",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-around",
-              fontWeight: 500,
-              fontSize: 12,
-              padding: 10,
-            }}
-          >
-            <a
-              style={{
-                color: "#000000",
-                opacity: 0.7,
-                textDecoration: "none",
-              }}
-              href="https://github.com/BuilderIO/html-to-figma/issues"
-              target="_blank"
-            >
-              <FormattedMessage id="feedbackFooter" defaultMessage="Feedback" />
-            </a>
-            <a
-              style={{
-                color: "#000000",
-                opacity: 0.7,
-                textDecoration: "none",
-                marginLeft: 5,
-              }}
-              href="https://github.com/BuilderIO/html-to-figma"
-              target="_blank"
-            >
-              <FormattedMessage id="source" defaultMessage="Source" />
-            </a>
-            <a
-              style={{
-                color: "#000000",
-                opacity: 0.7,
-                textDecoration: "none",
-                marginLeft: 5,
-              }}
-              href="https://github.com/BuilderIO/html-to-figma"
-              target="_blank"
-            >
-              <FormattedMessage id="help" defaultMessage="Help" />
-            </a>
+              <a
+                style={{
+                  color: "#000000",
+                  opacity: 0.7,
+                  textDecoration: "none",
+                }}
+                href="https://github.com/BuilderIO/html-to-figma/issues"
+                target="_blank"
+              >
+                <FormattedMessage
+                  id="feedbackFooter"
+                  defaultMessage="Feedback"
+                />
+              </a>
+              <a
+                style={{
+                  color: "#000000",
+                  opacity: 0.7,
+                  textDecoration: "none",
+                  marginLeft: 5,
+                }}
+                href="https://github.com/BuilderIO/html-to-figma"
+                target="_blank"
+              >
+                <FormattedMessage id="source" defaultMessage="Source" />
+              </a>
+              <a
+                style={{
+                  color: "#000000",
+                  opacity: 0.7,
+                  textDecoration: "none",
+                  marginLeft: 5,
+                }}
+                href="https://github.com/BuilderIO/html-to-figma"
+                target="_blank"
+              >
+                <FormattedMessage id="help" defaultMessage="Help" />
+              </a>
+            </div>
           </div>
         </div>
       </IntlProvider>
