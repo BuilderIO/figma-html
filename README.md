@@ -8,12 +8,6 @@
   Convert Figma designs into high quality HTML, React, Vue, Svelte, Angular, Solid, etc code via <a href="https://github.com/BuilderIO/mitosis">Mitosis</a>. Additionally, import sites to Figma as well!
 </p>
 
-<br />
-
-<p align="center">
-  <img src="https://i.imgur.com/BoKsLFs.gif" />
-</p>
-
 ## How does it work
 
 ### Export designs to code
@@ -68,16 +62,6 @@ A few known limitations:
 
 If you find any issues or have feedback at all please [make an issue](https://github.com/BuilderIO/html-to-figma/issues/new)
 
-## TODO
-
-- Support code import from [mitosis](https://github.com/BuilderIO/mitosis)
-- Support Figma components
-
-<br />
-<p align="center">
-  Made with ❤️ by <a target="_blank" href="https://builder.io/">Builder.io</a>
-</p>
-
 ## Architecture
 
 - `builder.io/api/v1/html-to-figma`: API endpoint that converts a URL's layout to a Figma design. The logic of that endpoint lives in this repo, under [./lib/html-to-figma](./lib/html-to-figma).
@@ -86,3 +70,14 @@ If you find any issues or have feedback at all please [make an issue](https://gi
 ## DEVELOP
 
 Read [DEVELOP.md](./DEVELOP.md)
+
+<br><br>
+
+<p align="center">
+   <a href="https://www.builder.io/m/developers">
+      <picture>
+         <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/844291/230786554-eb225eeb-2f6b-4286-b8c2-535b1131744a.png">
+         <img width="250" alt="Made with love by Builder.io" src="https://user-images.githubusercontent.com/844291/230786555-a58479e4-75f3-4222-a6eb-74c5af953eac.png">
+       </picture>
+   </a>
+</p>
