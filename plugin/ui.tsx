@@ -48,6 +48,7 @@ import { DesktopIcon } from "./components/Icons/DesktopIcon";
 import * as amplitude from "./functions/track";
 import { v4 as uuid } from "uuid";
 import { AiImport } from "./components/ai-import";
+import { Wand } from "./icons/wand";
 
 // Simple debug flag - flip when needed locally
 export const useDev = false;
@@ -1281,6 +1282,21 @@ class App extends SafeComponent {
                       </div>
                     )}
 
+                  {!Boolean(this.selection.length) && (
+                    <div
+                      style={{
+                        color: themeVars.colors.primary,
+                        marginTop: 20,
+                        padding: 10,
+                        borderRadius: 5,
+                        marginBottom: -10,
+                        backgroundColor:
+                          themeVars.colors.primaryWithOpacity(0.1),
+                      }}
+                    >
+                      {this.getLang().selectLayerPop}
+                    </div>
+                  )}
                   <Tooltip
                     disableHoverListener={Boolean(this.selection.length)}
                     title={this.getLang().selectLayerPop}
@@ -1353,6 +1369,36 @@ class App extends SafeComponent {
                   </Button>
                 </>
               )}
+              <div
+                style={{
+                  color: themeVars.colors.primary,
+                  marginTop: 20,
+                  border: `1px solid ${themeVars.colors.primary}`,
+                  fontWeight: "bold",
+                  padding: 10,
+                  borderRadius: 5,
+                  backgroundColor: themeVars.colors.primaryWithOpacity(0.1),
+                  display: "flex",
+                  alignItems: "center",
+                  cursor: "pointer",
+                }}
+                role="button"
+                onClick={() => {
+                  this.tabIndex = 1;
+                }}
+              >
+                <Wand style={{ marginRight: 15 }} />
+                New!
+                <span
+                  style={{
+                    color: "inherit",
+                    textDecoration: "underline",
+                    marginLeft: 3,
+                  }}
+                >
+                  Generate designs with AI
+                </span>
+              </div>
             </div>
           </TabPanel>
 

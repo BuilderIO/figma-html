@@ -1,7 +1,7 @@
 # Builder.io for Figma: AI generation, export to code, import from web
 
 <p align="center">
-  <img alt="Figma to HTML title" src="https://cdn.builder.io/api/v1/image/assets%2F1acd978ac4f64052bbfa787026e93509%2F7339cf0681b9413caab81aeed125cb85" />
+  <img alt="Figma to HTML title" src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2Feafd8e1b9b904e56bfb21aac5b357820" />
 </p>
 
 <p align="center">
