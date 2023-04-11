@@ -6,9 +6,19 @@ import { ClientStorage, apiHost, getImageFills, processImages } from "../ui";
 import { settings } from "../constants/settings";
 import { traverseLayers } from "../functions/traverse-layers";
 import * as amplitude from "../functions/track";
-import { sample } from "lodash";
+import { theme } from "../constants/theme";
+import { HelpTooltip } from "./help-tooltip";
+import { TooltipTextLink } from "./text-link";
 
 const numPreviews = 4;
+
+const tryJsonParse = (str: string) => {
+  try {
+    return JSON.parse(str);
+  } catch (err) {
+    return null;
+  }
+};
 
 function defaultPreviews() {
   return Array.from({ length: numPreviews }, () => "");
@@ -16,6 +26,14 @@ function defaultPreviews() {
 
 function countInstancesOf(string: string, char: string) {
   return string.split(char).length;
+}
+
+function addImagesToHtml(html: string, index: number, images: string[]) {
+  let i = 0;
+  return html.replace(/image\.jpg/g, () => {
+    const useIndex = index + i++;
+    return images[useIndex % 4] || defaultImage;
+  });
 }
 
 const defaultImage =
@@ -37,6 +55,7 @@ export function AiImport(props: {
   const [openAiKey, setOpenAiKey] = React.useState(
     props.clientStorage?.openAiKey
   );
+  const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean | string>(false);
 
   React.useEffect(() => {
@@ -86,6 +105,19 @@ export function AiImport(props: {
         "*"
       );
     }
+
+    return () => {
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "resize",
+            width: settings.ui.baseWidth,
+            height: settings.ui.baseHeight,
+          },
+        },
+        "*"
+      );
+    };
   }, [hasPreviews()]);
 
   async function fetchImages() {
@@ -108,16 +140,17 @@ export function AiImport(props: {
     );
     const json = await response.json();
     images.current = json.images.map((img: any) => img.url);
-    console.log("got images", images.current);
+
     setPreviews((previews) =>
       previews.map((preview, index) =>
-        preview.replace(/image\.jpg/g, images.current[index] || defaultImage)
+        addImagesToHtml(preview, index, images.current)
       )
     );
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     setLoading("Generating...");
 
     const data = new FormData(e.currentTarget);
@@ -131,28 +164,26 @@ export function AiImport(props: {
     fetchImages();
 
     try {
-      const response = await fetch(
-        "http://localhost:4000/api/v1/ai-to-figma/preview",
-        {
-          method: "POST",
-          signal: abortControllerRef.current.signal,
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            style: style,
-            prompt: prompt,
-            key: openAiKey,
-            number: numPreviews,
-          }),
-        }
-      );
+      const response = await fetch(`${apiHost}/api/v1/ai-to-figma/preview`, {
+        method: "POST",
+        signal: abortControllerRef.current.signal,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          style: style,
+          prompt: prompt,
+          key: openAiKey,
+          number: numPreviews,
+        }),
+      });
 
       const reader = response.body!.getReader();
       const decoder = new TextDecoder("utf-8");
 
       const html = ["", "", "", ""];
 
+      let fullResponseText = "";
       while (true) {
         const { value, done } = await reader.read();
         if (done) {
@@ -161,6 +192,7 @@ export function AiImport(props: {
         const textArr = decoder.decode(value, { stream: true }).split("\n");
 
         for (const text of textArr) {
+          fullResponseText += text;
           if (text.startsWith("data:")) {
             try {
               const { index, content } = JSON.parse(text.replace("data:", ""));
@@ -169,19 +201,30 @@ export function AiImport(props: {
               const item = html[index];
               // Make sure we don't stream in partial tags like `<div ...` before we close it
               if (countInstancesOf(item, "<") === countInstancesOf(item, ">")) {
-                previews[index] = item.replace(
-                  /image\.jpg/g,
-                  images.current[index] || defaultImage
-                );
+                previews[index] = addImagesToHtml(item, index, images.current);
+
                 setPreviews([...previews]);
               }
             } catch (err) {
-              console.error(`Could not parse JSON from chunk: ${text}`);
-              throw err;
+              console.warn(`Could not parse JSON from chunk: ${text}`);
+              // Continue
             }
           }
         }
       }
+      const resJson = tryJsonParse(fullResponseText);
+      if (resJson && resJson.error) {
+        const message = resJson.error.message;
+        setError(message);
+      } else if (!hasPreviews() && fullResponseText.trim().length) {
+        setError(fullResponseText);
+      }
+    } catch (err) {
+      console.error("Error fetching previews: ", err);
+      setError(`
+        We had an issue generating results. Please make sure you have a working internat connection and try again, and if this issue persists please let us know at https://github.com/BuilderIO/figma-html/issues
+      `.trim()
+      );
     } finally {
       setLoading(false);
     }
@@ -200,21 +243,60 @@ export function AiImport(props: {
         }}
       >
         <form onSubmit={onSubmit}>
-          <h4>Prompt</h4>
+          <h4>
+            Prompt{" "}
+            <HelpTooltip>
+              <>Be as detailed and specific as possible.</>
+            </HelpTooltip>
+          </h4>
           <Textarea
             placeholder="What do you want to create?"
             value={prompt}
             onChange={(e) => setPrompt(e.currentTarget.value)}
             name="prompt"
           />
-          <h4>Style</h4>
+          <h4>
+            Style
+            <HelpTooltip>
+              <>
+                Enter a well know site like 'jcrew.com'. This will guide the
+                look and feel and be used as a basis for any images
+              </>
+            </HelpTooltip>
+          </h4>
           <Input
             placeholder="Use a well recognized site, like 'jcrew.com'"
             value={style}
             onChange={(e) => setStyle(e.currentTarget.value)}
             name="style"
           />
-          <h4>OpenAI Key</h4>
+          <h4>
+            OpenAI Key
+            <HelpTooltip interactive>
+              <>
+                Please{" "}
+                <TooltipTextLink href="https://platform.openai.com/signup">
+                  create an account
+                </TooltipTextLink>{" "}
+                with{" "}
+                <TooltipTextLink href="https://platform.openai.com/overview">
+                  OpenAI
+                </TooltipTextLink>{" "}
+                and provide then grab your{" "}
+                <TooltipTextLink href="https://platform.openai.com/account/api-keys">
+                  API key
+                </TooltipTextLink>{" "}
+                and put it here. Be sure that you have{" "}
+                <TooltipTextLink href="https://platform.openai.com/account/billing/overview">
+                  billing
+                </TooltipTextLink>{" "}
+                <TooltipTextLink href="https://help.openai.com/en/articles/6891831-error-code-429-you-exceeded-your-current-quota-please-check-your-plan-and-billing-details">
+                  turned on
+                </TooltipTextLink>
+                .
+              </>
+            </HelpTooltip>
+          </h4>
           <Input
             value={openAiKey}
             onChange={(e) => setOpenAiKey(e.currentTarget.value)}
@@ -224,6 +306,7 @@ export function AiImport(props: {
           />
 
           <Button
+            disabled={!(prompt && style && openAiKey)}
             style={{ marginTop: 15 }}
             variant="contained"
             type="submit"
@@ -234,6 +317,20 @@ export function AiImport(props: {
           </Button>
           <style>{`h4 { margin: 11px 0 7px }`}</style>
         </form>
+        {error && (
+          <div
+            style={{
+              color: "rgba(255, 40, 40, 1)",
+              marginBottom: 10,
+              backgroundColor: "rgba(255, 0, 0, 0.1)",
+              padding: 10,
+              borderRadius: 5,
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {error}
+          </div>
+        )}
         {loading && (
           <div
             style={{
@@ -248,6 +345,24 @@ export function AiImport(props: {
             )}
           </div>
         )}
+        <div
+          style={{
+            textAlign: "center",
+            color: "rgba(0, 0, 0, 0.7)",
+            marginBottom: 20,
+            marginTop: 10,
+          }}
+        >
+          This feature is in{" "}
+          <span style={{ color: theme.colors.primary }}>beta</span>, please give
+          us{" "}
+          <a
+            href="https://github.com/BuilderIO/html-to-figma/issues"
+            target="_blank"
+          >
+            feedback
+          </a>
+        </div>
       </div>
       {hasPreviews() && (
         <div
@@ -258,11 +373,15 @@ export function AiImport(props: {
             justifyContent: "center",
             gap: 10,
             padding: 20,
-            width: "100%",
-            margin: "-42px 0 -200px 0",
             height: 670,
             marginLeft: -1,
             borderLeft: "1px solid #ccc",
+            position: "fixed",
+            right: 0,
+            zIndex: 5,
+            top: 0,
+            width: `calc(100% - ${settings.ui.baseWidth - 1}px)`,
+            overflow: "auto",
           }}
         >
           {previews.map((preview, index) => (
@@ -354,11 +473,16 @@ export function AiImport(props: {
                   top: "0",
                   left: "0",
                   transformOrigin: "top left",
-                  overflow: "hidden",
-                  pointerEvents: "none",
+                  overflow: "auto",
                 }}
-                dangerouslySetInnerHTML={{ __html: preview }}
-              ></div>
+              >
+                <div
+                  style={{
+                    pointerEvents: "none",
+                  }}
+                  dangerouslySetInnerHTML={{ __html: preview }}
+                ></div>
+              </div>
             </div>
           ))}
         </div>

@@ -22,6 +22,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, Props>(
             padding: 12,
             width: "100%",
             maxWidth: "100%",
+            resize: 'vertical',
             opacity: props.disabled ? 0.5 : 1,
             ...props.style,
           }}

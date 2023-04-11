@@ -50,7 +50,7 @@ import { v4 as uuid } from "uuid";
 import { AiImport } from "./components/ai-import";
 
 // Simple debug flag - flip when needed locally
-export const useDev = true;
+export const useDev = false;
 
 // https://stackoverflow.com/a/46634877
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
@@ -129,6 +129,13 @@ const theme = createMuiTheme({
     MuiButtonBase: {
       root: {
         boxShadow: "none !important",
+      },
+    },
+    MuiTooltip: {
+      tooltip: {
+        fontSize: 13,
+        backgroundColor: "rgba(45, 45, 45, 0.95)",
+        padding: "7px 11px",
       },
     },
   },
@@ -1883,14 +1890,25 @@ class App extends SafeComponent {
 
             {useDev && (
               <div
-                onClick={() => {}}
                 style={{
+                  color: "rgba(255, 40, 40, 1)",
+                  backgroundColor: "rgba(255, 0, 0, 0.1)",
                   padding: 10,
-                  color: "rgb(200, 0, 0)",
+                  borderRadius: 5,
+                  whiteSpace: "pre-wrap",
+                  margin: "10px 10px 0 10px",
                   textAlign: "center",
                 }}
               >
-                Using dev env. Click here to reset then reload the extension
+                Using dev env. If you see this and you are not a developer,
+                please{" "}
+                <a
+                  style={{ color: "inherit" }}
+                  href="https://github.com/BuilderIO/html-to-figma/issues"
+                  target="_blank"
+                >
+                  report it
+                </a>
               </div>
             )}
             <a

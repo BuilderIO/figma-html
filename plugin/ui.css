@@ -8,6 +8,14 @@ body {
   margin: 0;
 }
 
+a {
+  color: rgba(26, 115, 231, 1);
+}
+
+[role=tooltip] a {
+  color: rgb(7, 178, 215);
+}
+
 /* Loading animation */
 .lds-ellipsis {
   display: inline-block;
