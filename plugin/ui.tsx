@@ -40,7 +40,7 @@ import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
 import { IntlProvider, FormattedMessage } from "react-intl";
 import { en, ru } from "./localize/i18n";
-import { Loading } from "./components/Loading";
+import { Loading } from "./components/loading";
 import { CheckListContent } from "./constants/utils";
 import { MobileIcon } from "./components/Icons/MobileIcon";
 import { TabletIcon } from "./components/Icons/TabletIcon";
@@ -50,12 +50,12 @@ import { v4 as uuid } from "uuid";
 import { AiImport } from "./components/ai-import";
 
 // Simple debug flag - flip when needed locally
-const useDev = false;
+export const useDev = true;
 
 // https://stackoverflow.com/a/46634877
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
-const apiHost = useDev ? "http://localhost:4000" : "https://builder.io";
+export const apiHost = useDev ? "http://localhost:4000" : "https://builder.io";
 amplitude.initialize();
 
 const selectionToBuilder = async (
@@ -100,9 +100,10 @@ const selectionToBuilder = async (
   return res.blocks;
 };
 
-interface ClientStorage {
-  imageUrlsByHash?: { [hash: string]: string | null } | undefined;
-  userId: string | undefined;
+export interface ClientStorage {
+  imageUrlsByHash?: { [hash: string]: string | null };
+  userId?: string;
+  openAiKey?: string;
 }
 
 interface TabPanelProps {
@@ -112,25 +113,6 @@ interface TabPanelProps {
 }
 
 const apiKey = process.env.API_KEY || null;
-
-const WIDTH_LS_KEY = "builder.widthSetting";
-const FRAMES_LS_KEY = "builder.useFramesSetting";
-
-// TODO: make async and use figma.clientStorage
-function lsGet(key: string) {
-  try {
-    return JSON.parse(localStorage.getItem(key)!);
-  } catch (err) {
-    return undefined;
-  }
-}
-function lsSet(key: string, value: any) {
-  try {
-    return localStorage.setItem(key, JSON.stringify(value));
-  } catch (err) {
-    return undefined;
-  }
-}
 
 const clamp = (num: number, min: number, max: number) =>
   Math.max(min, Math.min(max, num));
@@ -143,8 +125,18 @@ const theme = createMuiTheme({
     primary: { main: themeVars.colors.primary },
     secondary: green,
   },
+  overrides: {
+    MuiButtonBase: {
+      root: {
+        boxShadow: "none !important",
+      },
+    },
+  },
   props: {
     MuiButtonBase: {
+      style: {
+        boxShadow: "none !important",
+      },
       // The properties to apply
       disableRipple: true, // No more ripple, on the whole application 💣!
     },
@@ -176,7 +168,7 @@ function convertDataURIToBinary(dataURI: string) {
   return array;
 }
 
-function getImageFills(layer: Node) {
+export function getImageFills(layer: Node) {
   const images =
     Array.isArray(layer.fills) &&
     layer.fills
@@ -190,7 +182,7 @@ function getImageFills(layer: Node) {
 
 // TODO: CACHE!
 // const imageCache: { [key: string]: Uint8Array | undefined } = {};
-async function processImages(layer: Node) {
+export async function processImages(layer: Node) {
   const images = getImageFills(layer);
 
   const convertToSvg = (value: string) => {
@@ -320,18 +312,18 @@ class App extends SafeComponent {
   editorRef: HTMLIFrameElement | null = null;
 
   @observable loading = false;
-  // TODO: lsget/set?
-  @observable lipsum = false; //  process.env.NODE_ENV !== "production";
+
+  @observable lipsum = false;
   @observable loadingGenerate = false;
   @observable clientStorage: ClientStorage | null = null;
   @observable errorMessage = "";
 
   @observable generatingCode = false;
   @observable urlValue = "https://www.builder.io";
-  @observable width = lsGet(WIDTH_LS_KEY) || "1200";
+  @observable width = "1200";
   @observable online = navigator.onLine;
-  @observable useFrames = lsGet(FRAMES_LS_KEY) || false;
-  @observable showMoreOptions = true; // lsGet(MORE_OPTIONS_LS_KEY) || false;
+  @observable useFrames = false;
+  @observable showMoreOptions = true;
   @observable selection: (BaseNode & { data?: { [key: string]: any } })[] = [];
   @observable.ref selectionWithImages:
     | (BaseNode & {
@@ -670,7 +662,7 @@ class App extends SafeComponent {
 
   componentDidMount() {
     window.addEventListener("message", (e) => {
-      const { data: rawData, source } = e as MessageEvent;
+      const { data: rawData } = e as MessageEvent;
 
       this.initialized = true;
 
@@ -803,11 +795,8 @@ class App extends SafeComponent {
       const width = clamp(parseInt(this.width) || 1200, 200, 3000);
       const widthString = String(width);
       this.width = widthString;
-      lsSet(WIDTH_LS_KEY, widthString);
 
       const encocedUrl = encodeURIComponent(this.urlValue);
-
-      lsSet(FRAMES_LS_KEY, this.useFrames);
 
       // We need to run the code to process DOM through a backend to run it in a headless browser.
       // Builder.io provides this for the Figma plugin for free.
@@ -905,6 +894,8 @@ class App extends SafeComponent {
               minHeight: 40,
               backgroundColor: "#F9F9F9",
               flexShrink: 0,
+              width: settings.ui.baseWidth,
+              borderRight: "1px solid #ccc",
             }}
             TabIndicatorProps={{
               style: { transition: "none" },
@@ -917,6 +908,7 @@ class App extends SafeComponent {
             <Tab
               style={{
                 minHeight: 40,
+                minWidth: 0,
               }}
               label={
                 <span
@@ -933,6 +925,7 @@ class App extends SafeComponent {
             <Tab
               style={{
                 minHeight: 40,
+                minWidth: 0,
               }}
               label={
                 <span
@@ -949,6 +942,7 @@ class App extends SafeComponent {
             <Tab
               style={{
                 minHeight: 40,
+                minWidth: 0,
               }}
               label={
                 <span
@@ -963,7 +957,7 @@ class App extends SafeComponent {
               }
             />
           </Tabs>
-          <Divider />
+          <Divider style={{ width: settings.ui.baseWidth }} />
           <TabPanel value={this.tabIndex} index={0}>
             <div
               style={{
@@ -1356,7 +1350,13 @@ class App extends SafeComponent {
           </TabPanel>
 
           <TabPanel value={this.tabIndex} index={1}>
-            <AiImport />
+            <AiImport
+              clientStorage={this.clientStorage}
+              updateClientStorage={(clientStorage) => {
+                this.clientStorage = clientStorage;
+                this.updateStorage();
+              }}
+            />
           </TabPanel>
 
           {/* Import to Figma */}
@@ -1690,7 +1690,12 @@ class App extends SafeComponent {
                       </Button>
                     </div>
 
-                    <Divider style={{ margin: "0 -5" }} />
+                    <Divider
+                      style={{
+                        margin: "0 -5",
+                        maxWidth: settings.ui.baseWidth,
+                      }}
+                    />
                     <div
                       style={{
                         padding: 15,
@@ -1863,30 +1868,31 @@ class App extends SafeComponent {
               </form>
             </div>
           </TabPanel>
-          <Divider style={{ marginTop: "auto" }} />
-
-          {useDev && (
-            <div
-              onClick={() => {
-                lsSet("builder.env", "production");
-              }}
-              style={{
-                padding: 10,
-                color: "rgb(200, 0, 0)",
-                textAlign: "center",
-              }}
-            >
-              Using dev env. Click here to reset then reload the extension
-            </div>
-          )}
 
           <div
             style={{
               display: "flex",
               flexDirection: "column",
               backgroundColor: "#F9F9F9",
+              width: settings.ui.baseWidth,
+              borderRight: "1px solid #ccc",
+              marginTop: "auto",
             }}
           >
+            <Divider />
+
+            {useDev && (
+              <div
+                onClick={() => {}}
+                style={{
+                  padding: 10,
+                  color: "rgb(200, 0, 0)",
+                  textAlign: "center",
+                }}
+              >
+                Using dev env. Click here to reset then reload the extension
+              </div>
+            )}
             <a
               style={{ display: "flex" }}
               href="https://www.builder.io?utm_source=figma"

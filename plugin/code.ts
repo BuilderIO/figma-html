@@ -558,8 +558,19 @@ figma.ui.onmessage = async (msg) => {
             ((parent && (parent as any).ref) || baseFrame).appendChild(node);
           } else if (layer.type === "RECTANGLE") {
             const rect = figma.createRectangle();
-            if (getImageFills(layer)) {
+            const imageFills = getImageFills(layer);
+            if (imageFills) {
               await processImages(layer);
+              if (imageFills.length && msg.blurImages) {
+                (layer as RectangleNode).effects = [
+                  {
+                    type: "LAYER_BLUR",
+                    visible: true,
+                    radius: 13,
+                  },
+                ];
+                (layer as RectangleNode).name = "Example Image";
+              }
             }
             assign(rect, layer);
             rect.resize(layer.width || 1, layer.height || 1);
