@@ -25,6 +25,8 @@ Troubleshooting: if having trouble with your OpenAI API calls, please follow [th
 3. Click the "get code" button to launch into the [Builder.io](https://www.builder.io) editor
 4. Make any final adjustments, and click "get code" at the top of Builder to view code output, or copy and paste it to content of a Builder account to publish live
 
+Supports many code outputs, such as React, Vue, Svelte, Qwik, Solid, plain HTML/CSS, and more via [Mitosis](https://github.com/builderio/mitosis)
+
 ### Import webpages to Figma designs
 
 1. [Install the plugin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma)
