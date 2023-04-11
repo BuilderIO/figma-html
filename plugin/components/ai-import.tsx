@@ -9,6 +9,12 @@ import * as amplitude from "../functions/track";
 import { theme } from "../constants/theme";
 import { HelpTooltip } from "./help-tooltip";
 import { TooltipTextLink } from "./text-link";
+import { useDev } from "../constants/use-dev";
+
+export const aiApiHost = useDev
+  ? "http://localhost:4000"
+  : // Need to use raw function URL to support streaming
+    "https://us-central1-builder-3b0a2.cloudfunctions.net/aiToFigma";
 
 const numPreviews = 4;
 
@@ -87,7 +93,7 @@ export function AiImport(props: {
         {
           pluginMessage: {
             type: "resize",
-            width: 1020,
+            width: 1025,
             height: settings.ui.baseHeight,
           },
         },
@@ -123,7 +129,7 @@ export function AiImport(props: {
   async function fetchImages() {
     images.current = defaultImages();
     const response = await fetch(
-      `${apiHost}/api/v1/ai-to-figma/generate-image`,
+      `${aiApiHost}/api/v1/ai-to-figma/generate-image`,
       {
         method: "POST",
         signal: abortControllerRef.current?.signal,
@@ -148,12 +154,10 @@ export function AiImport(props: {
     );
   }
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: React.FormEvent | React.KeyboardEvent) {
     e.preventDefault();
     setError(null);
     setLoading("Generating...");
-
-    const data = new FormData(e.currentTarget);
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -164,7 +168,7 @@ export function AiImport(props: {
     fetchImages();
 
     try {
-      const response = await fetch(`${apiHost}/api/v1/ai-to-figma/preview`, {
+      const response = await fetch(`${aiApiHost}/api/v1/ai-to-figma/preview`, {
         method: "POST",
         signal: abortControllerRef.current.signal,
         headers: {
@@ -221,7 +225,8 @@ export function AiImport(props: {
       }
     } catch (err) {
       console.error("Error fetching previews: ", err);
-      setError(`
+      setError(
+        `
         We had an issue generating results. Please make sure you have a working internat connection and try again, and if this issue persists please let us know at https://github.com/BuilderIO/figma-html/issues
       `.trim()
       );
@@ -250,6 +255,14 @@ export function AiImport(props: {
             </HelpTooltip>
           </h4>
           <Textarea
+            onKeyPress={(e) => {
+              if (
+                e.key === "Enter" &&
+                !(e.shiftKey || e.ctrlKey || e.altKey || e.metaKey)
+              ) {
+                onSubmit(e);
+              }
+            }}
             placeholder="What do you want to create?"
             value={prompt}
             onChange={(e) => setPrompt(e.currentTarget.value)}

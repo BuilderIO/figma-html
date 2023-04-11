@@ -49,9 +49,7 @@ import * as amplitude from "./functions/track";
 import { v4 as uuid } from "uuid";
 import { AiImport } from "./components/ai-import";
 import { Wand } from "./icons/wand";
-
-// Simple debug flag - flip when needed locally
-export const useDev = false;
+import { useDev } from "./constants/use-dev";
 
 // https://stackoverflow.com/a/46634877
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
