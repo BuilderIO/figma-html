@@ -1,14 +1,22 @@
-# Builder.io for Figma: Figma to HTML, React, and more
+# Builder.io for Figma: AI generation, export to code, import from web
 
 <p align="center">
   <img alt="Figma to HTML title" src="https://cdn.builder.io/api/v1/image/assets%2F1acd978ac4f64052bbfa787026e93509%2F7339cf0681b9413caab81aeed125cb85" />
 </p>
 
 <p align="center">
-  Convert Figma designs into high quality HTML, React, Vue, Svelte, Angular, Solid, etc code via <a href="https://github.com/BuilderIO/mitosis">Mitosis</a>. Additionally, import sites to Figma as well!
+  Teach Figma how to speak code: generate designs via AI, convert designs to code, import from web.
 </p>
 
 ## How does it work
+
+### Generate designs via AI
+
+1. [Install the plugin](https://www.figma.com/c/plugin/747985167520967365/HTML-To-Figma)
+2. Create an [OpenAI account](https://platform.openai.com/signup), grab your [OpenAI key](https://platform.openai.com/account/api-keys), make sure you have [billing enabled](https://platform.openai.com/account/billing/overview), and add your API key in the plugin
+3. Enter a prompt, and watch AI design in real time!
+
+Troubleshooting: if having trouble with your OpenAI API calls, please follow [this guide](https://help.openai.com/en/articles/6891831-error-code-429-you-exceeded-your-current-quota-please-check-your-plan-and-billing-details)
 
 ### Export designs to code
 
