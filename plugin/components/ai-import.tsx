@@ -14,7 +14,7 @@ import { useDev } from "../constants/use-dev";
 export const aiApiHost = useDev
   ? "http://localhost:4000"
   : // Need to use raw function URL to support streaming
-    "https://us-central1-builder-3b0a2.cloudfunctions.net/aiToFigma";
+    "https://ai-to-figma-tk43uighdq-uc.a.run.app";
 
 const numPreviews = 4;
 
@@ -227,7 +227,7 @@ export function AiImport(props: {
       console.error("Error fetching previews: ", err);
       setError(
         `
-        We had an issue generating results. Please make sure you have a working internat connection and try again, and if this issue persists please let us know at https://github.com/BuilderIO/figma-html/issues
+        We had an issue generating results. Please make sure you have a working internet connection and try again, and if this issue persists please let us know at https://github.com/BuilderIO/figma-html/issues
       `.trim()
       );
     } finally {
