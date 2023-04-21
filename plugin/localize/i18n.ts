@@ -44,7 +44,7 @@ export const en = {
   contentListBeforeImport: "Prep your Figma file for export:",
   contentListAfterImport: "Then after import:",
   importDescription:
-    "Quickly convert a website into editable Figma layers.",
+    "Quickly convert a live website into editable Figma layers.",
   chromeExtension: "Use the Chrome Extension",
 };
 

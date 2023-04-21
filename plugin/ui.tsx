@@ -1177,7 +1177,7 @@ class App extends SafeComponent {
                           style={{
                             color: "rgba(255, 20, 20, 1)",
                             border: `1px solid rgba(255, 0, 0, 0.2)`,
-                            padding: 10,
+                            padding: '10px 10px 4px 10px',
                             borderRadius: 5,
                             marginTop: 10,
                             backgroundColor: "rgba(255, 0, 0, 0.1)",
@@ -1270,7 +1270,7 @@ class App extends SafeComponent {
                           style={{
                             color: "rgba(255, 20, 20, 1)",
                             border: `1px solid rgba(255, 0, 0, 0.2)`,
-                            padding: "10px 10px 0 10px",
+                            padding: 10,
                             borderRadius: 5,
                             backgroundColor: "rgba(255, 0, 0, 0.1)",
                             alignItems: "center",
@@ -1481,7 +1481,7 @@ class App extends SafeComponent {
               >
                 <div
                   style={{
-                    margin: 10,
+                    margin: '15 10 10 10',
                     fontWeight: "bold",
                   }}
                 >
@@ -1778,7 +1778,7 @@ class App extends SafeComponent {
                           this.errorMessage || this.loading || !this.online
                         )}
                         style={{
-                          marginTop: 5,
+                          marginTop: 10,
                           marginBottom: 15,
                           textTransform: "none",
                         }}
@@ -1800,7 +1800,7 @@ class App extends SafeComponent {
                     <div
                       style={{
                         padding: 15,
-                        margin: "0 -5 -5",
+                        margin: "5 -5 -5",
                       }}
                     >
                       <div
