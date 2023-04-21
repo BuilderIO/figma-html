@@ -109,6 +109,7 @@ interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
+  style?: React.CSSProperties;
 }
 
 const apiKey = process.env.API_KEY || null;
@@ -276,9 +277,18 @@ function TabPanel(props: TabPanelProps) {
   const { children, value, index } = props;
 
   return (
-    <div hidden={value !== index} id={`simple-tabpanel-${index}`}>
-      {value === index && <div>{children}</div>}
-    </div>
+    value === index && (
+      <div
+        style={{
+          flexGrow: 1,
+          ...props.style,
+        }}
+        hidden={value !== index}
+        id={`simple-tabpanel-${index}`}
+      >
+        {value === index && children}
+      </div>
+    )
   );
 }
 
@@ -964,256 +974,325 @@ class App extends SafeComponent {
             />
           </Tabs>
           <Divider style={{ width: settings.ui.baseWidth }} />
-          <TabPanel value={this.tabIndex} index={0}>
-            <div
-              style={{
-                padding: 15,
-              }}
-            >
+          <TabPanel
+            style={{
+              display: "flex",
+              flexDirection: "column",
+            }}
+            value={this.tabIndex}
+            index={0}
+          >
+            <>
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
+                  padding: 15,
                 }}
               >
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    fontWeight: "bold",
+                    justifyContent: "space-between",
                   }}
                 >
-                  <FormattedMessage
-                    id="title"
-                    defaultMessage="Turn your design into code "
-                  />
-                  <Tooltip title="Learn how to use this feature">
-                    <a
-                      style={{
-                        color: themeVars.colors.primary,
-                        marginLeft: 5,
-                        fontWeight: "bold",
-                        position: "relative",
-                      }}
-                      href="https://www.builder.io/c/docs/import-from-figma"
-                      target="_blank"
-                      rel="noopenner"
-                    >
-                      <HelpOutline style={{ fontSize: 18 }} />
-                    </a>
-                  </Tooltip>
-                </div>
-              </div>
-              <div
-                style={{
-                  margin: "10 0 10",
-                  fontSize: 12,
-                  opacity: 0.8,
-                }}
-              >
-                <FormattedMessage
-                  id="description"
-                  defaultMessage="Convert your Figma designs into responsive code"
-                />
-              </div>
-
-              {!this.initialized ? (
-                <div>
                   <div
                     style={{
                       display: "flex",
-                      padding: 20,
-                      flexDirection: "column",
-                    }}
-                  >
-                    <LoadingEllipsis />
-                  </div>
-                  <div
-                    style={{
-                      textAlign: "center",
-                      fontSize: 12,
-                      opacity: 0.6,
-                      fontStyle: "italic",
+                      alignItems: "center",
+                      fontWeight: "bold",
                     }}
                   >
                     <FormattedMessage
-                      id="initExport"
-                      defaultMessage="Initializing for export, this can take about a minute..."
+                      id="title"
+                      defaultMessage="Turn your design into code "
                     />
+                    <Tooltip title="Learn how to use this feature">
+                      <a
+                        style={{
+                          color: themeVars.colors.primary,
+                          marginLeft: 5,
+                          fontWeight: "bold",
+                          position: "relative",
+                        }}
+                        href="https://www.builder.io/c/docs/import-from-figma"
+                        target="_blank"
+                        rel="noopenner"
+                      >
+                        <HelpOutline style={{ fontSize: 18 }} />
+                      </a>
+                    </Tooltip>
                   </div>
                 </div>
-              ) : this.generatingCode ? (
-                <>
-                  {" "}
-                  <Box
-                    style={{
-                      padding: 5,
-                      backgroundColor: "#F9F9F9",
-                      borderRadius: 4,
-                      border: "1px solid #D3D3D3",
-                      marginTop: 10,
-                    }}
-                  >
-                    <p style={{ margin: 2, fontSize: 12, opacity: 0.8 }}>
-                      <span style={{ fontWeight: "bold" }}>
-                        Note: this plugin is not magic.
-                      </span>{" "}
-                      We attempt to import your design as best possible. You may
-                      need to make final adjustments after import, including
-                      layout, responsiveness and styling.
-                    </p>
-                  </Box>
-                  <Box
-                    border={1}
-                    style={{
-                      padding: 5,
-                      backgroundColor: "#F4F8FF",
-                      borderRadius: 4,
-                      borderColor: "#F4F8FF",
-                      marginTop: 10,
-                    }}
-                  >
-                    <Loading content={this.loaderContent} />
-                  </Box>
-                </>
-              ) : (
-                <>
-                  {this.figmaCheckList &&
-                    Boolean(Object.keys(this.figmaCheckList).length) && (
+                <div
+                  style={{
+                    margin: "10 0 10",
+                    fontSize: 12,
+                    opacity: 0.8,
+                  }}
+                >
+                  <FormattedMessage
+                    id="description"
+                    defaultMessage="Convert your Figma designs into responsive code"
+                  />
+                </div>
+
+                {!this.initialized ? (
+                  <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        padding: 20,
+                        flexDirection: "column",
+                      }}
+                    >
+                      <LoadingEllipsis />
+                    </div>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        fontSize: 12,
+                        opacity: 0.6,
+                        fontStyle: "italic",
+                      }}
+                    >
+                      <FormattedMessage
+                        id="initExport"
+                        defaultMessage="Initializing for export, this can take about a minute..."
+                      />
+                    </div>
+                  </div>
+                ) : this.generatingCode ? (
+                  <>
+                    {" "}
+                    <Box
+                      style={{
+                        padding: 5,
+                        backgroundColor: "#F9F9F9",
+                        borderRadius: 4,
+                        border: "1px solid #D3D3D3",
+                        marginTop: 10,
+                      }}
+                    >
+                      <p style={{ margin: 2, fontSize: 12, opacity: 0.8 }}>
+                        <span style={{ fontWeight: "bold" }}>
+                          Note: this plugin is not magic.
+                        </span>{" "}
+                        We attempt to import your design as best possible. You
+                        may need to make final adjustments after import,
+                        including layout, responsiveness and styling.
+                      </p>
+                    </Box>
+                    <Box
+                      border={1}
+                      style={{
+                        padding: 5,
+                        backgroundColor: "#F4F8FF",
+                        borderRadius: 4,
+                        borderColor: "#F4F8FF",
+                        marginTop: 10,
+                      }}
+                    >
+                      <Loading content={this.loaderContent} />
+                    </Box>
+                  </>
+                ) : (
+                  <>
+                    {this.figmaCheckList &&
+                      Boolean(Object.keys(this.figmaCheckList).length) && (
+                        <div>
+                          <div
+                            style={{
+                              fontWeight: "bold",
+                              fontSize: 12,
+                              marginTop: 15,
+                            }}
+                          >
+                            <FormattedMessage
+                              id="contentListBeforeImport"
+                              defaultMessage="Prep your Figma file for export"
+                            />
+                          </div>
+                          <ul style={{ paddingLeft: 20, margin: 0 }}>
+                            {this.figmaCheckList.results?.map((item) => {
+                              if (item.data.type === "before") {
+                                return (
+                                  <li key={item.id}>
+                                    <p
+                                      className="rich-text"
+                                      style={{
+                                        marginTop: "auto",
+                                        marginBottom: "auto",
+                                        fontSize: 11,
+                                        opacity: 0.8,
+                                      }}
+                                      dangerouslySetInnerHTML={{
+                                        __html: item.data.textContent,
+                                      }}
+                                    />
+                                  </li>
+                                );
+                              }
+                            })}
+                          </ul>
+                          <div
+                            style={{
+                              fontWeight: "bold",
+                              marginTop: 15,
+                              fontSize: 12,
+                            }}
+                          >
+                            <FormattedMessage
+                              id="contentListAfterImport"
+                              defaultMessage="What you will need to do after import"
+                            />
+                          </div>
+                          <ul style={{ paddingLeft: 20, margin: 0 }}>
+                            {this.figmaCheckList.results?.map((item) => {
+                              if (item.data.type === "after") {
+                                return (
+                                  <li key={item.id}>
+                                    <p
+                                      className="rich-text"
+                                      style={{
+                                        marginTop: "auto",
+                                        marginBottom: "auto",
+                                        fontSize: 11,
+                                        opacity: 0.8,
+                                      }}
+                                      dangerouslySetInnerHTML={{
+                                        __html: item.data.textContent,
+                                      }}
+                                    />
+                                  </li>
+                                );
+                              }
+                            })}
+                          </ul>
+                        </div>
+                      )}
+
+                    {this.showImportInvalidError && (
                       <div>
                         <div
                           style={{
-                            fontWeight: "bold",
-                            fontSize: 12,
-                            marginTop: 15,
+                            color: "rgba(255, 20, 20, 1)",
+                            border: `1px solid rgba(255, 0, 0, 0.2)`,
+                            padding: 10,
+                            borderRadius: 5,
+                            marginTop: 10,
+                            backgroundColor: "rgba(255, 0, 0, 0.1)",
+                            alignItems: "center",
+                            cursor: "pointer",
+                            textDecoration: "none",
                           }}
                         >
                           <FormattedMessage
-                            id="contentListBeforeImport"
-                            defaultMessage="Prep your Figma file for export"
+                            id="importLayerHelp"
+                            defaultMessage="To import a layer, that layer and all children must use "
                           />
-                        </div>
-                        <ul style={{ paddingLeft: 20, margin: 0 }}>
-                          {this.figmaCheckList.results?.map((item) => {
-                            if (item.data.type === "before") {
-                              return (
-                                <li key={item.id}>
-                                  <p
-                                    className="rich-text"
-                                    style={{
-                                      marginTop: "auto",
-                                      marginBottom: "auto",
-                                      fontSize: 11,
-                                      opacity: 0.8,
-                                    }}
-                                    dangerouslySetInnerHTML={{
-                                      __html: item.data.textContent,
-                                    }}
-                                  />
-                                </li>
-                              );
-                            }
-                          })}
-                        </ul>
-                        <div
-                          style={{
-                            fontWeight: "bold",
-                            marginTop: 15,
-                            fontSize: 12,
-                          }}
-                        >
+                          <a
+                            style={{
+                              color: themeVars.colors.primary,
+                            }}
+                            href="https://help.figma.com/hc/en-us/articles/360040451373-Create-dynamic-designs-with-Auto-layout"
+                            target="_blank"
+                            rel="noopenner"
+                          >
+                            <FormattedMessage
+                              id="autolayout"
+                              defaultMessage="autolayout"
+                            />
+                          </a>
                           <FormattedMessage
-                            id="contentListAfterImport"
-                            defaultMessage="What you will need to do after import"
+                            id="importLayerHelp2"
+                            defaultMessage=" and vectors should be "
                           />
+                          <a
+                            style={{
+                              color: themeVars.colors.primary,
+                            }}
+                            href="https://github.com/BuilderIO/figma-html/#auto-layout-vectors"
+                            target="_blank"
+                            rel="noopenner"
+                          >
+                            <FormattedMessage
+                              id="rasterizeVectors"
+                              defaultMessage="rasterized"
+                            />
+                          </a>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "row-reverse",
+                            }}
+                          >
+                            <Button
+                              size="small"
+                              style={{ textTransform: "none" }}
+                              href="https://www.builder.io/c/docs/import-from-figma"
+                              target="_blank"
+                              color="primary"
+                              rel="noopenner"
+                            >
+                              <FormattedMessage
+                                id="learnMore"
+                                defaultMessage="Learn more"
+                              />
+                            </Button>
+                            <Button
+                              size="small"
+                              style={{ opacity: 0.5, textTransform: "none" }}
+                              onClick={() => {
+                                parent.postMessage(
+                                  {
+                                    pluginMessage: {
+                                      type: "clearErrors",
+                                      data: true,
+                                    },
+                                  },
+                                  "*"
+                                );
+                                this.showImportInvalidError = false;
+                              }}
+                            >
+                              <FormattedMessage
+                                id="clearErrors"
+                                defaultMessage="Clear errors"
+                              />
+                            </Button>
+                          </div>
                         </div>
-                        <ul style={{ paddingLeft: 20, margin: 0 }}>
-                          {this.figmaCheckList.results?.map((item) => {
-                            if (item.data.type === "after") {
-                              return (
-                                <li key={item.id}>
-                                  <p
-                                    className="rich-text"
-                                    style={{
-                                      marginTop: "auto",
-                                      marginBottom: "auto",
-                                      fontSize: 11,
-                                      opacity: 0.8,
-                                    }}
-                                    dangerouslySetInnerHTML={{
-                                      __html: item.data.textContent,
-                                    }}
-                                  />
-                                </li>
-                              );
-                            }
-                          })}
-                        </ul>
                       </div>
                     )}
-
-                  {this.showImportInvalidError && (
-                    <div>
-                      <div
-                        style={{
-                          color: "rgba(255, 20, 20, 1)",
-                          border: `1px solid rgba(255, 0, 0, 0.2)`,
-                          padding: 10,
-                          borderRadius: 5,
-                          marginTop: 10,
-                          backgroundColor: "rgba(255, 0, 0, 0.1)",
-                          alignItems: "center",
-                          cursor: "pointer",
-                          textDecoration: "none",
-                        }}
-                      >
-                        <FormattedMessage
-                          id="importLayerHelp"
-                          defaultMessage="To import a layer, that layer and all children must use "
-                        />
-                        <a
-                          style={{
-                            color: themeVars.colors.primary,
-                          }}
-                          href="https://help.figma.com/hc/en-us/articles/360040451373-Create-dynamic-designs-with-Auto-layout"
-                          target="_blank"
-                          rel="noopenner"
-                        >
-                          <FormattedMessage
-                            id="autolayout"
-                            defaultMessage="autolayout"
-                          />
-                        </a>
-                        <FormattedMessage
-                          id="importLayerHelp2"
-                          defaultMessage=" and vectors should be "
-                        />
-                        <a
-                          style={{
-                            color: themeVars.colors.primary,
-                          }}
-                          href="https://github.com/BuilderIO/figma-html/#auto-layout-vectors"
-                          target="_blank"
-                          rel="noopenner"
-                        >
-                          <FormattedMessage
-                            id="rasterizeVectors"
-                            defaultMessage="rasterized"
-                          />
-                        </a>
+                    {this.showRequestFailedError && (
+                      <div>
                         <div
                           style={{
-                            display: "flex",
-                            flexDirection: "row-reverse",
+                            color: "rgba(255, 20, 20, 1)",
+                            border: `1px solid rgba(255, 0, 0, 0.2)`,
+                            padding: "10px 10px 0 10px",
+                            borderRadius: 5,
+                            backgroundColor: "rgba(255, 0, 0, 0.1)",
+                            alignItems: "center",
+                            cursor: "pointer",
+                            textDecoration: "none",
+                            marginTop: 10,
                           }}
                         >
+                          <FormattedMessage
+                            id="errorMessage"
+                            defaultMessage="Oh no, there was an error! To troubleshoot, if you are
+                            importing a whole page, try importing a smaller part of the
+                            page at a time, like one section or even one button"
+                          />
+                        </div>
+                        <div>
                           <Button
-                            size="small"
                             style={{ textTransform: "none" }}
-                            href="https://www.builder.io/c/docs/import-from-figma"
-                            target="_blank"
+                            size="small"
                             color="primary"
+                            href="https://www.builder.io/c/docs/import-from-figma#troubleshooting"
+                            target="_blank"
                             rel="noopenner"
                           >
                             <FormattedMessage
@@ -1225,16 +1304,7 @@ class App extends SafeComponent {
                             size="small"
                             style={{ opacity: 0.5, textTransform: "none" }}
                             onClick={() => {
-                              parent.postMessage(
-                                {
-                                  pluginMessage: {
-                                    type: "clearErrors",
-                                    data: true,
-                                  },
-                                },
-                                "*"
-                              );
-                              this.showImportInvalidError = false;
+                              this.showRequestFailedError = false;
                             }}
                           >
                             <FormattedMessage
@@ -1244,154 +1314,107 @@ class App extends SafeComponent {
                           </Button>
                         </div>
                       </div>
-                    </div>
-                  )}
-                  {this.showRequestFailedError && (
-                    <div>
+                    )}
+                    {!Boolean(this.selection.length) && (
                       <div
                         style={{
-                          color: "rgba(255, 20, 20, 1)",
-                          border: `1px solid rgba(255, 0, 0, 0.2)`,
-                          padding: "10px 10px 0 10px",
-                          borderRadius: 5,
-                          backgroundColor: "rgba(255, 0, 0, 0.1)",
-                          alignItems: "center",
-                          cursor: "pointer",
-                          textDecoration: "none",
-                          marginTop: 10,
-                        }}
-                      >
-                        <FormattedMessage
-                          id="errorMessage"
-                          defaultMessage="Oh no, there was an error! To troubleshoot, if you are
-                            importing a whole page, try importing a smaller part of the
-                            page at a time, like one section or even one button"
-                        />
-                      </div>
-                      <div>
-                        <Button
-                          style={{ textTransform: "none" }}
-                          size="small"
-                          color="primary"
-                          href="https://www.builder.io/c/docs/import-from-figma#troubleshooting"
-                          target="_blank"
-                          rel="noopenner"
-                        >
-                          <FormattedMessage
-                            id="learnMore"
-                            defaultMessage="Learn more"
-                          />
-                        </Button>
-                        <Button
-                          size="small"
-                          style={{ opacity: 0.5, textTransform: "none" }}
-                          onClick={() => {
-                            this.showRequestFailedError = false;
-                          }}
-                        >
-                          <FormattedMessage
-                            id="clearErrors"
-                            defaultMessage="Clear errors"
-                          />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  {!Boolean(this.selection.length) && (
-                    <div
-                      style={{
-                        color: themeVars.colors.primary,
-                        marginTop: 20,
-                        padding: 10,
-                        borderRadius: 5,
-                        textAlign: "center",
-                        backgroundColor:
-                          themeVars.colors.primaryWithOpacity(0.1),
-                      }}
-                    >
-                      {this.getLang().selectLayerPop}
-                    </div>
-                  )}
-                  {Boolean(this.selection.length) && (
-                    <Tooltip
-                      disableHoverListener={Boolean(this.selection.length)}
-                      title={this.getLang().selectLayerPop}
-                    >
-                      <div>
-                        <Button
-                          fullWidth
-                          style={{ marginTop: 20, textTransform: "none" }}
-                          variant="contained"
-                          onClick={(e) => {
-                            this.getCode(true);
-                          }}
-                          disabled={!this.selection.length}
-                          color="primary"
-                        >
-                          <FormattedMessage
-                            id="getCode"
-                            defaultMessage="Get Code"
-                          />
-                        </Button>
-                      </div>
-                    </Tooltip>
-                  )}
-                  {this.displayFiddleUrl && (
-                    <div
-                      style={{
-                        margin: "15px 0 5px 0",
-                        textTransform: "none",
-                      }}
-                    >
-                      <FormattedMessage id="done" defaultMessage="Done! " />
-                      <a
-                        style={{
                           color: themeVars.colors.primary,
-                          fontWeight: "bold",
-                          textDecoration: "none",
+                          marginTop: 20,
+                          padding: 10,
+                          borderRadius: 5,
+                          textAlign: "center",
+                          backgroundColor:
+                            themeVars.colors.primaryWithOpacity(0.1),
                         }}
-                        rel="noopenner"
-                        href={this.displayFiddleUrl}
-                        target="_blank"
+                      >
+                        {this.getLang().selectLayerPop}
+                      </div>
+                    )}
+                    {Boolean(this.selection.length) && (
+                      <Tooltip
+                        disableHoverListener={Boolean(this.selection.length)}
+                        title={this.getLang().selectLayerPop}
+                      >
+                        <div>
+                          <Button
+                            fullWidth
+                            style={{ marginTop: 20, textTransform: "none" }}
+                            variant="contained"
+                            onClick={(e) => {
+                              this.getCode(true);
+                            }}
+                            disabled={!this.selection.length}
+                            color="primary"
+                          >
+                            <FormattedMessage
+                              id="getCode"
+                              defaultMessage="Get Code"
+                            />
+                          </Button>
+                        </div>
+                      </Tooltip>
+                    )}
+                    {this.displayFiddleUrl && (
+                      <div
+                        style={{
+                          margin: "10px 0 5px 0",
+                          textTransform: "none",
+                          textAlign: "center",
+                        }}
+                      >
+                        <FormattedMessage id="done" defaultMessage="Done! " />
+                        <a
+                          style={{
+                            color: themeVars.colors.primary,
+                            fontWeight: "bold",
+                            textDecoration: "none",
+                          }}
+                          rel="noopenner"
+                          href={this.displayFiddleUrl}
+                          target="_blank"
+                        >
+                          <FormattedMessage
+                            id="clickHere"
+                            defaultMessage="Click here"
+                          />
+                        </a>
+                        <FormattedMessage
+                          id="clickHere2"
+                          defaultMessage=" to open your content in Builder.io and choose 'get code'"
+                        />
+                      </div>
+                    )}
+                    {Boolean(this.selection.length) && (
+                      <Button
+                        fullWidth
+                        size="small"
+                        style={{
+                          marginTop: 5,
+                          opacity: 0.5,
+                          textTransform: "none",
+                        }}
+                        onClick={(e) => {
+                          this.getCode(false);
+                        }}
+                        disabled={!this.selection.length}
                       >
                         <FormattedMessage
-                          id="clickHere"
-                          defaultMessage="Click here"
+                          id="downloadJson"
+                          defaultMessage="Download JSON"
                         />
-                      </a>
-                      <FormattedMessage
-                        id="clickHere2"
-                        defaultMessage=" to open your content in Builder.io and choose 'get code'"
-                      />
-                    </div>
-                  )}
-                  {Boolean(this.selection.length) && (
-                    <Button
-                      fullWidth
-                      size="small"
-                      style={{
-                        marginTop: 5,
-                        opacity: 0.5,
-                        textTransform: "none",
-                      }}
-                      onClick={(e) => {
-                        this.getCode(false);
-                      }}
-                      disabled={!this.selection.length}
-                    >
-                      <FormattedMessage
-                        id="downloadJson"
-                        defaultMessage="Download JSON"
-                      />
-                    </Button>
-                  )}
-                </>
-              )}
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+
               <div
                 style={{
                   color: themeVars.colors.primary,
-                  marginTop: 20,
-                  border: `1px solid ${themeVars.colors.primary}`,
+                  margin: "auto 15px 15px",
+                  border: `1px solid ${themeVars.colors.primaryWithOpacity(
+                    0.2
+                  )}`,
                   fontWeight: "bold",
                   padding: 10,
                   borderRadius: 5,
@@ -1416,7 +1439,7 @@ class App extends SafeComponent {
                   Generate designs with AI
                 </span>
               </div>
-            </div>
+            </>
           </TabPanel>
 
           <TabPanel value={this.tabIndex} index={1}>
@@ -1470,7 +1493,7 @@ class App extends SafeComponent {
 
                 <div
                   style={{
-                    margin: "0 10 10",
+                    margin: "-3px 10px 13px",
                     fontSize: 12,
                     opacity: 0.8,
                   }}
@@ -1488,7 +1511,13 @@ class App extends SafeComponent {
                     margin: "0 10 10",
                   }}
                 >
-                  <div style={{ display: "flex", position: "relative" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      position: "relative",
+                      marginTop: 5,
+                    }}
+                  >
                     <TextField
                       inputProps={{
                         style: {
@@ -1601,7 +1630,7 @@ class App extends SafeComponent {
                           style={{
                             position: "absolute",
                             right: -4,
-                            top: 18,
+                            top: 14,
                             borderRadius: 100,
                             display: "flex",
                             ...(this.loading && {
@@ -1613,6 +1642,7 @@ class App extends SafeComponent {
                           <IconButton
                             style={{
                               padding: 5,
+                              background: "none",
                               color: this.width === "1200" ? "#000" : "#888",
                             }}
                             onClick={() => (this.width = "1200")}
@@ -1623,6 +1653,7 @@ class App extends SafeComponent {
                           <IconButton
                             style={{
                               padding: 5,
+                              background: "none",
                               color: this.width === "900" ? "#000" : "#888",
                             }}
                             onClick={() => (this.width = "900")}
@@ -1632,6 +1663,7 @@ class App extends SafeComponent {
                           <IconButton
                             style={{
                               padding: 5,
+                              background: "none",
                               color: this.width === "400" ? "#000" : "#888",
                             }}
                             onClick={() => (this.width = "400")}
@@ -1739,16 +1771,15 @@ class App extends SafeComponent {
                   </div>
                 ) : (
                   <>
-                    <div style={{ margin: "0 15" }}>
+                    <div style={{ margin: "0 10 10" }}>
                       <Button
                         type="submit"
-                        size="small"
                         disabled={Boolean(
                           this.errorMessage || this.loading || !this.online
                         )}
                         style={{
                           marginTop: 5,
-                          marginBottom: 10,
+                          marginBottom: 15,
                           textTransform: "none",
                         }}
                         fullWidth
@@ -2022,7 +2053,7 @@ class App extends SafeComponent {
                 fontSize: 12,
                 padding: 10,
                 gap: 10,
-                margin: "0 auto",
+                margin: "0 auto 5px",
               }}
             >
               <a
