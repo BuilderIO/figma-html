@@ -988,19 +988,21 @@ class App extends SafeComponent {
                     id="title"
                     defaultMessage="Turn your design into code "
                   />
-                  <a
-                    style={{
-                      color: themeVars.colors.primary,
-                      marginLeft: 5,
-                      fontWeight: "bold",
-                      position: "relative",
-                    }}
-                    href="https://www.builder.io/c/docs/import-from-figma"
-                    target="_blank"
-                    rel="noopenner"
-                  >
-                    <HelpOutline style={{ fontSize: 18 }} />
-                  </a>
+                  <Tooltip title="Learn how to use this feature">
+                    <a
+                      style={{
+                        color: themeVars.colors.primary,
+                        marginLeft: 5,
+                        fontWeight: "bold",
+                        position: "relative",
+                      }}
+                      href="https://www.builder.io/c/docs/import-from-figma"
+                      target="_blank"
+                      rel="noopenner"
+                    >
+                      <HelpOutline style={{ fontSize: 18 }} />
+                    </a>
+                  </Tooltip>
                 </div>
               </div>
               <div
@@ -1077,135 +1079,6 @@ class App extends SafeComponent {
                 </>
               ) : (
                 <>
-                  {this.showImportInvalidError && (
-                    <div>
-                      <div
-                        style={{
-                          color: "rgb(200, 0, 0)",
-                          marginTop: 10,
-                          marginBottom: 10,
-                        }}
-                      >
-                        <FormattedMessage
-                          id="importLayerHelp"
-                          defaultMessage="To import a layer, that layer and all children must use "
-                        />
-                        <a
-                          style={{
-                            color: themeVars.colors.primary,
-                          }}
-                          href="https://help.figma.com/hc/en-us/articles/360040451373-Create-dynamic-designs-with-Auto-layout"
-                          target="_blank"
-                          rel="noopenner"
-                        >
-                          <FormattedMessage
-                            id="autolayout"
-                            defaultMessage="autolayout"
-                          />
-                        </a>
-                        <br />
-                        <FormattedMessage
-                          id="importLayerHelp2"
-                          defaultMessage="Vectors should be "
-                        />
-                        <a
-                          style={{
-                            color: themeVars.colors.primary,
-                          }}
-                          href="https://github.com/BuilderIO/figma-html/#auto-layout-vectors"
-                          target="_blank"
-                          rel="noopenner"
-                        >
-                          <FormattedMessage
-                            id="rasterizeVectors"
-                            defaultMessage="rasterized"
-                          />
-                        </a>
-                      </div>
-                      <div>
-                        <Button
-                          size="small"
-                          style={{ textTransform: "none" }}
-                          href="https://www.builder.io/c/docs/import-from-figma"
-                          target="_blank"
-                          color="primary"
-                          rel="noopenner"
-                        >
-                          <FormattedMessage
-                            id="learnMore"
-                            defaultMessage="Learn more"
-                          />
-                        </Button>
-                        <Button
-                          size="small"
-                          style={{ opacity: 0.5, textTransform: "none" }}
-                          onClick={() => {
-                            parent.postMessage(
-                              {
-                                pluginMessage: {
-                                  type: "clearErrors",
-                                  data: true,
-                                },
-                              },
-                              "*"
-                            );
-                            this.showImportInvalidError = false;
-                          }}
-                        >
-                          <FormattedMessage
-                            id="clearErrors"
-                            defaultMessage="Clear errors"
-                          />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  {this.showRequestFailedError && (
-                    <div>
-                      <div
-                        style={{
-                          color: "rgb(200, 0, 0)",
-                          marginTop: 10,
-                          marginBottom: 10,
-                        }}
-                      >
-                        <FormattedMessage
-                          id="errorMessage"
-                          defaultMessage="Oh no, there was an error! To troubleshoot, if you are
-                            importing a whole page, try importing a smaller part of the
-                            page at a time, like one section or even one button"
-                        />
-                      </div>
-                      <div>
-                        <Button
-                          style={{ textTransform: "none" }}
-                          size="small"
-                          color="primary"
-                          href="https://www.builder.io/c/docs/import-from-figma#troubleshooting"
-                          target="_blank"
-                          rel="noopenner"
-                        >
-                          <FormattedMessage
-                            id="learnMore"
-                            defaultMessage="Learn more"
-                          />
-                        </Button>
-                        <Button
-                          size="small"
-                          style={{ opacity: 0.5, textTransform: "none" }}
-                          onClick={() => {
-                            this.showRequestFailedError = false;
-                          }}
-                        >
-                          <FormattedMessage
-                            id="clearErrors"
-                            defaultMessage="Clear errors"
-                          />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
                   {this.figmaCheckList &&
                     Boolean(Object.keys(this.figmaCheckList).length) && (
                       <div>
@@ -1280,6 +1153,150 @@ class App extends SafeComponent {
                       </div>
                     )}
 
+                  {this.showImportInvalidError && (
+                    <div>
+                      <div
+                        style={{
+                          color: "rgba(255, 20, 20, 1)",
+                          border: `1px solid rgba(255, 0, 0, 0.2)`,
+                          padding: 10,
+                          borderRadius: 5,
+                          marginTop: 10,
+                          backgroundColor: "rgba(255, 0, 0, 0.1)",
+                          alignItems: "center",
+                          cursor: "pointer",
+                          textDecoration: "none",
+                        }}
+                      >
+                        <FormattedMessage
+                          id="importLayerHelp"
+                          defaultMessage="To import a layer, that layer and all children must use "
+                        />
+                        <a
+                          style={{
+                            color: themeVars.colors.primary,
+                          }}
+                          href="https://help.figma.com/hc/en-us/articles/360040451373-Create-dynamic-designs-with-Auto-layout"
+                          target="_blank"
+                          rel="noopenner"
+                        >
+                          <FormattedMessage
+                            id="autolayout"
+                            defaultMessage="autolayout"
+                          />
+                        </a>
+                        <FormattedMessage
+                          id="importLayerHelp2"
+                          defaultMessage=" and vectors should be "
+                        />
+                        <a
+                          style={{
+                            color: themeVars.colors.primary,
+                          }}
+                          href="https://github.com/BuilderIO/figma-html/#auto-layout-vectors"
+                          target="_blank"
+                          rel="noopenner"
+                        >
+                          <FormattedMessage
+                            id="rasterizeVectors"
+                            defaultMessage="rasterized"
+                          />
+                        </a>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "row-reverse",
+                          }}
+                        >
+                          <Button
+                            size="small"
+                            style={{ textTransform: "none" }}
+                            href="https://www.builder.io/c/docs/import-from-figma"
+                            target="_blank"
+                            color="primary"
+                            rel="noopenner"
+                          >
+                            <FormattedMessage
+                              id="learnMore"
+                              defaultMessage="Learn more"
+                            />
+                          </Button>
+                          <Button
+                            size="small"
+                            style={{ opacity: 0.5, textTransform: "none" }}
+                            onClick={() => {
+                              parent.postMessage(
+                                {
+                                  pluginMessage: {
+                                    type: "clearErrors",
+                                    data: true,
+                                  },
+                                },
+                                "*"
+                              );
+                              this.showImportInvalidError = false;
+                            }}
+                          >
+                            <FormattedMessage
+                              id="clearErrors"
+                              defaultMessage="Clear errors"
+                            />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {this.showRequestFailedError && (
+                    <div>
+                      <div
+                        style={{
+                          color: "rgba(255, 20, 20, 1)",
+                          border: `1px solid rgba(255, 0, 0, 0.2)`,
+                          padding: "10px 10px 0 10px",
+                          borderRadius: 5,
+                          backgroundColor: "rgba(255, 0, 0, 0.1)",
+                          alignItems: "center",
+                          cursor: "pointer",
+                          textDecoration: "none",
+                          marginTop: 10,
+                        }}
+                      >
+                        <FormattedMessage
+                          id="errorMessage"
+                          defaultMessage="Oh no, there was an error! To troubleshoot, if you are
+                            importing a whole page, try importing a smaller part of the
+                            page at a time, like one section or even one button"
+                        />
+                      </div>
+                      <div>
+                        <Button
+                          style={{ textTransform: "none" }}
+                          size="small"
+                          color="primary"
+                          href="https://www.builder.io/c/docs/import-from-figma#troubleshooting"
+                          target="_blank"
+                          rel="noopenner"
+                        >
+                          <FormattedMessage
+                            id="learnMore"
+                            defaultMessage="Learn more"
+                          />
+                        </Button>
+                        <Button
+                          size="small"
+                          style={{ opacity: 0.5, textTransform: "none" }}
+                          onClick={() => {
+                            this.showRequestFailedError = false;
+                          }}
+                        >
+                          <FormattedMessage
+                            id="clearErrors"
+                            defaultMessage="Clear errors"
+                          />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   {!Boolean(this.selection.length) && (
                     <div
                       style={{
@@ -1287,7 +1304,7 @@ class App extends SafeComponent {
                         marginTop: 20,
                         padding: 10,
                         borderRadius: 5,
-                        marginBottom: -10,
+                        textAlign: "center",
                         backgroundColor:
                           themeVars.colors.primaryWithOpacity(0.1),
                       }}
@@ -1295,29 +1312,30 @@ class App extends SafeComponent {
                       {this.getLang().selectLayerPop}
                     </div>
                   )}
-                  <Tooltip
-                    disableHoverListener={Boolean(this.selection.length)}
-                    title={this.getLang().selectLayerPop}
-                  >
-                    <div>
-                      <Button
-                        fullWidth
-                        size="small"
-                        style={{ marginTop: 20, textTransform: "none" }}
-                        variant="contained"
-                        onClick={(e) => {
-                          this.getCode(true);
-                        }}
-                        disabled={!this.selection.length}
-                        color="primary"
-                      >
-                        <FormattedMessage
-                          id="getCode"
-                          defaultMessage="Get Code"
-                        />
-                      </Button>
-                    </div>
-                  </Tooltip>
+                  {Boolean(this.selection.length) && (
+                    <Tooltip
+                      disableHoverListener={Boolean(this.selection.length)}
+                      title={this.getLang().selectLayerPop}
+                    >
+                      <div>
+                        <Button
+                          fullWidth
+                          style={{ marginTop: 20, textTransform: "none" }}
+                          variant="contained"
+                          onClick={(e) => {
+                            this.getCode(true);
+                          }}
+                          disabled={!this.selection.length}
+                          color="primary"
+                        >
+                          <FormattedMessage
+                            id="getCode"
+                            defaultMessage="Get Code"
+                          />
+                        </Button>
+                      </div>
+                    </Tooltip>
+                  )}
                   {this.displayFiddleUrl && (
                     <div
                       style={{
@@ -1347,24 +1365,26 @@ class App extends SafeComponent {
                       />
                     </div>
                   )}
-                  <Button
-                    fullWidth
-                    size="small"
-                    style={{
-                      marginTop: 5,
-                      opacity: 0.4,
-                      textTransform: "none",
-                    }}
-                    onClick={(e) => {
-                      this.getCode(false);
-                    }}
-                    disabled={!this.selection.length}
-                  >
-                    <FormattedMessage
-                      id="downloadJson"
-                      defaultMessage="Download JSON"
-                    />
-                  </Button>
+                  {Boolean(this.selection.length) && (
+                    <Button
+                      fullWidth
+                      size="small"
+                      style={{
+                        marginTop: 5,
+                        opacity: 0.5,
+                        textTransform: "none",
+                      }}
+                      onClick={(e) => {
+                        this.getCode(false);
+                      }}
+                      disabled={!this.selection.length}
+                    >
+                      <FormattedMessage
+                        id="downloadJson"
+                        defaultMessage="Download JSON"
+                      />
+                    </Button>
+                  )}
                 </>
               )}
               <div
@@ -1390,7 +1410,6 @@ class App extends SafeComponent {
                 <span
                   style={{
                     color: "inherit",
-                    textDecoration: "underline",
                     marginLeft: 3,
                   }}
                 >

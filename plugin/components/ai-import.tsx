@@ -8,8 +8,9 @@ import { traverseLayers } from "../functions/traverse-layers";
 import * as amplitude from "../functions/track";
 import { theme } from "../constants/theme";
 import { HelpTooltip } from "./help-tooltip";
-import { TooltipTextLink } from "./text-link";
+import { TextLink, TooltipTextLink } from "./text-link";
 import { useDev } from "../constants/use-dev";
+import { HelpOutline } from "@material-ui/icons";
 
 export const aiApiHost = useDev
   ? "http://localhost:4000"
@@ -358,24 +359,25 @@ export function AiImport(props: {
             )}
           </div>
         )}
-        <div
+        <TextLink
+          target="_blank"
+          href="https://www.builder.io/blog/ai-figma"
           style={{
-            textAlign: "center",
-            color: "rgba(0, 0, 0, 0.7)",
-            marginBottom: 20,
-            marginTop: 10,
+            color: theme.colors.primary,
+            border: `1px solid ${theme.colors.primaryWithOpacity(0.2)}`,
+            fontWeight: "bold",
+            padding: 10,
+            borderRadius: 5,
+            backgroundColor: theme.colors.primaryWithOpacity(0.1),
+            display: "flex",
+            alignItems: "center",
+            cursor: "pointer",
+            textDecoration: "none",
           }}
         >
-          This feature is in{" "}
-          <span style={{ color: theme.colors.primary }}>beta</span>, please give
-          us{" "}
-          <a
-            href="https://github.com/BuilderIO/html-to-figma/issues"
-            target="_blank"
-          >
-            feedback
-          </a>
-        </div>
+          <HelpOutline style={{ marginRight: 10 }} />
+          Learn how to use this feature
+        </TextLink>
       </div>
       {hasPreviews() && (
         <div

@@ -40,7 +40,7 @@ export const en = {
   width: "Viewport Width",
   framesPop: "Nest layers in frames",
   rasterizeVectors: "rasterized",
-  importLayerHelp2: "Vectors should be ",
+  importLayerHelp2: " and vectors should be ",
   contentListBeforeImport: "Prep your Figma file for export:",
   contentListAfterImport: "Then after import:",
   importDescription:
