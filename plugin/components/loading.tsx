@@ -47,7 +47,7 @@ export function Loading(props: { content?: CheckListContent[] | undefined }) {
     <Box
       border={1}
       style={{
-        padding: 5,
+        padding: 15,
         backgroundColor: "#F4F8FF",
         borderRadius: 4,
         borderColor: "#F4F8FF",

@@ -17,6 +17,7 @@ import {
   Tabs,
   Tab,
   Box,
+  CircularProgress,
 } from "@material-ui/core";
 import green from "@material-ui/core/colors/green";
 import { HelpOutline } from "@material-ui/icons";
@@ -276,58 +277,26 @@ export async function processImages(layer: Node) {
 function TabPanel(props: TabPanelProps) {
   const { children, value, index } = props;
 
-  return (
-    value === index && (
-      <div
-        style={{
-          flexGrow: 1,
-          ...props.style,
-        }}
-        hidden={value !== index}
-        id={`simple-tabpanel-${index}`}
-      >
-        {value === index && children}
-      </div>
-    )
-  );
+  return value === index ? (
+    <div
+      style={{
+        flexGrow: 1,
+        ...props.style,
+      }}
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+    >
+      {value === index && children}
+    </div>
+  ) : null;
 }
-
-const LoadingEllipsis: React.FC<{}> = () => (
-  <>
-    <div style={{ margin: "0 auto" }} className="lds-ellipsis">
-      <div style={{ background: themeVars.colors.primaryLight }} />
-      <div style={{ background: themeVars.colors.primaryLight }} />
-      <div style={{ background: themeVars.colors.primaryLight }} />
-      <div style={{ background: themeVars.colors.primaryLight }} />
-    </div>
-    <div style={{ textAlign: "center" }}>
-      <Typography
-        variant="caption"
-        style={{
-          textAlign: "center",
-          color: themeVars.colors.primaryLight,
-          marginBottom: -10,
-        }}
-      >
-        <FormattedMessage
-          id="processingCode"
-          defaultMessage="Processing code..."
-        />
-        <br />
-        <FormattedMessage
-          id="processingCode2"
-          defaultMessage="This can take a couple minutes..."
-        />
-      </Typography>
-    </div>
-  </>
-);
 
 @observer
 class App extends SafeComponent {
   editorRef: HTMLIFrameElement | null = null;
 
   @observable loading = false;
+  @observable loadingCmsData = false;
 
   @observable lipsum = false;
   @observable loadingGenerate = false;
@@ -703,10 +672,9 @@ class App extends SafeComponent {
       }
     });
 
-    // Get Content Checklist from Builder Data Model
-
+    this.loadingCmsData = true;
     fetch(
-      "https://cdn.builder.io/api/v2/content/figma-modal-items?apiKey=YJIGb4i01jvw0SRdL5Bt"
+      "https://cdn.builder.io/api/v3/content/figma-modal-items?apiKey=YJIGb4i01jvw0SRdL5Bt"
     )
       .then((response) => {
         if (!response.ok) {
@@ -725,6 +693,7 @@ class App extends SafeComponent {
           );
           this.loaderContent = this.loaderContent.slice().reverse();
         }
+        this.loadingCmsData = false;
       });
 
     parent.postMessage(
@@ -1036,32 +1005,7 @@ class App extends SafeComponent {
                   />
                 </div>
 
-                {!this.initialized ? (
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        padding: 20,
-                        flexDirection: "column",
-                      }}
-                    >
-                      <LoadingEllipsis />
-                    </div>
-                    <div
-                      style={{
-                        textAlign: "center",
-                        fontSize: 12,
-                        opacity: 0.6,
-                        fontStyle: "italic",
-                      }}
-                    >
-                      <FormattedMessage
-                        id="initExport"
-                        defaultMessage="Initializing for export, this can take about a minute..."
-                      />
-                    </div>
-                  </div>
-                ) : this.generatingCode ? (
+                {this.generatingCode ? (
                   <>
                     {" "}
                     <Box
@@ -1082,94 +1026,90 @@ class App extends SafeComponent {
                         including layout, responsiveness and styling.
                       </p>
                     </Box>
-                    <Box
-                      border={1}
-                      style={{
-                        padding: 5,
-                        backgroundColor: "#F4F8FF",
-                        borderRadius: 4,
-                        borderColor: "#F4F8FF",
-                        marginTop: 10,
-                      }}
-                    >
-                      <Loading content={this.loaderContent} />
-                    </Box>
+                    <Loading content={this.loaderContent} />
                   </>
                 ) : (
                   <>
                     {this.figmaCheckList &&
-                      Boolean(Object.keys(this.figmaCheckList).length) && (
-                        <div>
-                          <div
-                            style={{
-                              fontWeight: "bold",
-                              fontSize: 12,
-                              marginTop: 15,
-                            }}
-                          >
-                            <FormattedMessage
-                              id="contentListBeforeImport"
-                              defaultMessage="Prep your Figma file for export"
-                            />
-                          </div>
-                          <ul style={{ paddingLeft: 20, margin: 0 }}>
-                            {this.figmaCheckList.results?.map((item) => {
-                              if (item.data.type === "before") {
-                                return (
-                                  <li key={item.id}>
-                                    <p
-                                      className="rich-text"
-                                      style={{
-                                        marginTop: "auto",
-                                        marginBottom: "auto",
-                                        fontSize: 11,
-                                        opacity: 0.8,
-                                      }}
-                                      dangerouslySetInnerHTML={{
-                                        __html: item.data.textContent,
-                                      }}
-                                    />
-                                  </li>
-                                );
-                              }
-                            })}
-                          </ul>
-                          <div
-                            style={{
-                              fontWeight: "bold",
-                              marginTop: 15,
-                              fontSize: 12,
-                            }}
-                          >
-                            <FormattedMessage
-                              id="contentListAfterImport"
-                              defaultMessage="What you will need to do after import"
-                            />
-                          </div>
-                          <ul style={{ paddingLeft: 20, margin: 0 }}>
-                            {this.figmaCheckList.results?.map((item) => {
-                              if (item.data.type === "after") {
-                                return (
-                                  <li key={item.id}>
-                                    <p
-                                      className="rich-text"
-                                      style={{
-                                        marginTop: "auto",
-                                        marginBottom: "auto",
-                                        fontSize: 11,
-                                        opacity: 0.8,
-                                      }}
-                                      dangerouslySetInnerHTML={{
-                                        __html: item.data.textContent,
-                                      }}
-                                    />
-                                  </li>
-                                );
-                              }
-                            })}
-                          </ul>
+                    Boolean(Object.keys(this.figmaCheckList).length) ? (
+                      <div>
+                        <div
+                          style={{
+                            fontWeight: "bold",
+                            fontSize: 12,
+                            marginTop: 15,
+                          }}
+                        >
+                          <FormattedMessage
+                            id="contentListBeforeImport"
+                            defaultMessage="Prep your Figma file for export"
+                          />
                         </div>
-                      )}
+                        <ul style={{ paddingLeft: 20, margin: 0 }}>
+                          {this.figmaCheckList.results?.map((item) => {
+                            if (item.data.type === "before") {
+                              return (
+                                <li key={item.id}>
+                                  <p
+                                    className="rich-text"
+                                    style={{
+                                      marginTop: "auto",
+                                      marginBottom: "auto",
+                                      fontSize: 11,
+                                      opacity: 0.8,
+                                    }}
+                                    dangerouslySetInnerHTML={{
+                                      __html: item.data.textContent,
+                                    }}
+                                  />
+                                </li>
+                              );
+                            }
+                          })}
+                        </ul>
+                        <div
+                          style={{
+                            fontWeight: "bold",
+                            marginTop: 15,
+                            fontSize: 12,
+                          }}
+                        >
+                          <FormattedMessage
+                            id="contentListAfterImport"
+                            defaultMessage="What you will need to do after import"
+                          />
+                        </div>
+                        <ul style={{ paddingLeft: 20, margin: 0 }}>
+                          {this.figmaCheckList.results?.map((item) => {
+                            if (item.data.type === "after") {
+                              return (
+                                <li key={item.id}>
+                                  <p
+                                    className="rich-text"
+                                    style={{
+                                      marginTop: "auto",
+                                      marginBottom: "auto",
+                                      fontSize: 11,
+                                      opacity: 0.8,
+                                    }}
+                                    dangerouslySetInnerHTML={{
+                                      __html: item.data.textContent,
+                                    }}
+                                  />
+                                </li>
+                              );
+                            }
+                          })}
+                        </ul>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex" }}>
+                        <CircularProgress
+                          disableShrink
+                          style={{ margin: "10 auto" }}
+                        />
+                      </div>
+                    )}
 
                     {this.showImportInvalidError && (
                       <div>
@@ -1177,7 +1117,7 @@ class App extends SafeComponent {
                           style={{
                             color: "rgba(255, 20, 20, 1)",
                             border: `1px solid rgba(255, 0, 0, 0.2)`,
-                            padding: '10px 10px 4px 10px',
+                            padding: "10px 10px 4px 10px",
                             borderRadius: 5,
                             marginTop: 10,
                             backgroundColor: "rgba(255, 0, 0, 0.1)",
@@ -1481,7 +1421,7 @@ class App extends SafeComponent {
               >
                 <div
                   style={{
-                    margin: '15 10 10 10',
+                    margin: "15 10 10 10",
                     fontWeight: "bold",
                   }}
                 >
@@ -2011,10 +1951,10 @@ class App extends SafeComponent {
               target="_blank"
             >
               <img
+                width={170}
+                height={56}
                 style={{
                   margin: "20px auto 10px",
-                  maxWidth: 170,
-                  width: "100%",
                 }}
                 src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2F2dee283279f244c1a731330a3aa96166"
               />
