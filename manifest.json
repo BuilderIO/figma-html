@@ -4,5 +4,26 @@
   "api": "1.0.0",
   "main": "dist/code.js",
   "editorType": ["figma"],
-  "ui": "dist/ui.html"
+  "ui": "dist/ui.html",
+  "networkAccess": {
+    "allowedDomains": [
+      "https://figma.com",
+      "https://*.amplitude.com",
+      "https://*.builder.io",
+      "https://www.googletagmanager.com",
+      "https://*.openai.com",
+      "https://ai-to-figma-tk43uighdq-uc.a.run.app",
+      "https://imgur.com"
+    ],
+    "devAllowedDomains": [
+      "https://figma.com",
+      "https://*.amplitude.com",
+      "https://*.builder.io",
+      "https://www.googletagmanager.com",
+      "https://*.openai.com",
+      "https://ai-to-figma-tk43uighdq-uc.a.run.app",
+      "https://imgur.com",
+      "http://localhost:4000"
+    ]
+  }
 }
