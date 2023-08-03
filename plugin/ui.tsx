@@ -35,7 +35,7 @@ import { arrayBufferToBase64 } from "../lib/functions/buffer-to-base64";
 import { SafeComponent } from "./classes/safe-component";
 import { settings } from "./constants/settings";
 import { theme as themeVars } from "./constants/theme";
-import { fastClone } from "./functions/fast-clone";
+import { deepClone, fastClone } from "./functions/fast-clone";
 import { transformWebpToPNG } from "./functions/encode-images";
 import { traverseLayers } from "./functions/traverse-layers";
 import "./ui.css";
@@ -59,11 +59,12 @@ export const apiHost = useDev ? "http://localhost:4000" : "https://builder.io";
 amplitude.initialize();
 
 const selectionToBuilder = async (
-  selection: SceneNode[]
+  selection: SceneNode[],
+  useAbsolute = false
 ): Promise<BuilderElement[]> => {
   const useGzip = true;
 
-  selection = fastClone(selection);
+  selection = deepClone(selection);
 
   traverse(selection).forEach(function (item) {
     if (this.key === "intArr") {
@@ -71,7 +72,8 @@ const selectionToBuilder = async (
     }
   });
 
-  const res = await fetch(`${apiHost}/api/v1/figma-to-builder`, {
+  const queryParam = useAbsolute ? "?useAbsolute=true" : "";
+  const res = await fetch(`${apiHost}/api/v1/figma-to-builder${queryParam}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -308,6 +310,7 @@ class App extends SafeComponent {
   @observable width = "1200";
   @observable online = navigator.onLine;
   @observable useFrames = false;
+  @observable useAbsolute: boolean = false;
   @observable showMoreOptions = true;
   @observable selection: (BaseNode & { data?: { [key: string]: any } })[] = [];
   @observable.ref selectionWithImages:
@@ -489,7 +492,8 @@ class App extends SafeComponent {
     // TODO: analyze if page is properly nested and annotated, if not
     // suggest in the UI what needs grouping
     const selectionToBuilderPromise = selectionToBuilder(
-      this.selectionWithImages as any
+      this.selectionWithImages as any,
+      this.useAbsolute
     ).catch((err) => {
       this.loadingGenerate = false;
       this.generatingCode = false;
@@ -1271,28 +1275,73 @@ class App extends SafeComponent {
                       </div>
                     )}
                     {Boolean(this.selection.length) && (
-                      <Tooltip
-                        disableHoverListener={Boolean(this.selection.length)}
-                        title={this.getLang().selectLayerPop}
-                      >
-                        <div>
-                          <Button
-                            fullWidth
-                            style={{ marginTop: 20, textTransform: "none" }}
-                            variant="contained"
-                            onClick={(e) => {
-                              this.getCode(true);
-                            }}
+                      <>
+                        <Tooltip
+                          PopperProps={{
+                            modifiers: { flip: { behavior: ["top"] } },
+                          }}
+                          enterDelay={300}
+                          placement="top"
+                          title={this.getLang().absoluteMode}
+                        >
+                          <FormControlLabel
+                            value="Use Absolute Mode"
                             disabled={!this.selection.length}
-                            color="primary"
-                          >
-                            <FormattedMessage
-                              id="getCode"
-                              defaultMessage="Get Code"
-                            />
-                          </Button>
-                        </div>
-                      </Tooltip>
+                            style={{
+                              marginTop: 20,
+                              textTransform: "none",
+                              float: "right",
+                              marginRight: 0,
+                            }}
+                            control={
+                              <Switch
+                                size="small"
+                                color="primary"
+                                checked={this.useAbsolute}
+                                onChange={(e) =>
+                                  (this.useAbsolute = e.target.checked)
+                                }
+                              />
+                            }
+                            label={
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  position: "relative",
+                                  fontWeight: "bold",
+                                }}
+                              >
+                                <FormattedMessage
+                                  id="absolute"
+                                  defaultMessage="Use Absolute Mode"
+                                />
+                              </span>
+                            }
+                            labelPlacement="start"
+                          />
+                        </Tooltip>
+                        <Tooltip
+                          disableHoverListener={Boolean(this.selection.length)}
+                          title={this.getLang().selectLayerPop}
+                        >
+                          <div>
+                            <Button
+                              fullWidth
+                              variant="contained"
+                              onClick={(e) => {
+                                this.getCode(true);
+                              }}
+                              disabled={!this.selection.length}
+                              color="primary"
+                            >
+                              <FormattedMessage
+                                id="getCode"
+                                defaultMessage="Get Code"
+                              />
+                            </Button>
+                          </div>
+                        </Tooltip>
+                      </>
                     )}
                     {this.displayFiddleUrl && (
                       <div
