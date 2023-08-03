@@ -9,6 +9,7 @@
     "allowedDomains": [
       "https://figma.com",
       "https://*.amplitude.com",
+      "https://builder.io",
       "https://*.builder.io",
       "https://www.googletagmanager.com",
       "https://*.openai.com",
@@ -18,6 +19,7 @@
     "devAllowedDomains": [
       "https://figma.com",
       "https://*.amplitude.com",
+      "https://builder.io",
       "https://*.builder.io",
       "https://www.googletagmanager.com",
       "https://*.openai.com",
