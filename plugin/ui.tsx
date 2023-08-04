@@ -567,14 +567,20 @@ class App extends SafeComponent {
     };
 
     this.isValidImport = null;
-    parent.postMessage(
-      {
-        pluginMessage: {
-          type: "checkIfCanGetCode",
+    if (this.useAbsolute) {
+      // In the case of absolute import
+      // We don't care about autolayout
+      this.isValidImport = true;
+    } else {
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "checkIfCanGetCode",
+          },
         },
-      },
-      "*"
-    );
+        "*"
+      );
+    }
 
     this.generatingCode = true;
 
