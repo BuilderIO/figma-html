@@ -51,6 +51,7 @@ import { v4 as uuid } from "uuid";
 import { AiImport } from "./components/ai-import";
 import { Wand } from "./icons/wand";
 import { useDev } from "./constants/use-dev";
+import { Observable } from "@builder.io/sdk/dist/src/classes/observable.class";
 
 // https://stackoverflow.com/a/46634877
 type Writeable<T> = { -readonly [P in keyof T]: T[P] };
@@ -311,6 +312,7 @@ class App extends SafeComponent {
   @observable online = navigator.onLine;
   @observable useFrames = false;
   @observable useAbsolute: boolean = false;
+  @observable devModeClickCount: number = 0;
   @observable showMoreOptions = true;
   @observable selection: (BaseNode & { data?: { [key: string]: any } })[] = [];
   @observable.ref selectionWithImages:
@@ -330,6 +332,7 @@ class App extends SafeComponent {
   @observable displayFiddleUrl = "";
   @observable currentLanguage = "en";
   @observable tabIndex = 0;
+  @observable showAbsoluteOption: boolean = false;
   @observable figmaCheckList: {
     results?: CheckListContent[];
   } = {};
@@ -1282,50 +1285,52 @@ class App extends SafeComponent {
                     )}
                     {Boolean(this.selection.length) && (
                       <>
-                        <Tooltip
-                          PopperProps={{
-                            modifiers: { flip: { behavior: ["top"] } },
-                          }}
-                          enterDelay={300}
-                          placement="top"
-                          title={this.getLang().absoluteMode}
-                        >
-                          <FormControlLabel
-                            value="Use Absolute Mode"
-                            disabled={!this.selection.length}
-                            style={{
-                              marginTop: 20,
-                              textTransform: "none",
-                              float: "right",
-                              marginRight: 0,
+                        {this.showAbsoluteOption && (
+                          <Tooltip
+                            PopperProps={{
+                              modifiers: { flip: { behavior: ["top"] } },
                             }}
-                            control={
-                              <Switch
-                                size="small"
-                                color="primary"
-                                checked={this.useAbsolute}
-                                onChange={(e) =>
-                                  (this.useAbsolute = e.target.checked)
-                                }
-                              />
-                            }
-                            label={
-                              <span
-                                style={{
-                                  fontSize: 12,
-                                  position: "relative",
-                                  fontWeight: "bold",
-                                }}
-                              >
-                                <FormattedMessage
-                                  id="absolute"
-                                  defaultMessage="Use Absolute Mode"
+                            enterDelay={300}
+                            placement="top"
+                            title={this.getLang().absoluteMode}
+                          >
+                            <FormControlLabel
+                              value="Use Absolute Mode"
+                              disabled={!this.selection.length}
+                              style={{
+                                marginTop: 20,
+                                textTransform: "none",
+                                float: "right",
+                                marginRight: 0,
+                              }}
+                              control={
+                                <Switch
+                                  size="small"
+                                  color="primary"
+                                  checked={this.useAbsolute}
+                                  onChange={(e) =>
+                                    (this.useAbsolute = e.target.checked)
+                                  }
                                 />
-                              </span>
-                            }
-                            labelPlacement="start"
-                          />
-                        </Tooltip>
+                              }
+                              label={
+                                <span
+                                  style={{
+                                    fontSize: 12,
+                                    position: "relative",
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  <FormattedMessage
+                                    id="absolute"
+                                    defaultMessage="Use Absolute Mode"
+                                  />
+                                </span>
+                              }
+                              labelPlacement="start"
+                            />
+                          </Tooltip>
+                        )}
                         <Tooltip
                           disableHoverListener={Boolean(this.selection.length)}
                           title={this.getLang().selectLayerPop}
@@ -1334,6 +1339,9 @@ class App extends SafeComponent {
                             <Button
                               fullWidth
                               variant="contained"
+                              style={{
+                                marginTop: 10,
+                              }}
                               onClick={(e) => {
                                 this.getCode(true);
                               }}
@@ -2035,7 +2043,10 @@ class App extends SafeComponent {
               </a>{" "}
               <span style={{ opacity: 0.9 }}>
                 is a headless CMS that lets you drag & drop with your
-                components.
+                <span onClick={() => this.handleDevModeClick()}>
+                  &nbsp;components
+                </span>
+                .
               </span>
             </p>
 
@@ -2094,6 +2105,12 @@ class App extends SafeComponent {
         </div>
       </IntlProvider>
     );
+  }
+  handleDevModeClick(): void {
+    this.devModeClickCount++;
+    if (this.devModeClickCount > 4) {
+      this.showAbsoluteOption = true;
+    }
   }
 }
 
