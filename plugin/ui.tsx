@@ -60,8 +60,7 @@ export const apiHost = useDev ? "http://localhost:4000" : "https://builder.io";
 amplitude.initialize();
 
 const selectionToBuilder = async (
-  selection: SceneNode[],
-  useAbsolute = false
+  selection: SceneNode[]
 ): Promise<BuilderElement[]> => {
   const useGzip = true;
 
@@ -73,8 +72,7 @@ const selectionToBuilder = async (
     }
   });
 
-  const queryParam = useAbsolute ? "?useAbsolute=true" : "";
-  const res = await fetch(`${apiHost}/api/v1/figma-to-builder${queryParam}`, {
+  const res = await fetch(`${apiHost}/api/v1/figma-to-builder`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -311,7 +309,7 @@ class App extends SafeComponent {
   @observable width = "1200";
   @observable online = navigator.onLine;
   @observable useFrames = false;
-  @observable useAbsolute: boolean = false;
+  @observable inDevMode: boolean = false;
   @observable devModeClickCount: number = 0;
   @observable showMoreOptions = true;
   @observable selection: (BaseNode & { data?: { [key: string]: any } })[] = [];
@@ -332,7 +330,7 @@ class App extends SafeComponent {
   @observable displayFiddleUrl = "";
   @observable currentLanguage = "en";
   @observable tabIndex = 0;
-  @observable showAbsoluteOption: boolean = false;
+  @observable showDevModeOption: boolean = false;
   @observable figmaCheckList: {
     results?: CheckListContent[];
   } = {};
@@ -494,23 +492,33 @@ class App extends SafeComponent {
 
     // TODO: analyze if page is properly nested and annotated, if not
     // suggest in the UI what needs grouping
-    const selectionToBuilderPromise = selectionToBuilder(
-      this.selectionWithImages as any,
-      this.useAbsolute
-    ).catch((err) => {
-      this.loadingGenerate = false;
-      this.generatingCode = false;
-      this.showRequestFailedError = true;
-      amplitude.track("export error");
-      throw err;
-    });
+    let selectionToBuilderPromise;
+    if (!this.inDevMode) {
+      selectionToBuilderPromise = selectionToBuilder(
+        this.selectionWithImages as any
+      ).catch((err) => {
+        this.loadingGenerate = false;
+        this.generatingCode = false;
+        this.showRequestFailedError = true;
+        amplitude.track("export error");
+        throw err;
+      });
+    } else {
+      const selections = deepClone(this.selectionWithImages);
+      traverse(selections).forEach(function () {
+        if (this.key === "intArr") {
+          this.delete();
+        }
+      });
+      selectionToBuilderPromise = Promise.resolve(selections);
+    }
 
     const imagesPromises: Promise<any>[] = [];
     const imageMap: { [key: string]: string } = {};
     for (const layer of this.selectionWithImages as SceneNode[]) {
       traverseLayers(layer, (node) => {
         const imageFills = getImageFills(node as Node);
-        if (Array.isArray(imageFills) && imageFills.length) {
+        if (Array.isArray(imageFills) && imageFills.length && !this.inDevMode) {
           imageFills.forEach((image) => {
             if ((image as any)?.intArr) {
               imagesPromises.push(
@@ -570,8 +578,8 @@ class App extends SafeComponent {
     };
 
     this.isValidImport = null;
-    if (this.useAbsolute) {
-      // In the case of absolute import
+    if (this.inDevMode) {
+      // In the case of dev mode
       // We don't care about autolayout
       this.isValidImport = true;
     } else {
@@ -599,7 +607,8 @@ class App extends SafeComponent {
 
     const json = JSON.stringify(data);
 
-    if (useFiddle) {
+    // Always only download in dev mode
+    if (useFiddle && !this.inDevMode) {
       const res = await fetch(apiHost + "/api/v1/fiddle", {
         method: "POST",
         headers: {
@@ -1285,17 +1294,17 @@ class App extends SafeComponent {
                     )}
                     {Boolean(this.selection.length) && (
                       <>
-                        {this.showAbsoluteOption && (
+                        {this.showDevModeOption && (
                           <Tooltip
                             PopperProps={{
                               modifiers: { flip: { behavior: ["top"] } },
                             }}
                             enterDelay={300}
                             placement="top"
-                            title={this.getLang().absoluteMode}
+                            title={this.getLang().devMode}
                           >
                             <FormControlLabel
-                              value="Use Absolute Mode"
+                              value="Use Dev Mode"
                               disabled={!this.selection.length}
                               style={{
                                 marginTop: 20,
@@ -1307,9 +1316,9 @@ class App extends SafeComponent {
                                 <Switch
                                   size="small"
                                   color="primary"
-                                  checked={this.useAbsolute}
+                                  checked={this.inDevMode}
                                   onChange={(e) =>
-                                    (this.useAbsolute = e.target.checked)
+                                    (this.inDevMode = e.target.checked)
                                   }
                                 />
                               }
@@ -1322,8 +1331,8 @@ class App extends SafeComponent {
                                   }}
                                 >
                                   <FormattedMessage
-                                    id="absolute"
-                                    defaultMessage="Use Absolute Mode"
+                                    id="devMode"
+                                    defaultMessage="Use Dev Mode"
                                   />
                                 </span>
                               }
@@ -2109,7 +2118,7 @@ class App extends SafeComponent {
   handleDevModeClick(): void {
     this.devModeClickCount++;
     if (this.devModeClickCount > 4) {
-      this.showAbsoluteOption = true;
+      this.showDevModeOption = true;
     }
   }
 }

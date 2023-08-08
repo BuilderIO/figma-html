@@ -12,7 +12,7 @@ export const en = {
   errorMessage:
     "Oh no, there was an error! To troubleshoot, if you are importing a whole page, try importing a smaller part of the page at a time, like one section or even one button",
   getCode: "Generate Code",
-  absoluteMode: "Use Absolute Import",
+  devMode: "Use Dev Mode",
   done: "Done! ",
   clickHere: "Click here",
   clickHere2: " to open your content in Builder.io and choose 'get code'",
@@ -62,7 +62,7 @@ export const ru = {
   errorMessage:
     "О нет, ошибка! Для устранения ошибки, вместо импорта целой страницы, попробуйте импортировать по небольшим частям - к примеру, один блок или кнопку",
   getCode: "Получить код",
-  absoluteMode: "Absolute Import",
+  devMode: "Dev Mode",
   done: "Готово! ",
   clickHere: "Нажмите тут,",
   clickHere2: " что-бы открыть контент в Builder.io и выберите 'get code'",
