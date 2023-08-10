@@ -112,6 +112,7 @@ const allPropertyNames = [
   "effects",
   "type",
   "layoutGrids",
+  "absoluteRenderBounds"
 ];
 
 // The Figma nodes are hard to inspect at a glance because almost all properties are non enumerable
