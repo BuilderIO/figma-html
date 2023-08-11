@@ -112,7 +112,7 @@ const allPropertyNames = [
   "effects",
   "type",
   "layoutGrids",
-  "absoluteRenderBounds"
+  "absoluteRenderBounds",
 ];
 
 // The Figma nodes are hard to inspect at a glance because almost all properties are non enumerable
@@ -135,13 +135,6 @@ const cloneObject = (obj: any, valuesSet = new Set()) => {
 };
 
 async function postSelection() {
-  console.log(
-    JSON.stringify(
-      figma.currentPage.selection.map((obj) => cloneObject(obj)),
-      null,
-      2
-    )
-  );
   figma.ui.postMessage({
     type: "selectionChange",
     elements: fastClone(
@@ -271,10 +264,12 @@ async function serialize(
       },
     ];
   }
+  const cssProps = await element.getCSSAsync();
 
   // TODO: better way to enumerate everything, including getters, that is not function
   return {
     ...cloneObject(element),
+    cssProps,
     fills,
     type: element.type === "VECTOR" ? "RECTANGLE" : element.type,
     data: JSON.parse(element.getSharedPluginData("builder", "data") || "{}"),
