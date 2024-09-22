@@ -1,4 +1,4 @@
-# HTML to Figma Chrome Extension
+chrome-extension/README.md# HTML to Figma Chrome Extension
 
 > Chrome extension to import the current page HTML to Figma
 
