@@ -1,18 +1,17 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
 
   "name": "HTML to Figma - by Builder.io",
   "description": "Import a web page to Figma layers",
   "version": "0.0.7",
 
-  "browser_action": {
+  "action": {
     "default_icon": "icon16.png",
     "default_popup": "popup.html"
   },
 
   "background": {
-    "scripts": ["js/background.js"],
-    "persistent": false
+    "service_worker": "js/background.js"
   },
 
   "icons": {
@@ -21,5 +20,5 @@
     "128": "icon128.png"
   },
 
-  "permissions": ["activeTab"]
+  "permissions": ["activeTab", "scripting"]
 }

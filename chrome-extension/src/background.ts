@@ -6,10 +6,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
       const activeTab = sender.tab || tabs[0];
       if (activeTab && activeTab.id) {
-        chrome.tabs.executeScript(
-          activeTab.id,
+        chrome.scripting.executeScript(
           {
-            file: "js/inject.js"
+            target: {
+              tabId: activeTab.id
+            },
+            files: ["js/inject.js"]
           },
           args => {
             sendResponse({ done: true, args });

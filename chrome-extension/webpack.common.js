@@ -23,6 +23,7 @@ module.exports = {
     path: path.join(__dirname, "dist/js"),
     filename: "[name].js"
   },
+  devtool: 'source-map', // Avoids using eval
   module: {
     rules: [
       {
