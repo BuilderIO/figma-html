@@ -4,7 +4,7 @@ import CheckCircle from "@material-ui/icons/CheckCircleOutline";
 import Heart from "@material-ui/icons/Favorite";
 import { observer } from "mobx-react";
 import { observable } from "mobx";
-import { theme } from "../constants/theme";
+import theme from "../constants/theme";
 const logo = require("../../assets/logo.png");
 
 interface AppProps {}

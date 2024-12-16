@@ -6,7 +6,7 @@ import {
 import green from "@material-ui/core/colors/green";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { theme as themeVars } from "../constants/theme";
+import themeVars from "../constants/theme";
 import Popup from "./Popup";
 
 const theme = createMuiTheme({
