@@ -227,8 +227,10 @@ async function serialize(
       if (fill.type === "IMAGE" && fill.imageHash) {
         const image = figma.getImageByHash(fill.imageHash);
         try {
-          const bytes = await image.getBytesAsync();
-          (fill as any).intArr = bytes;
+          if (image !== null) {
+            const bytes = await image.getBytesAsync();
+            (fill as any).intArr = bytes;
+          }
         } catch (err) {
           console.warn("Could not get image for layer", element, fill, err);
         }
