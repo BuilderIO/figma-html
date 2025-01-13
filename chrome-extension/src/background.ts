@@ -1,7 +1,7 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   let isResponseAsync = false;
 
-  if (request.inject) {
+  if ('inject' in request) {
     isResponseAsync = true;
     chrome.tabs.query({ currentWindow: true, active: true }, tabs => {
       const activeTab = sender.tab || tabs[0];
@@ -12,8 +12,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             file: "js/inject.js"
           },
           args => {
-            sendResponse({ done: true, args});
-          }
+            sendResponse({ done: true, args });
+          },
         );
       }
     });

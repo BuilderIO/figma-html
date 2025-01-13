@@ -7,7 +7,7 @@ import {
   addStrokesFromBorder,
   getStrokesRectangle,
   getAppliedComputedStyles,
-  getShadowEffects,
+  getDropShadowEffects,
   getBorderRadii,
 } from "./helpers/styles";
 import { createSvgLayer, processSvgUseElements } from "./helpers/svg";
@@ -136,7 +136,7 @@ const getLayersForElement = (el: Element) => {
         rectNode.name = "IMAGE";
       }
 
-      const shadowEffects = getShadowEffects({ computedStyle });
+      const shadowEffects = getDropShadowEffects({ computedStyle });
 
       if (shadowEffects) {
         rectNode.effects = shadowEffects;

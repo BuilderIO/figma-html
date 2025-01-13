@@ -1,5 +1,5 @@
 const webpack = require("webpack");
-const HtmlWebpackInlineSourcePlugin = require("html-webpack-inline-source-plugin");
+const HtmlWebpackInlineSourcePlugin = require("html-inline-script-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const path = require("path");
 
@@ -12,11 +12,11 @@ module.exports = (env, argv) => {
         { test: /\.tsx?$/, use: "ts-loader", exclude: /node_modules/ },
         {
           test: /\.css$/,
-          loader: [{ loader: "style-loader" }, { loader: "css-loader" }],
+          use: [{ loader: "style-loader" }, { loader: "css-loader" }],
         },
         {
           test: /\.(png|jpg|gif|webp|svg)$/,
-          loader: [{ loader: "url-loader" }],
+          use: [{ loader: "url-loader" }],
         },
       ],
     },
