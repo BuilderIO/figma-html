@@ -1,81 +1,104 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>HTML &lt;&gt; Figma</title>
-    <script src="js/popup.js"></script>
+    <title>HTML to Figma</title>
     <style>
       body {
-        min-width: 340px;
-        min-height: 210px;
-        background-color: #f8f8f8
+        margin: 0;
+        padding: 40px;
+        min-width: 300px;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       }
 
-      /* Loading animation */
-      .lds-ellipsis {
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 43px;
+      }
+
+      .logo {
+        width: 130px;
+        height: auto;
+      }
+
+      h1 {
+        font-size: 18px;
+        margin: 0;
+        color: #1a1a1a;
+        text-align: center;
+      }
+
+      p {
+        font-size: 14px;
+        line-height: 1.5;
+        color: #666;
+        text-align: center;
+        margin: 0;
+      }
+
+      .button {
         display: inline-block;
-        margin: auto;
-        position: relative;
-        width: 64px;
-        height: 48px;
-        background-color: rgb(28, 151, 204);
-      }
-      .lds-ellipsis div {
-        position: absolute;
-        top: 27px;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        animation-timing-function: cubic-bezier(0, 1, 1, 0);
-      }
-      .lds-ellipsis div:nth-child(1) {
-        left: 6px;
-        animation: lds-ellipsis1 0.6s infinite;
-      }
-      .lds-ellipsis div:nth-child(2) {
-        left: 6px;
-        animation: lds-ellipsis2 0.6s infinite;
-      }
-      .lds-ellipsis div:nth-child(3) {
-        left: 26px;
-        animation: lds-ellipsis2 0.6s infinite;
-      }
-      .lds-ellipsis div:nth-child(4) {
-        left: 45px;
-        animation: lds-ellipsis3 0.6s infinite;
-      }
-      @keyframes lds-ellipsis1 {
-        0% {
-          transform: scale(0);
-        }
-        100% {
-          transform: scale(1);
-        }
-      }
-      @keyframes lds-ellipsis3 {
-        0% {
-          transform: scale(1);
-        }
-        100% {
-          transform: scale(0);
-        }
-      }
-      @keyframes lds-ellipsis2 {
-        0% {
-          transform: translate(0, 0);
-        }
-        100% {
-          transform: translate(19px, 0);
-        }
+        background-color: rgb(26, 115, 235, 1);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 14px;
+        transition: background-color 0.2s;
       }
 
+      .button:hover {
+        background-color: #3955cc;
+      }
+
+      .beta-tag {
+        background-color: #e8edff;
+        color: #4b6fff;
+        padding: 3px 6px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+        margin-left: 6px;
+      }
+
+      .content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
     </style>
   </head>
-
   <body>
-    <div id="popup">
-        <div style="margin: 0 auto" class="lds-ellipsis">
-            <div /> <div /> <div /><div />
-        </div>
+    <div class="container">
+      <img
+        src="https://cdn.builder.io/api/v1/image/assets%2FYJIGb4i01jvw0SRdL5Bt%2F1d1897131896467986b4bc5d9e8d3c6e"
+        alt="Builder.io"
+        class="logo"
+      />
+
+      <div class="content">
+        <h1>This Extension Has Moved</h1>
+        <p>
+          Please download the
+          <a
+            href="https://www.builder.io/c/docs/chrome-extension#paste-from-chrome-into-figma"
+            style="color: #1a73eb; text-decoration: none"
+            >new Builder.io Chrome extension</a
+          >
+          to copy layouts from the web directly into Figma.
+        </p>
+        <a
+          href="https://chromewebstore.google.com/detail/builderio/cfldfgibklhmjhnkfighkbafbkbfcmij?hl=en"
+          target="_blank"
+          class="button"
+        >
+          Get the New Extension
+        </a>
+      </div>
     </div>
   </body>
 </html>

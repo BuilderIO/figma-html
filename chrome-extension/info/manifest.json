@@ -3,16 +3,11 @@
 
   "name": "HTML to Figma - by Builder.io",
   "description": "Import a web page to Figma layers",
-  "version": "0.0.7",
+  "version": "0.0.8",
 
   "action": {
     "default_icon": "icon16.png",
     "default_popup": "popup.html"
-  },
-
-  "background": {
-    "service_worker": "js/background.js",
-    "type": "module"
   },
 
   "icons": {
